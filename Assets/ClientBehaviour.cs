@@ -3,6 +3,8 @@ using Unity.Entities;
 using UnityEngine;
 using Unity.Networking.Transport;
 
+// This is the script responsible for handling the client side of the network, with connections to server etc
+
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
 public class ClientBehaviour : MonoBehaviour
 {

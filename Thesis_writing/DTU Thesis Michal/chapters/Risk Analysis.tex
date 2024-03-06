@@ -1,0 +1,43 @@
+\chapter{Risk Analysis}
+
+
+\begin{table}[H]
+\caption{Risks. 1: low likelihood or impact, 5: high likelihood or impact}
+\centering{
+\scriptsize{
+\begin{tabular}{|c p{5.0cm}| c | c| c|}
+\toprule 
+\hline
+\textbf{Title} &	\textbf{Description} &	\textbf{Impact} &	\textbf{Likelihood} &	\textbf{Score}  \\
+\hline
+\hline
+API changes    &	Either Unity or GGPO may introduce changes to their respective software usage policies or APIs, which could result in compatibility issues or unexpected challenges during implementation.  & 	 5 & 	 1  & 5\\
+\hline
+Limited documentation    &	Due to the relatively newer nature of Unity DOTS and its specialized use for this thesis, there may be limited community support and documentation available to address technical challenges or provide guidance.. & 	 3 & 	 4  & 12\\
+\hline
+Non-determinism   & Despite efforts to ensure determinism in Unity DOTS, unforeseen non-deterministic behavior may emerge due to complex interactions between game systems, entities, or external factors, posing a challenge to achieving consistent gameplay experiences across different platforms or network conditions.   & 	 4 & 	 3  & 12\\
+\hline
+API support   & The current Unity API may not provide adequate support for creating a sufficient game example, potentially hindering the demonstration of the proposed solution's effectiveness.   & 	 3 & 	 2  & 6\\
+\hline
+GGPO integration    & Integrating GGPO into the project may present unforeseen difficulties or limitations, requiring additional time and effort for custom adaptation.  & 	 3 & 	 3  & 9\\
+\hline
+Shortage of experience    & There might be a shortage of necessary resources, such as expertise or tools, which could impede progress and lead to project delays.   & 	 3 & 	 4  & 12\\
+\hline
+Solution exists   & The solution already exists   & 	 5 & 	 1  & 5\\
+\hline
+Performance degradation    & The utilization of Data-Oriented Design in Unity DOTS may lead to unexpected performance degradation under certain conditions or configurations, potentially impacting the desired result.   & 	 3 & 	 1  & 3\\
+\hline
+Low quality writing    & Lack of proper understanding of the scope and techniques leads to too much writing at the end of the project or to its low quality   & 	 4 & 	 2  & 8\\
+\hline
+\bottomrule
+\end{tabular}
+}
+}
+\label{tab:survey}
+\end{table}
+
+The risks scoring the highest are \textbf{Limited documentation}, \textbf{Non-determinism} and \textbf{Shortage of experience}. In the first case the impact is 3 and the likelihood is 4 and the only way to mitigate this risk is to engage with online forums, community groups, developer networks specialized in Unity DOTS and Unity employees to seek guidance and assistance in addressing technical challenges.
+
+In the second example in order to mitigate this risk, implementation of a robust error handling and logging mechanisms to detect and diagnose instances of non-deterministic behavior will be required.
+
+In the third case conducting a comprehensive assessment of the project's resource requirements, including expertise, tools, and infrastructure would be required. Additionally all relevant articles and knowledge should be collected in easy to access place.

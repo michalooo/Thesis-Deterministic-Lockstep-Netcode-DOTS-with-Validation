@@ -3,10 +3,11 @@ using Unity.Entities;
 using Unity.Networking.Transport;
 using UnityEngine;
 
+// This is the script responsible for handling the server side of the network, with connections etc
+
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
 public class ServerBehaviour : MonoBehaviour
 {
-
     NetworkDriver m_Driver;
     NativeList<NetworkConnection> m_Connections;
 
