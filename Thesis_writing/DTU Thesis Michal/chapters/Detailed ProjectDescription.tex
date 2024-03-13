@@ -1,12 +1,3 @@
-%Solutions
-%There are already existing solutions providing more complicated systems build on top of GGPO or just using different approach for rollback netcode implementation like:
-%1) Photon quantum
-%2) Fightcade
-%3) RedGGPO
-%4) GGPOZ
-%\newline
-%But since GGPO is the original solution, still in use, under MIT license and powerful enough this thesis will focus on it.
-
 % Introduction of what we want to do
 \chapter{Detailed Project Description}
 
@@ -14,43 +5,43 @@ While previous integrations of GGPO with Unity's object-oriented code have been 
 
 DOTS, still in development, provides a promising platform to investigate how it can complement the strengths of GGPO. Specifically, the focus lies on integrating GGPO's predictive input models within the framework of DOTS. With DOTS' enhanced performance capabilities, there exists a promising prospect to facilitate the development of multiplayer games featuring a multitude of entities with minimal latency.
 
-Furthermore, the utilization of DOTS may provide additional resources for exploring player prediction techniques. However, existing research like \cite{Improving_prediction} suggests that while there may be improvements in prediction accuracy, the incremental gain compared to naive models may not be substantial, potentially necessitating additional computational resources. Additionally, there is a noticeable scarcity of scholarly literature and practical implementation examples concerning rollback netcode with prediction within contemporary game engines.
+Furthermore, the utilization of DOTS may provide additional resources for exploring player prediction techniques. However, existing research like \cite{Improving_prediction} suggests that while there may be improvements in prediction accuracy, the incremental gain compared to naive models may not be substantial, potentially necessitating additional computational resources. Additionally, there is a noticeable scarcity of scholarly literature and implementation examples when it comes to DOTS which is a relatively new technology.
 
 Hence, this thesis aims to bridge this gap by investigating the integration of GGPO with Unity's DOTS framework. Through a thorough examination of the potential advantages and challenges associated with combining these frameworks, this project aims to advance the understanding and implementation of rollback netcode within modern game engines. Ultimately, the goal is to facilitate the creation of large-scale multiplayer games that leverage the strengths of both DOTS and GGPO, thereby enriching the multiplayer gaming experience. Because of this the title of the thesis shouldn't be understand as simply decreasing the lag in the game (combination of DOTS + GGPO won't lead to reduce latency much. Existing GGPO approaches already reduce latency as much as humanly possible. Reduced CPU cost because of DOTS can lead to reduced latency, but only if the CPU + socket poor performance is wasting many milliseconds.). Thus what DOTS + GGPO offers is reduced CPU consumption and higher game scope/scale for smooth multiplayer games and it's also potentially easier to work with.
 
 % Show of different related works
 \section{Prior work}
 
-Regarding directing competitors/existing solutions we're talking only about architecture (and not implementation), so we can ignore ggpoz because it's fundamentally still a 'deterministic Lockstep + prediction' model, which is what you're building. Existing solutions are problematic for a variety of reasons. Lack of support, licensing issues etc. % We can deep dive on that (NIKI).
+Regarding directing competitors/existing solutions we're talking only about architecture concept (and not implementation), so we can ignore other implementations of GGPO like RedGGPO, Fightcade or GGPOZ because it's fundamentally still a 'deterministic Lockstep + prediction' model, which we are trying to build and which GGPO is a main example of. Additionally solutions like Photon quantum which also can be integrated into Unity to handle deterministic simulation are not tested with DOTS and harder to access. Existing solutions are problematic for a variety of reasons. Lack of support, licensing issues etc. % We can deep dive on that (NIKI).
 
-Previous research in this domain has primarily concentrated on conventional Object-Oriented Design (OOD) paradigms for game development and networking. Early implementations of GGPO in Unity were largely rooted in the OOD approach, thus paving the way for further exploration of its application within emerging technologies like DOTS (Data-Oriented Technology Stack) \cite{UnityGGPO}.
+Previous research in this domain has primarily concentrated on conventional Object-Oriented Design (OOD) paradigms for game development and networking. Early implementations of GGPO in Unity were largely rooted in the OOD approach, thus paving the way for further exploration of its application within emerging technologies like DOTS \cite{UnityGGPO}.
 
 \noindent\textbf{GGPO and rollback netcode implementations}:
 Several GitHub repositories and community projects have emerged, offering implementations of rollback netcode within popular game engines like Unity and Unreal Engine. These implementations vary in quality, documentation, and compatibility with newer versions of the game engines. However, the literature on rollback netcode integration within game engines is relatively sparse, with only a few studies exploring its implementation and optimization like \cite{ECS_unity_implementation}, \cite{Lockstep_Unity}.
 
 \noindent\textbf{Integration with DOTS}:
-Furthermore, the integration of rollback netcode solutions within Unity's Data-Oriented Technology Stack (DOTS) remains largely unexplored. While DOTS promises significant performance improvements over traditional object-oriented approaches, its compatibility and effectiveness with rollback netcode solutions have yet to be thoroughly investigated.
+Furthermore, the integration of GGPO solution within Unity's Data-Oriented Technology Stack (DOTS) remains largely unexplored. While DOTS promises significant performance improvements over traditional object-oriented approaches, its compatibility and effectiveness with GGPO solution have yet to be thoroughly investigated.
 
 % Explaining what is the objective of this thesis
 \section{Research Focus}
 
 \subsection{Problem Statement}
 
-This thesis addresses the imperative for effective and scalable solutions to overcome network latency and synchronization challenges in online multiplayer games. Right now it's really challenging to create a performant large scale multiplayer online game and many developers could benefit from a potential already integrated solution.
+This thesis tackles the pressing need for robust and scalable solutions to address the pervasive challenges of network latency and synchronization in online multiplayer games. Currently, the creation of high-performance, large-scale multiplayer online games remains a formidable challenge, presenting significant hurdles for developers. Consequently, there is a critical demand within the gaming industry for integrated solutions capable of effectively mitigating latency and synchronization issues, thereby facilitating the development of seamless multiplayer gaming experiences.
 
 \subsection{Objective}
 
-This thesis aims to explore and develop novel methodologies by integrating GGPO (or its custom implementation) with DOTS, with the specific goal of enabling seamless large scale multiplayer gaming experiences within the DOTS framework. The aim is to address the issue of lag in multiplayer online games and their size, thereby unlocking the potential for high-performance, large-scale multiplayer games utilizing Unity's Data-Oriented Technology Stack.
+This thesis endeavors to investigate and devise innovative methodologies by integrating GGPO, or its custom implementation, with DOTS. The primary objective is to facilitate the creation of seamless large-scale multiplayer gaming experiences within the DOTS framework. Specifically, the goal is to address the challenge of latency in multiplayer online games and enhance their scalability, thereby unleashing the potential for developing high-performance, large-scale multiplayer games utilizing Unity's Data-Oriented Technology Stack.
 
-\subsection{Hypothesis}
+\subsection{Hypothesis} % it can be measure to accept) + methodology
 
 The hypothesis guiding this research is as follows:
 
-\textbf{H}: \textit{"The integration of rollback netcode, represented by GGPO, with Unity's DOTS framework will enable the creation of large-scale multiplayer real-time strategy (RTS) games with improved scalability and performance."}\newline
+\textbf{H}: \textit{"The integration of rollback netcode, represented by GGPO, with Unity's DOTS framework will enable the creation of large scale RTS games using lockstep, and a very lightweight fighting games with improved scalability and performance."}\newline
 
 If hypothesis \textbf{H} is accepted, the project will explore the following research question:
 
-\textbf{RQ1}: \textit{"How does the integration of GGPO with Unity's DOTS framework enhance the scalability and performance of multiplayer RTS games?"}\newline
+\textbf{RQ1}: \textit{"How does the integration of GGPO with Unity's DOTS framework enhance the scalability and performance of said games?"}\newline
 
 If hypothesis \textbf{H} is rejected, the thesis will investigate the factors contributing to its rejection and seek alternative avenues for achieving the desired outcomes in multiplayer RTS game development.
 
@@ -74,17 +65,17 @@ The research questions underpinning this thesis are:
 The research goals outlined below aim to address the identified problems and research questions, guiding the investigation into the integration of GGGPO within Unity's Data-Oriented Technology Stack (DOTS).
 
 \begin{enumerate}
-    \item \textbf{Goal 1:} Develop a thorough understanding of the principles of GGPO and Unity's Data-Oriented Technology Stack (DOTS), including their respective strengths, limitations, and compatibility.
+    \item \textbf{Goal 1:} Document with a thorough description of the principles of GGPO and Unity's Data-Oriented Technology Stack (DOTS), including their respective strengths, limitations, and compatibility is developed.
     
-    \item \textbf{Goal 2:} Investigate existing methodologies and approaches for integrating GGPO within game engines, with a focus on Unity DOTS, and identify best practices and challenges.
+    \item \textbf{Goal 2:} Existing methodologies and approaches for integrating GGPO within game engines are investigated, with a focus on Unity DOTS, and identify best practices and challenges.
     
-    \item \textbf{Goal 3:} Design and implement a prototype integration of GGPO within Unity's DOTS framework, leveraging Data-Oriented Design (DOD) principles and performance optimizations.
+    \item \textbf{Goal 3:} A prototype integration of GGPO within Unity's DOTS framework, leveraging Data-Oriented Design (DOD) principles and performance optimizations is designed and implemented.
     
-    \item \textbf{Goal 4:} Evaluate the performance and effectiveness of the implemented solution through testing and showcase game.
+    \item \textbf{Goal 4:} Performance and effectiveness of the implemented solution is evaluated through showcase game.
     
-    \item \textbf{Goal 5:} Provide insights, recommendations, and best practices for developers seeking to integrate GGPO within modern game development frameworks, particularly Unity's DOTS.
+    \item \textbf{Goal 5:} Insights, recommendations, and best practices are provided for developers seeking to integrate GGPO within modern game development frameworks, particularly Unity's DOTS.
     
-    \item Proove that you can build deterministic games in dots and how to do it
+    \item \textbf{Goal 6:} Possibility of building deterministic games in DOTS is prooved with examples how to do it.
 \end{enumerate}
 
 \subsection{Research Methods}
@@ -98,12 +89,48 @@ To achieve the research goals outlined above, the following methods will be empl
     
     \item \textbf{Prototyping:} Develop a prototype implementation of GGPO  integration within Unity's DOTS framework, utilizing DOD principles and performance optimizations to achieve efficient and scalable solutions.
     
-    \item \textbf{Performance Evaluation:} Conduct performance testing and benchmarking of the implemented solution.
+    \item \textbf{Performance Evaluation:} Conduct performance testing of the implemented solution.
     
-    \item \textbf{Documentation:} Document the research process, findings, and insights obtained throughout the study, and disseminate the results through academic papers, presentations, and open-source contributions.
+    \item \textbf{Documentation:} Document the research process, findings, and insights obtained throughout the study, and disseminate the results through academic papers, presentations.
 \end{itemize}
 
 By employing these research methods, this study aims to achieve its goals and contribute valuable insights and recommendations to the field of online multiplayer game development.
+
+\section{Impact -- innovation and application}
+
+\subsection{Expected Contributions}
+
+The research aims to make several significant contributions to the field of online multiplayer game development, including:
+
+\begin{itemize}
+    \item \textbf{Innovative Integration of Rollback Netcode:} The integration of GGPO within Unity's DOTS represents an innovative approach to addressing scalability and performance in large scale multiplayer online games and synchronization issues. By leveraging the principles of Data-Oriented Design (DOD) and performance optimizations offered by DOTS, the research seeks to demonstrate a novel solution for enhancing gameplay experiences.
+    
+    \item \textbf{Performance Benchmarking and Best Practices:} Through testing and showcasing, the research aims to establish best practices for integrating GGPO within modern game development frameworks. By providing empirical evidence of the effectiveness and efficiency of the implemented solution, the research seeks to inform developers about optimal strategies for achieving smooth and responsive online multiplayer experiences.
+    
+    \item \textbf{Insights into DOTS Compatibility:} By exploring the compatibility of GGPO with Unity's DOTS framework, the research aims to provide insights into the feasibility and challenges of integrating networking solutions with emerging game development technologies. This analysis can inform future developments and enhancements to DOTS, paving the way for improved support for online multiplayer gaming.
+\end{itemize}
+
+\subsection{Practical Applications}
+
+The research findings are expected to have practical applications in the gaming industry, including:
+
+\begin{itemize}
+    \item \textbf{Enhanced Online Multiplayer Experiences:} The integration of GGPO within Unity's DOTS framework has the potential to improve the quality and scale of online multiplayer gaming experiences.
+    
+    \item \textbf{Advancements in Game Development Practices:} By disseminating insights and best practices for integrating rollback netcode within modern game development frameworks, the research aims to contribute to advancements in game development practices. Developers can leverage these findings to optimize their networking implementations and deliver more immersive and competitive online multiplayer games.
+    
+    \item \textbf{Acceleration of Technology Adoption:} The research outcomes may accelerate the adoption of Data-Oriented Design (DOD) principles and Unity's DOTS framework within the gaming industry. By demonstrating the compatibility and effectiveness of GGPO with DOTS, the research can encourage developers to embrace these technologies, leading to broader innovation and advancement in game development.
+\end{itemize}
+
+Overall, the research findings have the potential to drive innovation, improve gameplay experiences, and advance game development practices in the increasingly competitive landscape of online multiplayer gaming.
+
+
+
+
+
+
+
+
 
 %\section{Empirical considerations}
 
@@ -123,31 +150,3 @@ By employing these research methods, this study aims to achieve its goals and co
 %\subsection{Intellectual Property Rights (IPR) Issues}
 
 %Consideration of intellectual property rights (IPR) issues, including licensing and copyright, will be paramount throughout the research, particularly concerning the integration of third-party libraries or technologies. Open-source licensing models, such as the MIT license used by GGPO, will be preferred to ensure compatibility and accessibility of the implemented solution.
-
-\section{Impact -- innovation and application}
-
-\subsection{Expected Contributions}
-
-The research aims to make several significant contributions to the field of online multiplayer game development, including:
-
-\begin{itemize}
-    \item \textbf{Innovative Integration of Rollback Netcode:} The integration of GGPO within Unity's Data-Oriented Technology Stack (DOTS) represents an innovative approach to addressing network latency in large scale multiplayer online games and synchronization issues in online multiplayer games. By leveraging the principles of Data-Oriented Design (DOD) and performance optimizations offered by DOTS, the research seeks to demonstrate a novel solution for enhancing gameplay experiences.
-    
-    \item \textbf{Performance Benchmarking and Best Practices:} Through testing and benchmarking, the research aims to establish performance metrics and best practices for integrating rollback netcode within modern game development frameworks. By providing empirical evidence of the effectiveness and efficiency of the implemented solution, the research seeks to inform developers about optimal strategies for achieving smooth and responsive online multiplayer experiences.
-    
-    \item \textbf{Insights into DOTS Compatibility:} By exploring the compatibility of GGPO with Unity's DOTS framework, the research aims to provide insights into the feasibility and challenges of integrating networking solutions with emerging game development technologies. This analysis can inform future developments and enhancements to DOTS, paving the way for improved support for online multiplayer gaming.
-\end{itemize}
-
-\subsection{Practical Applications}
-
-The research findings are expected to have practical applications in the gaming industry, including:
-
-\begin{itemize}
-    \item \textbf{Enhanced Online Multiplayer Experiences:} The integration of GGPO within Unity's DOTS framework has the potential to improve the quality and scale of online multiplayer gaming experiences. Reduced latency, and ability to create massive multiplayer RTS games can ultimately benefit game developers and publishers.
-    
-    \item \textbf{Advancements in Game Development Practices:} By disseminating insights and best practices for integrating rollback netcode within modern game development frameworks, the research aims to contribute to advancements in game development practices. Developers can leverage these findings to optimize their networking implementations and deliver more immersive and competitive online multiplayer games.
-    
-    \item \textbf{Acceleration of Technology Adoption:} The research outcomes may accelerate the adoption of Data-Oriented Design (DOD) principles and Unity's DOTS framework within the gaming industry. By demonstrating the compatibility and effectiveness of GGPO with DOTS, the research can encourage developers to embrace these technologies, leading to broader innovation and advancement in game development.
-\end{itemize}
-
-Overall, the research findings have the potential to drive innovation, improve gameplay experiences, and advance game development practices in the increasingly competitive landscape of online multiplayer gaming.
