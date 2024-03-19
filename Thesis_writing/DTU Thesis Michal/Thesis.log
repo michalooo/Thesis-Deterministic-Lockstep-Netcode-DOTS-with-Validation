@@ -1,10 +1,10 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 24.1) (preloaded format=pdflatex 2024.3.4)  6 MAR 2024 22:17
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 24.1) (preloaded format=pdflatex 2024.3.4)  13 MAR 2024 16:58
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
  %&-line parsing enabled.
-**"c:/Users/michalchrobot/Desktop/Thesis_writing/DTU Thesis Michal/Thesis.tex"
-(c:/Users/michalchrobot/Desktop/Thesis_writing/DTU Thesis Michal/Thesis.tex
+**"c:/Users/michalchrobot/Desktop/Thesis/Thesis_writing/DTU Thesis Michal/Thesis.tex"
+(c:/Users/michalchrobot/Desktop/Thesis/Thesis_writing/DTU Thesis Michal/Thesis.tex
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2024-02-20>
 (preamble/static.tex) (C:\Users\michalchrobot\AppData\Local\Programs\MiKTeX\tex/latex/nag\nag.sty
@@ -19,7 +19,7 @@ Package nag Info: Loaded nag-orthodox.cfg  on input line 552.
  (C:\Users\michalchrobot\AppData\Local\Programs\MiKTeX\tex/latex/nag\nag-orthodox.cfg
 File: nag-orthodox.cfg 2006/04/19 v1.8 strict rules for nag.sty (ulmi)
 ))
-c:/Users/michalchrobot/Desktop/Thesis_writing/DTU Thesis Michal/Thesis.tex:6: Undefined control sequence.
+c:/Users/michalchrobot/Desktop/Thesis/Thesis_writing/DTU Thesis Michal/Thesis.tex:6: Undefined control sequence.
 \papersizeswitch #1#2#3->\ifnum \strcmp 
                                         {\papersize }{#1}=0#2\else #3\fi 
 l.6 ...ssfontsize{10pt}}{\def\classfontsize{12pt}}
@@ -30,7 +30,7 @@ misspelled it (e.g., `\hobx'), type `I' and the correct
 spelling (e.g., `I\hbox'). Otherwise just continue,
 and I'll forget about whatever was undefined.
 
-c:/Users/michalchrobot/Desktop/Thesis_writing/DTU Thesis Michal/Thesis.tex:6: Missing number, treated as zero.
+c:/Users/michalchrobot/Desktop/Thesis/Thesis_writing/DTU Thesis Michal/Thesis.tex:6: Missing number, treated as zero.
 <to be read again> 
                    {
 l.6 ...ssfontsize{10pt}}{\def\classfontsize{12pt}}
@@ -39,14 +39,14 @@ A number should have been here; I inserted `0'.
 (If you can't figure out why I needed to see a number,
 look up `weird error' in the index to The TeXbook.)
 
-c:/Users/michalchrobot/Desktop/Thesis_writing/DTU Thesis Michal/Thesis.tex:6: Missing = inserted for \ifnum.
+c:/Users/michalchrobot/Desktop/Thesis/Thesis_writing/DTU Thesis Michal/Thesis.tex:6: Missing = inserted for \ifnum.
 <to be read again> 
                    {
 l.6 ...ssfontsize{10pt}}{\def\classfontsize{12pt}}
                                                   
 I was expecting to see `<', `=', or `>'. Didn't.
 
-c:/Users/michalchrobot/Desktop/Thesis_writing/DTU Thesis Michal/Thesis.tex:6: Missing number, treated as zero.
+c:/Users/michalchrobot/Desktop/Thesis/Thesis_writing/DTU Thesis Michal/Thesis.tex:6: Missing number, treated as zero.
 <to be read again> 
                    {
 l.6 ...ssfontsize{10pt}}{\def\classfontsize{12pt}}
@@ -56,7 +56,7 @@ A number should have been here; I inserted `0'.
 look up `weird error' in the index to The TeXbook.)
 
 
-c:/Users/michalchrobot/Desktop/Thesis_writing/DTU Thesis Michal/Thesis.tex:6: LaTeX Error: Missing \begin{document}.
+c:/Users/michalchrobot/Desktop/Thesis/Thesis_writing/DTU Thesis Michal/Thesis.tex:6: LaTeX Error: Missing \begin{document}.
 
 See the LaTeX manual or LaTeX Companion for explanation.
 Type  H <return>  for immediate help.
@@ -503,10 +503,10 @@ l.8 \RequireXeTeX
  
 Here is how much of TeX's memory you used:
  5511 strings out of 474456
- 86402 string characters out of 5738958
+ 86451 string characters out of 5738958
  1928190 words of memory out of 5000000
  27805 multiletter control sequences out of 15000+600000
  567048 words of font info for 39 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 85i,13n,93p,318b,189s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 85i,13n,93p,325b,189s stack positions out of 10000i,1000n,20000p,200000b,200000s
 preamble/general.tex:8:  ==> Fatal error occurred, no output PDF file produced!

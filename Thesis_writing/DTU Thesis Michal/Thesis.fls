@@ -1,6 +1,6 @@
-PWD c:\Users\michalchrobot\Desktop\Thesis_writing\DTU Thesis Michal
+PWD c:\Users\michalchrobot\Desktop\Thesis\Thesis_writing\DTU Thesis Michal
 INPUT C:\Users\michalchrobot\AppData\Local\MiKTeX\miktex\data\le\pdftex\pdflatex.fmt
-INPUT c:\Users\michalchrobot\Desktop\Thesis_writing\DTU Thesis Michal\Thesis.tex
+INPUT c:\Users\michalchrobot\Desktop\Thesis\Thesis_writing\DTU Thesis Michal\Thesis.tex
 OUTPUT Thesis.log
 INPUT .\preamble\static.tex
 INPUT .\preamble\static.tex
