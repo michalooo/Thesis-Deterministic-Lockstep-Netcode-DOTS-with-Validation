@@ -127,6 +127,14 @@ public static class RpcUtils
             writer.WriteInt((int) rpcMessage.inputs[i].y);
         }
         writer.WriteInt(rpcMessage.tick);
+        
+        if (writer.HasFailedWrites) // check out
+        {
+            m_Driver.AbortSend(writer);
+            throw new InvalidOperationException("Driver has failed writes.: " +
+                                                writer.Capacity); //driver too small for the schema of this rpc
+        }
+        
         m_Driver.EndSend(writer);
         Debug.Log("RPC with players input send from server");
     }
@@ -177,6 +185,14 @@ public static class RpcUtils
         }
         writer.WriteInt(rpcMessage.tickrate);
         writer.WriteInt(rpcMessage.connectionID);
+        
+        if (writer.HasFailedWrites) // check out
+        {
+            m_Driver.AbortSend(writer);
+            throw new InvalidOperationException("Driver has failed writes.: " +
+                                                writer.Capacity); //driver too small for the schema of this rpc
+        }
+        
         m_Driver.EndSend(writer);
         Debug.Log("RPC with start game request send from server");
     }
