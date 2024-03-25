@@ -7,6 +7,7 @@ using UnityEngine.SceneManagement;
 // This is the script responsible for handling the client side of the network, with connections to server etc
 
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
+[UpdateInGroup(typeof(ConnectionHandleSystemGroup))]
 public partial class ClientBehaviour : SystemBase
 {
     public NetworkDriver m_Driver;

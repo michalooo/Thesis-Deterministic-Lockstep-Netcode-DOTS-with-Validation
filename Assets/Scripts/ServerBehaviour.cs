@@ -14,6 +14,7 @@ public struct PlayerInputData
 }
 
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
+[UpdateInGroup(typeof(ConnectionHandleSystemGroup))]
 public partial class ServerBehaviour : SystemBase
 {
     NetworkDriver m_Driver;

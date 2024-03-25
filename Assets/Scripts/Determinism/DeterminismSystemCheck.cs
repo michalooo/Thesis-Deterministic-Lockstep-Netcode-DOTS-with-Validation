@@ -3,6 +3,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Transforms;
 
+[UpdateInGroup(typeof(DeterminismSystemGroup))]
 public partial class DeterminismCheckSystem : SystemBase
 {
     NativeArray<ulong> resultsArray;

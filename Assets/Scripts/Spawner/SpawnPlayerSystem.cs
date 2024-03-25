@@ -50,10 +50,7 @@ public struct CommandTarget : IComponentData
 public struct GhostOwnerIsLocal : IComponentData, IEnableableComponent
 {}
 
-
-
-[UpdateAfter(typeof(ClientBehaviour))]
-[WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
+[UpdateInGroup(typeof(InputGatherSystemGroup))]
     public partial class SpawnPlayerSystem : SystemBase
     {
         protected override void OnCreate()

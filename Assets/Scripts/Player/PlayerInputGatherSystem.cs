@@ -2,8 +2,8 @@ using Unity.Entities;
 using UnityEngine;
 
 // This system is responsible for gathering this player's input and storing it in the PlayerInputData component
-[UpdateAfter(typeof(PlayerUpdateSystem))]
-[WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
+[UpdateInGroup(typeof(InputGatherSystemGroup))]
+[UpdateAfter(typeof(SpawnPlayerSystem))]
 public partial class PlayerInputGatherAndSendSystem : SystemBase
 {
     

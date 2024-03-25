@@ -7,8 +7,7 @@ using UnityEngine;
 
 // This system is responsible for updating all of players positions based on their input component (updated by the server) if they are spawned and if
 // UpdatePlayerPosition component is enabled. After updating those positions this component will be disabled
-[UpdateAfter(typeof(SpawnPlayerSystem))]
-[WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
+[UpdateInGroup(typeof(MovementSystemGroup))]
 public partial class PlayerUpdateSystem : SystemBase
 {
     protected override void OnCreate()
