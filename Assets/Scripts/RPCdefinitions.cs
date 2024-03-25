@@ -22,7 +22,7 @@ public static class RpcDefinitions //can be deleted
 
     // RPC that server sends to all clients at the start of the game, it contains info about all players network IDs so the corresponding
     // connections entities can be created. Also contains information about expected tickRate
-    public struct RpcStartGameAndSpawnPlayers //change name
+    public struct RpcStartGameAndSpawnPlayers: INetcodeRPC //change name
     {
         public RpcID id;
         public NativeList<int> networkIDs;
@@ -181,7 +181,6 @@ public static class RpcUtils
         m_Driver.BeginSend(connection, out var writer);
         writer.WriteInt((int) rpcMessage.id);
         writer.WriteInt(rpcMessage.networkIDs.Length);
-        // Debug.Log("networdkID" + initialPositions.Length);
         for (int i = 0; i < rpcMessage.networkIDs.Length; i++)
         {
             writer.WriteInt(rpcMessage.networkIDs[i]);
