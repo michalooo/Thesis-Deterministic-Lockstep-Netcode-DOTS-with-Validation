@@ -22,10 +22,11 @@ public static class RpcDefinitions //can be deleted
 
     // RPC that server sends to all clients at the start of the game, it contains info about all players network IDs so the corresponding
     // connections entities can be created. Also contains information about expected tickRate
-    public struct RpcStartGameAndSpawnPlayers: INetcodeRPC//change name
+    public struct RpcStartGameAndSpawnPlayers //change name
     {
         public RpcID id;
         public NativeList<int> networkIDs;
+        public NativeList<Vector3> initialPositions;
         public int tickrate;
         public int connectionID; //networkID
         
@@ -166,12 +167,13 @@ public static class RpcUtils
     }
     
     // RPC serialization method that is used by the server to send request to start game to the clients and the initial state of the game
-    public static void SendRPCWithStartGameRequest(NetworkDriver m_Driver, NetworkConnection connection, NativeList<int> networkIDs, int tickRate, int connectionID)
+    public static void SendRPCWithStartGameRequest(NetworkDriver m_Driver, NetworkConnection connection, NativeList<int> networkIDs, NativeList<Vector3> initialPositions, int tickRate, int connectionID)
     {
         var rpcMessage = new RpcDefinitions.RpcStartGameAndSpawnPlayers()
         {
             id = RpcDefinitions.RpcID.StartDeterministicSimulation,
             networkIDs = networkIDs,
+            initialPositions = initialPositions,
             tickrate = tickRate,
             connectionID = connectionID,
         };
@@ -179,9 +181,13 @@ public static class RpcUtils
         m_Driver.BeginSend(connection, out var writer);
         writer.WriteInt((int) rpcMessage.id);
         writer.WriteInt(rpcMessage.networkIDs.Length);
+        // Debug.Log("networdkID" + initialPositions.Length);
         for (int i = 0; i < rpcMessage.networkIDs.Length; i++)
         {
             writer.WriteInt(rpcMessage.networkIDs[i]);
+            writer.WriteFloat(rpcMessage.initialPositions[i].x);
+            writer.WriteFloat(rpcMessage.initialPositions[i].y);
+            writer.WriteFloat(rpcMessage.initialPositions[i].z);
         }
         writer.WriteInt(rpcMessage.tickrate);
         writer.WriteInt(rpcMessage.connectionID);
@@ -205,10 +211,12 @@ public static class RpcUtils
         int count = stream.ReadInt();
 
         rpcMessage.networkIDs = new NativeList<int>(count, Allocator.Temp);
+        rpcMessage.initialPositions = new NativeList<Vector3>(count, Allocator.Temp);
 
         for (int i = 0; i < count; i++)
         {
             rpcMessage.networkIDs.Add(stream.ReadInt());
+            rpcMessage.initialPositions.Add(new Vector3(stream.ReadFloat(), stream.ReadFloat(), stream.ReadFloat()));
         }
 
         rpcMessage.tickrate = stream.ReadInt();

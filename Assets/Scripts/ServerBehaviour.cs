@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Networking.Transport;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -23,7 +22,7 @@ public partial class ServerBehaviour : SystemBase
     
     private Dictionary<int, List<PlayerInputData>> everyTickInputBuffer;
 
-    private int tickRate = 2;
+    private int tickRate = 30;
     private int currentTick = 1;
     NativeList<Vector2> m_PlayerInputs;
 
@@ -61,19 +60,6 @@ public partial class ServerBehaviour : SystemBase
     {
         m_Driver.ScheduleUpdate().Complete();
         
-        //test
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            foreach (var connection in m_Connections)
-            {
-                // Collect player data
-                CollectInitialPlayerData();
-
-                // Send RPC with player data to all clients
-                SendRPCtoStartGame();
-            }
-        }
-    
         // Clean up connections.
         for (int i = 0; i < m_Connections.Length; i++)
         {
@@ -83,7 +69,6 @@ public partial class ServerBehaviour : SystemBase
                 i--;
             }
         }
-
 
         if (SceneManager.GetActiveScene().name != "Game") // We are not accepting new connections while in game
         {
@@ -95,7 +80,6 @@ public partial class ServerBehaviour : SystemBase
                 Debug.Log("Accepted a connection.");
             }
         }
-        
     
         for (int i = 0; i < m_Connections.Length; i++)
         {
@@ -113,6 +97,19 @@ public partial class ServerBehaviour : SystemBase
                         m_Connections[i] = default;
                         break;
                 }
+            }
+        }
+        
+        //test
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            if (SceneManager.GetActiveScene().name == "Loading")
+            {
+                // Collect player data
+                CollectInitialPlayerData();
+
+                // Send RPC with player data to all clients
+                SendRPCtoStartGame();
             }
         }
     }
@@ -149,9 +146,16 @@ public partial class ServerBehaviour : SystemBase
     
     private void SendRPCtoStartGame()
     {
+        Debug.Log(m_NetworkIDs.Length + "networkidlength");
+        NativeList<Vector3> spawnPositions = new NativeList<Vector3>(m_NetworkIDs.Length, Allocator.Temp);
+        for (int j = 0; j < m_NetworkIDs.Length; j++) // Generate initial positions
+        {
+            spawnPositions.Add(new Vector3(10 + Random.Range(-5f, 5f),1,10 + Random.Range(-3f, 3f)));
+        }
+        Debug.Log(spawnPositions.Length + "spawnposlength");
         for (int i = 0; i < m_Connections.Length; i++)
         {
-            RpcUtils.SendRPCWithStartGameRequest(m_Driver, m_Connections[i], m_NetworkIDs, tickRate, i+1);
+            RpcUtils.SendRPCWithStartGameRequest(m_Driver, m_Connections[i], m_NetworkIDs, spawnPositions, tickRate, i+1);
         }
     }
     

@@ -21,11 +21,8 @@ public partial class PlayerUpdateSystem : SystemBase
         var commandBuffer = new EntityCommandBuffer(Allocator.Temp);
         foreach (var (commandTaget, playerInputDataToUse, connectionEntity) in SystemAPI.Query<RefRO<CommandTarget>, RefRO<PlayerInputDataToUse>>().WithAll<PlayerSpawned>().WithEntityAccess())
         {
-            Debug.Log($"Updating position for player of id: {playerInputDataToUse.ValueRO.playerNetworkId}");
             int horizontalInput = playerInputDataToUse.ValueRO.horizontalInput;
             int verticalInput = playerInputDataToUse.ValueRO.verticalInput;
-                
-            Debug.Log("horizontalInput: " + horizontalInput + " verticalInput: " + verticalInput);
                 
             LocalToWorld targetTransform = SystemAPI.GetComponent<LocalToWorld>(commandTaget.ValueRO.targetEntity);
             float3 targetPosition = targetTransform.Position;

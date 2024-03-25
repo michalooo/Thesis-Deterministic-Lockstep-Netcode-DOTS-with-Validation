@@ -64,6 +64,7 @@ public partial class ClientBehaviour : SystemBase
                 UpdatePlayersData(rpcUpdatePLayers);
                 break;
             case RpcDefinitions.RpcID.StartDeterministicSimulation:
+                Debug.Log("Starting game rpc");
                 var rpcStartGame = RpcUtils.DeserializeServerStartGameRpc(stream);
                 StartGame(rpcStartGame);
                 break;
@@ -84,7 +85,6 @@ public partial class ClientBehaviour : SystemBase
             {
                 // Create a new entity
                 Entity newEntity = EntityManager.CreateEntity();
-                Debug.Log("New entity created");
 
                 // Set the PlayerInputData component for the entity
                 EntityManager.AddComponentData(newEntity, new PlayerInputDataToUse
@@ -92,6 +92,7 @@ public partial class ClientBehaviour : SystemBase
                     playerNetworkId = rpc.networkIDs[i],
                     horizontalInput = 0, 
                     verticalInput = 0,
+                    initialPosition = rpc.initialPositions[i]
                 });
                 EntityManager.AddComponentData(newEntity, new PlayerInputDataToSend
                 {
