@@ -23,7 +23,7 @@ public partial class ServerBehaviour : SystemBase
     
     private Dictionary<int, List<PlayerInputData>> everyTickInputBuffer;
 
-    private int tickRate = 30;
+    private int tickRate = 2;
     private int currentTick = 1;
     NativeList<Vector2> m_PlayerInputs;
 
@@ -122,7 +122,7 @@ public partial class ServerBehaviour : SystemBase
         var id = (RpcDefinitions.RpcID) stream.ReadInt();
         switch (id)
         {
-            case RpcDefinitions.RpcID.PlayerDataUpdate:
+            case RpcDefinitions.RpcID.SendPlayerInputToServer:
                 var rpc = RpcUtils.DeserializeClientUpdatePlayerRPC(stream);
                 SaveTheData(rpc);
                 CheckIfAllDataReceivedAndSendToClients();

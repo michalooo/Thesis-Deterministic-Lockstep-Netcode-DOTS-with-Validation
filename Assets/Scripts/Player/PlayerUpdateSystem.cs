@@ -19,26 +19,23 @@ public partial class PlayerUpdateSystem : SystemBase
     protected override void OnUpdate()
     {
         var commandBuffer = new EntityCommandBuffer(Allocator.Temp);
-        
-        Entities.WithName("UpdatePlayersPositions")
-            .WithAll<PlayerInputDataToUse, PlayerSpawned, CommandTarget>()
-            .ForEach((Entity connection, ref PlayerInputDataToUse inputData, ref CommandTarget target) =>
-            {
-                Debug.Log($"Updating position for player of id: {inputData.playerNetworkId}");
-                int horizontalInput = inputData.horizontalInput;
-                int verticalInput = inputData.verticalInput;
+        foreach (var (commandTaget, playerInputDataToUse, connectionEntity) in SystemAPI.Query<RefRO<CommandTarget>, RefRO<PlayerInputDataToUse>>().WithAll<PlayerSpawned>().WithEntityAccess())
+        {
+            Debug.Log($"Updating position for player of id: {playerInputDataToUse.ValueRO.playerNetworkId}");
+            int horizontalInput = playerInputDataToUse.ValueRO.horizontalInput;
+            int verticalInput = playerInputDataToUse.ValueRO.verticalInput;
                 
-                Debug.Log("horizontalInput: " + horizontalInput + " verticalInput: " + verticalInput);
+            Debug.Log("horizontalInput: " + horizontalInput + " verticalInput: " + verticalInput);
                 
-                LocalToWorld targetTransform = SystemAPI.GetComponent<LocalToWorld>(target.targetEntity);
-                float3 targetPosition = targetTransform.Position;
-                targetPosition.x += horizontalInput;
-                targetPosition.z += verticalInput;
+            LocalToWorld targetTransform = SystemAPI.GetComponent<LocalToWorld>(commandTaget.ValueRO.targetEntity);
+            float3 targetPosition = targetTransform.Position;
+            targetPosition.x += horizontalInput;
+            targetPosition.z += verticalInput;
 
-                commandBuffer.SetComponent(target.targetEntity, LocalTransform.FromPosition(targetPosition));
+            commandBuffer.SetComponent(commandTaget.ValueRO.targetEntity, LocalTransform.FromPosition(targetPosition));
                 
-                commandBuffer.SetComponentEnabled<PlayerInputDataToUse>(connection, false);
-            }).Run();
+            commandBuffer.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity, false);
+        }
         
         commandBuffer.Playback(EntityManager);
     }

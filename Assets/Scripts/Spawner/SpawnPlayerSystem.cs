@@ -65,21 +65,20 @@ public struct GhostOwnerIsLocal : IComponentData, IEnableableComponent
             var prefab = SystemAPI.GetSingleton<Spawner>().Player;
             var commandBuffer = new EntityCommandBuffer(Allocator.Temp);
             
-            Entities.WithName("SpawnPlayers").WithNone<PlayerSpawned, PlayerInputDataToSend>().WithAll<PlayerInputDataToUse>().ForEach(
-                    (Entity connectionEntity, ref PlayerInputDataToUse inputData) =>
-                    {
-                        Debug.Log($"Spawning player for connection {inputData.playerNetworkId}");
+            foreach (var (inputDataToUse, connectionEntity) in SystemAPI.Query<RefRW<PlayerInputDataToUse>>().WithNone<PlayerSpawned, PlayerInputDataToSend>().WithEntityAccess())
+            {
+                Debug.Log($"Spawning player for connection {inputDataToUse.ValueRO.playerNetworkId}");
                         
-                        commandBuffer.AddComponent<PlayerSpawned>(connectionEntity);
-                        var player = commandBuffer.Instantiate(prefab);
-                        commandBuffer.AddComponent(connectionEntity, new CommandTarget(){targetEntity = player});
-                        commandBuffer.SetComponent(player, LocalTransform.FromPosition(10 + Random.Range(-5f, 5f),1,10 + Random.Range(-3f, 3f)));
-                        commandBuffer.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity, false);
-                        // Add the player to the linked entity group on the connection so it is destroyed
-                        // automatically on disconnect (destroyed with connection entity destruction)
-                        // commandBuffer.AddBuffer<LinkedEntityGroup>(connectionEntity);
-                        // commandBuffer.AppendToBuffer(connectionEntity, new LinkedEntityGroup{Value = player});
-                    }).Run();
+                commandBuffer.AddComponent<PlayerSpawned>(connectionEntity);
+                var player = commandBuffer.Instantiate(prefab);
+                commandBuffer.AddComponent(connectionEntity, new CommandTarget(){targetEntity = player});
+                commandBuffer.SetComponent(player, LocalTransform.FromPosition(10 + Random.Range(-5f, 5f),1,10 + Random.Range(-3f, 3f)));
+                commandBuffer.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity, false);
+                // Add the player to the linked entity group on the connection so it is destroyed
+                // automatically on disconnect (destroyed with connection entity destruction)
+                // commandBuffer.AddBuffer<LinkedEntityGroup>(connectionEntity);
+                // commandBuffer.AppendToBuffer(connectionEntity, new LinkedEntityGroup{Value = player});
+            }
             
             commandBuffer.Playback(EntityManager);
         }

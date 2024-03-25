@@ -28,10 +28,10 @@ public class MenuHandler : MonoBehaviour
     {
         Debug.Log($"[ConnectToServer]");
         var client = CreateClientWorld("ClientWorld");
+        DestroyLocalSimulationWorld();
         
         SceneManager.LoadScene("Loading");
         
-        DestroyLocalSimulationWorld();
         World.DefaultGameObjectInjectionWorld ??= client;
     }
     

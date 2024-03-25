@@ -59,11 +59,11 @@ public partial class ClientBehaviour : SystemBase
         var id = (RpcDefinitions.RpcID) stream.ReadInt();
         switch (id)
         {
-            case RpcDefinitions.RpcID.PlayersDataUpdate:
+            case RpcDefinitions.RpcID.BroadcastAllPlayersInputs:
                 var rpcUpdatePLayers = RpcUtils.DeserializeServerUpdatePlayersRPC(stream);
                 UpdatePlayersData(rpcUpdatePLayers);
                 break;
-            case RpcDefinitions.RpcID.StartGameAndSpawnPlayers:
+            case RpcDefinitions.RpcID.StartDeterministicSimulation:
                 var rpcStartGame = RpcUtils.DeserializeServerStartGameRpc(stream);
                 StartGame(rpcStartGame);
                 break;
@@ -100,7 +100,7 @@ public partial class ClientBehaviour : SystemBase
                 });
                 EntityManager.AddComponentData(newEntity, new TickRateInfo
                 {
-                    delayTime = 1 / rpc.tickrate,
+                    delayTime = 1f / rpc.tickrate,
                     tickRate = rpc.tickrate,
                     currentTick = 0
                 });

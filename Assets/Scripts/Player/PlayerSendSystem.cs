@@ -17,9 +17,10 @@ public partial class PlayerSendSystem : SystemBase
         foreach (var (tickRateInfo, connectionEntity) in SystemAPI.Query<RefRW<TickRateInfo>>().WithAll<GhostOwnerIsLocal, PlayerSpawned>().WithDisabled<PlayerInputDataToSend>().WithEntityAccess())
         {
             tickRateInfo.ValueRW.delayTime -= deltaTime;
-            if (tickRateInfo.ValueRO.tickRate != 0 && tickRateInfo.ValueRO.delayTime <= 0)
+            if (tickRateInfo.ValueRO.delayTime < 0)
             {
-                tickRateInfo.ValueRW.delayTime = 1 / tickRateInfo.ValueRO.tickRate;
+                tickRateInfo.ValueRW.delayTime = 1f / tickRateInfo.ValueRO.tickRate; // check
+                //system group.tick, define systemGropu (PredictionSystemGroup)
                 EntityManager.SetComponentEnabled<PlayerInputDataToSend>(connectionEntity, true);
             }
         }

@@ -1,25 +1,35 @@
+using System;
 using Unity.Collections;
 using Unity.Networking.Transport;
 using UnityEngine;
 
-public static class RpcDefinitions
+public interface INetcodeRPC
+{
+    public static RpcDefinitions.RpcID GetID
+    {
+        get;
+    }
+}
+public static class RpcDefinitions //can be deleted
 {
     // Definition of different RPC types
     public enum RpcID
     {
-        StartGameAndSpawnPlayers,
-        PlayersDataUpdate,
-        PlayerDataUpdate
+        StartDeterministicSimulation,
+        BroadcastAllPlayersInputs,
+        SendPlayerInputToServer
     }
 
     // RPC that server sends to all clients at the start of the game, it contains info about all players network IDs so the corresponding
     // connections entities can be created. Also contains information about expected tickRate
-    public struct RpcStartGameAndSpawnPlayers
+    public struct RpcStartGameAndSpawnPlayers: INetcodeRPC//change name
     {
         public RpcID id;
         public NativeList<int> networkIDs;
         public int tickrate;
-        public int connectionID;
+        public int connectionID; //networkID
+        
+        public static RpcID GetID => RpcID.StartDeterministicSimulation; // check out
     }
     
     // RPC that server sends to all clients after reciving inputs from all of them. It contains info about all players network IDs so they can be identified
@@ -38,7 +48,7 @@ public static class RpcDefinitions
         public RpcID id;
         public Vector2 playerInput;  // Horizontal + Vertical input
         public int currentTick;
-        public int connectionID;
+        public int connectionID; // remove
     }
 }
 
@@ -54,7 +64,7 @@ public static class RpcUtils
     {
         var rpcMessage = new RpcDefinitions.RpcPlayerDataUpdate
         {
-            id = RpcDefinitions.RpcID.PlayerDataUpdate,
+            id = RpcDefinitions.RpcID.SendPlayerInputToServer,
             playerInput = new Vector2(playerInput.horizontalInput, playerInput.verticalInput),
             currentTick = tickNumber,
             connectionID = owner.networkId
@@ -66,6 +76,13 @@ public static class RpcUtils
         writer.WriteInt((int) rpcMessage.playerInput.y); // Vertical input
         writer.WriteInt(rpcMessage.currentTick);
         writer.WriteInt(rpcMessage.connectionID);
+        if (writer.HasFailedWrites) // check out
+        {
+            mDriver.AbortSend(writer);
+            throw new InvalidOperationException("Driver has failed writes.: " +
+                                                writer.Capacity); //driver too small for the schema of this rpc
+        }
+
         mDriver.EndSend(writer);
         Debug.Log("RPC send from client with input values");
     }
@@ -76,7 +93,7 @@ public static class RpcUtils
         RpcDefinitions.RpcPlayerDataUpdate rpcMessage = new RpcDefinitions.RpcPlayerDataUpdate
         {
             // ID is read in the scope above in order to use a proper deserializer
-            id = RpcDefinitions.RpcID.PlayerDataUpdate,
+            id = RpcDefinitions.RpcID.SendPlayerInputToServer,
             playerInput = new Vector2(stream.ReadInt(), stream.ReadInt()),
             currentTick = stream.ReadInt(),
             connectionID = stream.ReadInt()
@@ -91,7 +108,7 @@ public static class RpcUtils
     {
         var rpcMessage = new RpcDefinitions.RpcPlayersDataUpdate
         {
-            id = RpcDefinitions.RpcID.PlayersDataUpdate,
+            id = RpcDefinitions.RpcID.BroadcastAllPlayersInputs,
             networkIDs = networkIDs,
             inputs = inputs,
             tick = tickRate
@@ -145,7 +162,7 @@ public static class RpcUtils
     {
         var rpcMessage = new RpcDefinitions.RpcStartGameAndSpawnPlayers()
         {
-            id = RpcDefinitions.RpcID.StartGameAndSpawnPlayers,
+            id = RpcDefinitions.RpcID.StartDeterministicSimulation,
             networkIDs = networkIDs,
             tickrate = tickRate,
             connectionID = connectionID,
