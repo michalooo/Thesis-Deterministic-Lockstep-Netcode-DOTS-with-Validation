@@ -1,26 +1,29 @@
-// using Unity.Networking.Transport;
-// using Unity.Networking.Transport.Utilities;
-//
-// public static void RefreshSimulationPipelineParametersLive(in SimulatorUtility.Parameters parameters,
-//     ref NetworkDriver driver)
-// {
-//     var driverCurrentSettings = driver.CurrentSettings;
-//     var simParams = driverCurrentSettings.GetSimulatorStageParameters();
-//     simParams.Mode = parameters.Mode;
-//     simParams.PacketDelayMs = parameters.PacketDelayMs;
-//     simParams.PacketJitterMs = parameters.PacketJitterMs;
-//     simParams.PacketDropPercentage = 0; // // Set this to zero to avoid applying packet loss twice.
-//     simParams.PacketDropInterval = parameters.PacketDropInterval;
-//     simParams.PacketDuplicationPercentage = parameters.PacketDuplicationPercentage;
-//     simParams.FuzzFactor = parameters.FuzzFactor;
-//     simParams.FuzzOffset = parameters.FuzzOffset;
-//     driver.ModifySimulatorStageParameters(simParams);
-//
-//     // This new simulator has less features, but it does allow us to drop ALL packets (even low-level connection ones),
-//     // allowing us to test timeouts etc. Setting it instead of on the "light simulator".
-//     driver.ModifyNetworkSimulatorParameters(new NetworkSimulatorParameter
-//     {
-//         ReceivePacketLossPercent = parameters.PacketDropPercentage,
-//         SendPacketLossPercent = parameters.PacketDropPercentage,
-//     });
-// }
+using Unity.Networking.Transport;
+using Unity.Networking.Transport.Utilities;
+
+public static class NetworkSimulatorSettings
+{
+    public static void RefreshSimulationPipelineParametersLive(in SimulatorUtility.Parameters parameters,
+        ref NetworkDriver driver)
+    {
+        var driverCurrentSettings = driver.CurrentSettings;
+        var simParams = driverCurrentSettings.GetSimulatorStageParameters();
+        simParams.Mode = parameters.Mode;
+        simParams.PacketDelayMs = parameters.PacketDelayMs;
+        simParams.PacketJitterMs = parameters.PacketJitterMs;
+        simParams.PacketDropPercentage = 0; // // Set this to zero to avoid applying packet loss twice.
+        simParams.PacketDropInterval = parameters.PacketDropInterval;
+        simParams.PacketDuplicationPercentage = parameters.PacketDuplicationPercentage;
+        simParams.FuzzFactor = parameters.FuzzFactor;
+        simParams.FuzzOffset = parameters.FuzzOffset;
+        driver.ModifySimulatorStageParameters(simParams);
+
+        // This new simulator has less features, but it does allow us to drop ALL packets (even low-level connection ones),
+        // allowing us to test timeouts etc. Setting it instead of on the "light simulator".
+        driver.ModifyNetworkSimulatorParameters(new NetworkSimulatorParameter
+        {
+            ReceivePacketLossPercent = parameters.PacketDropPercentage,
+            SendPacketLossPercent = parameters.PacketDropPercentage,
+        });
+    }
+}

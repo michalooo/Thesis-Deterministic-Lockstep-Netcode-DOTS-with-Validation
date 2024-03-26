@@ -30,6 +30,7 @@ struct TickRateInfo : IComponentData
 public struct NetworkConnectionReference : IComponentData
 {
     public NetworkDriver Driver;
+    public NetworkPipeline SimulatorPipeline;
     public NetworkConnection Connection;
 }
 

@@ -61,7 +61,7 @@ public static class RpcDefinitions //can be deleted
 public static class RpcUtils
 {
     // RPC serialization method that is used by the client to send its input to the server
-    public static void SendRPCWithPlayerInput(NetworkDriver mDriver, NetworkConnection connection, PlayerInputDataToSend playerInput, GhostOwner owner, int tickNumber)
+    public static void SendRPCWithPlayerInput(NetworkDriver mDriver, NetworkPipeline simulatorPipeline, NetworkConnection connection, PlayerInputDataToSend playerInput, GhostOwner owner, int tickNumber)
     {
         var rpcMessage = new RpcDefinitions.RpcPlayerDataUpdate
         {
@@ -71,7 +71,7 @@ public static class RpcUtils
             connectionID = owner.networkId
         };
         
-        mDriver.BeginSend(connection, out var writer);
+        mDriver.BeginSend(simulatorPipeline, connection, out var writer);
         writer.WriteInt((int) rpcMessage.id);
         writer.WriteInt((int) rpcMessage.playerInput.x); // Horizontal input
         writer.WriteInt((int) rpcMessage.playerInput.y); // Vertical input
@@ -105,7 +105,7 @@ public static class RpcUtils
     }
     
     // RPC serialization method that is used by the server to send inputs off all clients to the server
-    public static void SendRPCWithPlayersInput(NetworkDriver m_Driver, NetworkConnection connection, NativeList<int> networkIDs, NativeList<Vector2> inputs, int tickRate)
+    public static void SendRPCWithPlayersInput(NetworkDriver mDriver, NetworkPipeline simulatorPipeline, NetworkConnection connection, NativeList<int> networkIDs, NativeList<Vector2> inputs, int tickRate)
     {
         var rpcMessage = new RpcDefinitions.RpcPlayersDataUpdate
         {
@@ -115,7 +115,7 @@ public static class RpcUtils
             tick = tickRate
         };
         
-        m_Driver.BeginSend(connection, out var writer);
+        mDriver.BeginSend(connection, out var writer);
         writer.WriteInt((int) rpcMessage.id);
         writer.WriteInt(rpcMessage.networkIDs.Length);
         for (int i = 0; i < rpcMessage.networkIDs.Length; i++)
@@ -131,12 +131,12 @@ public static class RpcUtils
         
         if (writer.HasFailedWrites) // check out
         {
-            m_Driver.AbortSend(writer);
+            mDriver.AbortSend(writer);
             throw new InvalidOperationException("Driver has failed writes.: " +
                                                 writer.Capacity); //driver too small for the schema of this rpc
         }
         
-        m_Driver.EndSend(writer);
+        mDriver.EndSend(writer);
         Debug.Log("RPC with players input send from server");
     }
     
@@ -167,7 +167,7 @@ public static class RpcUtils
     }
     
     // RPC serialization method that is used by the server to send request to start game to the clients and the initial state of the game
-    public static void SendRPCWithStartGameRequest(NetworkDriver m_Driver, NetworkConnection connection, NativeList<int> networkIDs, NativeList<Vector3> initialPositions, int tickRate, int connectionID)
+    public static void SendRPCWithStartGameRequest(NetworkDriver mDriver, NetworkPipeline simulatorPipeline, NetworkConnection connection, NativeList<int> networkIDs, NativeList<Vector3> initialPositions, int tickRate, int connectionID)
     {
         var rpcMessage = new RpcDefinitions.RpcStartGameAndSpawnPlayers()
         {
@@ -178,7 +178,7 @@ public static class RpcUtils
             connectionID = connectionID,
         };
         
-        m_Driver.BeginSend(connection, out var writer);
+        mDriver.BeginSend(connection, out var writer);
         writer.WriteInt((int) rpcMessage.id);
         writer.WriteInt(rpcMessage.networkIDs.Length);
         for (int i = 0; i < rpcMessage.networkIDs.Length; i++)
@@ -193,12 +193,12 @@ public static class RpcUtils
         
         if (writer.HasFailedWrites) // check out
         {
-            m_Driver.AbortSend(writer);
+            mDriver.AbortSend(writer);
             throw new InvalidOperationException("Driver has failed writes.: " +
                                                 writer.Capacity); //driver too small for the schema of this rpc
         }
         
-        m_Driver.EndSend(writer);
+        mDriver.EndSend(writer);
         Debug.Log("RPC with start game request send from server");
     }
 

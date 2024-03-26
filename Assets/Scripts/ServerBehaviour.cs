@@ -19,12 +19,13 @@ public struct PlayerInputData
 public partial class ServerBehaviour : SystemBase
 {
     NetworkDriver m_Driver;
+    NetworkPipeline simulatorPipeline;
     NativeList<NetworkConnection> m_Connections;
     NativeList<int> m_NetworkIDs;
     
     private Dictionary<int, List<PlayerInputData>> everyTickInputBuffer;
 
-    private int tickRate = 1;
+    private int tickRate = 30;
     private int currentTick = 1;
     NativeList<Vector2> m_PlayerInputs;
 
@@ -35,7 +36,7 @@ public partial class ServerBehaviour : SystemBase
     [Tooltip("Whether to apply simulation to received or sent packets (defaults to both).")]
     ApplyMode mode = ApplyMode.AllPackets;
     [Tooltip("Fixed delay in milliseconds to apply to all packets which pass through.")]
-    int packetDelayMs = 5000;
+    int packetDelayMs = 0;
     [Tooltip("Variance of the delay that gets added to all packets that pass through. For example, setting this value to 5 will result in the delay being a random value within 5 milliseconds of the value set with PacketDelayMs.")]
     int packetJitterMs = 0;
     [Tooltip("Fixed interval to drop packets on. This is most suitable for tests where predictable behaviour is desired, as every X-th packet will be dropped. For example, if the value is 5 every fifth packet is dropped.")]
@@ -59,7 +60,7 @@ public partial class ServerBehaviour : SystemBase
             packetDuplicationPercentage: packetDuplicationPercentage);
         
         m_Driver = NetworkDriver.Create(settings);
-        m_Driver.CreatePipeline(typeof(SimulatorPipelineStage));
+        simulatorPipeline = m_Driver.CreatePipeline(typeof(SimulatorPipelineStage));
         
         m_Connections = new NativeList<NetworkConnection>(16, Allocator.Persistent);
         m_NetworkIDs = new NativeList<int>(16, Allocator.Persistent);
@@ -185,7 +186,7 @@ public partial class ServerBehaviour : SystemBase
         }
         for (int i = 0; i < m_Connections.Length; i++)
         {
-            RpcUtils.SendRPCWithStartGameRequest(m_Driver, m_Connections[i], m_NetworkIDs, spawnPositions, tickRate, i+1);
+            RpcUtils.SendRPCWithStartGameRequest(m_Driver, simulatorPipeline, m_Connections[i], m_NetworkIDs, spawnPositions, tickRate, i+1);
         }
     }
     
@@ -193,7 +194,7 @@ public partial class ServerBehaviour : SystemBase
     {
         for (int i = 0; i < m_Connections.Length; i++)
         {
-            RpcUtils.SendRPCWithPlayersInput(m_Driver, m_Connections[i], networkIDs, playerInputs, tickRate);
+            RpcUtils.SendRPCWithPlayersInput(m_Driver, simulatorPipeline, m_Connections[i], networkIDs, playerInputs, tickRate);
         }
     }
     

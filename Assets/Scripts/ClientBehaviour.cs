@@ -11,8 +11,10 @@ using UnityEngine.SceneManagement;
 [UpdateInGroup(typeof(ConnectionHandleSystemGroup))]
 public partial class ClientBehaviour : SystemBase
 {
-    public NetworkDriver m_Driver;
+    NetworkDriver m_Driver;
     NetworkConnection m_Connection;
+    NetworkSettings clientSimulatorParameters;
+    NetworkPipeline simulatorPipeline;
     
     [Tooltip("The maximum amount of packets the pipeline can keep track of. This used when a packet is delayed, the packet is stored in the pipeline processing buffer and can be later brought back.")]
     int maxPacketCount = 1000;
@@ -21,7 +23,7 @@ public partial class ClientBehaviour : SystemBase
     [Tooltip("Whether to apply simulation to received or sent packets (defaults to both).")]
     ApplyMode mode = ApplyMode.AllPackets;
     [Tooltip("Fixed delay in milliseconds to apply to all packets which pass through.")]
-    int packetDelayMs = 5000;
+    int packetDelayMs = 0;
     [Tooltip("Variance of the delay that gets added to all packets that pass through. For example, setting this value to 5 will result in the delay being a random value within 5 milliseconds of the value set with PacketDelayMs.")]
     int packetJitterMs = 0;
     [Tooltip("Fixed interval to drop packets on. This is most suitable for tests where predictable behaviour is desired, as every X-th packet will be dropped. For example, if the value is 5 every fifth packet is dropped.")]
@@ -33,8 +35,8 @@ public partial class ClientBehaviour : SystemBase
     
     protected override void OnCreate()
     {
-        var settings = new NetworkSettings();
-        settings.WithSimulatorStageParameters(
+        clientSimulatorParameters = new NetworkSettings();
+        clientSimulatorParameters.WithSimulatorStageParameters(
             maxPacketCount: maxPacketCount,
             maxPacketSize: maxPacketSize,
             mode: mode,
@@ -44,8 +46,8 @@ public partial class ClientBehaviour : SystemBase
             packetDropPercentage: packetDropPercentage,
             packetDuplicationPercentage: packetDuplicationPercentage);
 
-        m_Driver = NetworkDriver.Create(settings);
-        m_Driver.CreatePipeline(typeof(SimulatorPipelineStage));
+        m_Driver = NetworkDriver.Create(clientSimulatorParameters);
+        simulatorPipeline = m_Driver.CreatePipeline(typeof(SimulatorPipelineStage));
         
         var endpoint = NetworkEndpoint.LoopbackIpv4.WithPort(7777);
         m_Connection = m_Driver.Connect(endpoint);
@@ -143,6 +145,7 @@ public partial class ClientBehaviour : SystemBase
                 EntityManager.AddComponentData(newEntity, new NetworkConnectionReference
                 {
                     Driver = m_Driver,
+                    SimulatorPipeline = simulatorPipeline,
                     Connection = m_Connection
                 });
                 EntityManager.AddComponentData(newEntity, new GhostOwnerIsLocal());
