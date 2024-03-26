@@ -1,3 +1,4 @@
+using System;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
@@ -89,7 +90,14 @@ public partial class ClientBehaviour : SystemBase
 
     void HandleRpc(DataStreamReader stream)
     {
-        var id = (RpcDefinitions.RpcID) stream.ReadInt();
+        var id = (RpcDefinitions.RpcID) stream.ReadInt(); // problem here is if we would like to unread this so ideally we just want to peek the value
+        if (!Enum.IsDefined(typeof(RpcDefinitions.RpcID), id))
+        {
+            Debug.LogError("Received invalid RPC ID: " + id);
+            return;
+        }
+        
+        
         switch (id)
         {
             case RpcDefinitions.RpcID.BroadcastAllPlayersInputs:

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Entities;
@@ -5,6 +6,7 @@ using Unity.Networking.Transport;
 using Unity.Networking.Transport.Utilities;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Random = UnityEngine.Random;
 
 // This is the script responsible for handling the server side of the network, with connections etc
 
@@ -149,7 +151,13 @@ public partial class ServerBehaviour : SystemBase
     
     void HandleRpc(DataStreamReader stream)
     {
-        var id = (RpcDefinitions.RpcID) stream.ReadInt();
+        var id = (RpcDefinitions.RpcID) stream.ReadInt(); // problem here is if we would like to unread this so ideally we just want to peek the value
+        if (!Enum.IsDefined(typeof(RpcDefinitions.RpcID), id))
+        {
+            Debug.LogError("Received invalid RPC ID: " + id);
+            return;
+        }
+
         switch (id)
         {
             case RpcDefinitions.RpcID.SendPlayerInputToServer:
