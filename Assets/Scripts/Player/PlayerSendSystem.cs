@@ -2,6 +2,7 @@ using Unity.Entities;
 using UnityEngine;
 
 [UpdateInGroup(typeof(DeterminismSystemGroup))]
+[WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
 public partial class PlayerSendSystem : SystemBase
 {
     protected override void OnCreate()

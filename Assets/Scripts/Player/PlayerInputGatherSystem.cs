@@ -4,6 +4,7 @@ using UnityEngine;
 // This system is responsible for gathering this player's input and storing it in the PlayerInputData component
 [UpdateInGroup(typeof(InputGatherSystemGroup))]
 [UpdateAfter(typeof(SpawnPlayerSystem))]
+[WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
 public partial class PlayerInputGatherAndSendSystem : SystemBase
 {
     

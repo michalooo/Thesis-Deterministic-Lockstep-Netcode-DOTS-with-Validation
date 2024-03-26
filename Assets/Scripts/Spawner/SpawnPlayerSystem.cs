@@ -51,6 +51,7 @@ public struct GhostOwnerIsLocal : IComponentData, IEnableableComponent
 {}
 
 [UpdateInGroup(typeof(InputGatherSystemGroup))]
+[WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     public partial class SpawnPlayerSystem : SystemBase
     {
         protected override void OnCreate()

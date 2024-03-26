@@ -1,14 +1,11 @@
 using Unity.Entities;
 
 
-[WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
 public partial class InputGatherSystemGroup : ComponentSystemGroup { }
 
-[WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
 [UpdateAfter(typeof(InputGatherSystemGroup))]
 public partial class MovementSystemGroup : ComponentSystemGroup { }
 
-[WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
 [UpdateAfter(typeof(MovementSystemGroup))]
 public partial class DeterminismSystemGroup : ComponentSystemGroup //IRateManager How to implement?
 {
@@ -22,6 +19,27 @@ public partial class DeterminismSystemGroup : ComponentSystemGroup //IRateManage
 
 [UpdateBefore(typeof(InputGatherSystemGroup))]
 public partial class ConnectionHandleSystemGroup : ComponentSystemGroup { }
+
+
+
+
+
+
+
+public partial struct ManualSystemTicking : ISystem
+{
+
+    public void OnCreate(ref SystemState state)
+    {
+        var world = World.DefaultGameObjectInjectionWorld;
+
+        world.GetOrCreateSystem<InputGatherSystemGroup>();
+        world.GetOrCreateSystem<MovementSystemGroup>();
+        world.GetOrCreateSystem<DeterminismSystemGroup>();
+        world.GetOrCreateSystem<ConnectionHandleSystemGroup>();
+
+    }
+}
 
 // public partial struct ManualSystemTicking : ISystem
 // {

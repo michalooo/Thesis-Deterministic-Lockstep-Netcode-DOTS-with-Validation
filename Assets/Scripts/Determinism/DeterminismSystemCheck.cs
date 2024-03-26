@@ -4,6 +4,7 @@ using Unity.Entities;
 using Unity.Transforms;
 
 [UpdateInGroup(typeof(DeterminismSystemGroup))]
+[WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
 public partial class DeterminismCheckSystem : SystemBase
 {
     NativeArray<ulong> resultsArray;
