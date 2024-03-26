@@ -2,6 +2,7 @@ using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
 using Unity.Networking.Transport;
+using Unity.Networking.Transport.Utilities;
 using UnityEngine.SceneManagement;
 
 // This is the script responsible for handling the client side of the network, with connections to server etc
@@ -13,9 +14,38 @@ public partial class ClientBehaviour : SystemBase
     public NetworkDriver m_Driver;
     NetworkConnection m_Connection;
     
+    [Tooltip("The maximum amount of packets the pipeline can keep track of. This used when a packet is delayed, the packet is stored in the pipeline processing buffer and can be later brought back.")]
+    int maxPacketCount = 1000;
+    [Tooltip("The maximum size of a packet which the simulator stores. If a packet exceeds this size it will bypass the simulator.")]
+    int maxPacketSize = NetworkParameterConstants.MaxMessageSize;
+    [Tooltip("Whether to apply simulation to received or sent packets (defaults to both).")]
+    ApplyMode mode = ApplyMode.AllPackets;
+    [Tooltip("Fixed delay in milliseconds to apply to all packets which pass through.")]
+    int packetDelayMs = 5000;
+    [Tooltip("Variance of the delay that gets added to all packets that pass through. For example, setting this value to 5 will result in the delay being a random value within 5 milliseconds of the value set with PacketDelayMs.")]
+    int packetJitterMs = 0;
+    [Tooltip("Fixed interval to drop packets on. This is most suitable for tests where predictable behaviour is desired, as every X-th packet will be dropped. For example, if the value is 5 every fifth packet is dropped.")]
+    int packetDropInterval = 0;
+    [Tooltip("Percentage of packets that will be dropped.")]
+    int packetDropPercentage = 0;
+    [Tooltip("Percentage of packets that will be duplicated. Packets are duplicated at most once and will not be duplicated if they were first deemed to be dropped.")]
+    int packetDuplicationPercentage = 0;
+    
     protected override void OnCreate()
     {
-        m_Driver = NetworkDriver.Create();
+        var settings = new NetworkSettings();
+        settings.WithSimulatorStageParameters(
+            maxPacketCount: maxPacketCount,
+            maxPacketSize: maxPacketSize,
+            mode: mode,
+            packetDelayMs: packetDelayMs,
+            packetJitterMs: packetJitterMs,
+            packetDropInterval: packetDropInterval,
+            packetDropPercentage: packetDropPercentage,
+            packetDuplicationPercentage: packetDuplicationPercentage);
+
+        m_Driver = NetworkDriver.Create(settings);
+        m_Driver.CreatePipeline(typeof(SimulatorPipelineStage));
         
         var endpoint = NetworkEndpoint.LoopbackIpv4.WithPort(7777);
         m_Connection = m_Driver.Connect(endpoint);
