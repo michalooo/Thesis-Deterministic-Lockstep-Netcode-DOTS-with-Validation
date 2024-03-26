@@ -19,8 +19,7 @@ public partial class PlayerSendSystem : SystemBase
             tickRateInfo.ValueRW.delayTime -= deltaTime;
             if (tickRateInfo.ValueRO.delayTime < 0)
             {
-                tickRateInfo.ValueRW.delayTime = 1f / tickRateInfo.ValueRO.tickRate; // check
-                //system group.tick, define systemGropu (PredictionSystemGroup)
+                tickRateInfo.ValueRW.delayTime = 1f / tickRateInfo.ValueRO.tickRate;
                 EntityManager.SetComponentEnabled<PlayerInputDataToSend>(connectionEntity, true);
             }
         }

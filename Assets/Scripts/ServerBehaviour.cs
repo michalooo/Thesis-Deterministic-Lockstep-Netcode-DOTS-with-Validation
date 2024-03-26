@@ -24,7 +24,7 @@ public partial class ServerBehaviour : SystemBase
     
     private Dictionary<int, List<PlayerInputData>> everyTickInputBuffer;
 
-    private int tickRate = 30;
+    private int tickRate = 1;
     private int currentTick = 1;
     NativeList<Vector2> m_PlayerInputs;
 
@@ -219,7 +219,7 @@ public partial class ServerBehaviour : SystemBase
                 return; // Stop executing the function here, since we don't want to add the new inputData
             }
         }
-
+        
         everyTickInputBuffer[rpc.currentTick].Add(inputData);
     }
     

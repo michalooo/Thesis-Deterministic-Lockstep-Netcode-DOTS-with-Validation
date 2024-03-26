@@ -73,10 +73,11 @@ public struct GhostOwnerIsLocal : IComponentData, IEnableableComponent
                 commandBuffer.AddComponent(connectionEntity, new CommandTarget(){targetEntity = player});
                 commandBuffer.SetComponent(player, LocalTransform.FromPosition(inputDataToUse.ValueRO.initialPosition));
                 commandBuffer.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity, false);
+                
                 // Add the player to the linked entity group on the connection so it is destroyed
                 // automatically on disconnect (destroyed with connection entity destruction)
-                // commandBuffer.AddBuffer<LinkedEntityGroup>(connectionEntity);
-                // commandBuffer.AppendToBuffer(connectionEntity, new LinkedEntityGroup{Value = player});
+                commandBuffer.AddBuffer<LinkedEntityGroup>(connectionEntity);
+                commandBuffer.AppendToBuffer(connectionEntity, new LinkedEntityGroup{Value = player});
             }
             
             commandBuffer.Playback(EntityManager);

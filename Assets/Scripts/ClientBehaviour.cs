@@ -134,7 +134,7 @@ public partial class ClientBehaviour : SystemBase
                 {
                     delayTime = 1f / rpc.tickrate,
                     tickRate = rpc.tickrate,
-                    currentTick = 0
+                    currentTick = 1
                 });
                 EntityManager.AddComponentData(newEntity, new GhostOwner
                 {
