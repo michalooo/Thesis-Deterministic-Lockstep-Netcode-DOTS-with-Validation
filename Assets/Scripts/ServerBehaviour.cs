@@ -178,13 +178,11 @@ public partial class ServerBehaviour : SystemBase
     
     private void SendRPCtoStartGame()
     {
-        Debug.Log(m_NetworkIDs.Length + "networkidlength");
         NativeList<Vector3> spawnPositions = new NativeList<Vector3>(m_NetworkIDs.Length, Allocator.Temp);
         for (int j = 0; j < m_NetworkIDs.Length; j++) // Generate initial positions
         {
             spawnPositions.Add(new Vector3(10 + Random.Range(-5f, 5f),1,10 + Random.Range(-3f, 3f)));
         }
-        Debug.Log(spawnPositions.Length + "spawnposlength");
         for (int i = 0; i < m_Connections.Length; i++)
         {
             RpcUtils.SendRPCWithStartGameRequest(m_Driver, m_Connections[i], m_NetworkIDs, spawnPositions, tickRate, i+1);

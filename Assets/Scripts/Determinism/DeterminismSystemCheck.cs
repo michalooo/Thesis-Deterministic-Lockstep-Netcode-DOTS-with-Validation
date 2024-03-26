@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Jobs;
 using Unity.Transforms;
 
 [UpdateInGroup(typeof(DeterminismSystemGroup))]
@@ -14,7 +15,8 @@ public partial class DeterminismCheckSystem : SystemBase
     
     protected override void OnCreate()
     {
-        resultsArray = new NativeArray<ulong>(1000, Allocator.Persistent);
+        resultsArray = new NativeArray<ulong>(10000, Allocator.Persistent);
+        everyTickHashBuffer = new Dictionary<int, ulong>();
     }
     
     protected override void OnUpdate()
@@ -22,14 +24,14 @@ public partial class DeterminismCheckSystem : SystemBase
         m_Query = EntityManager.CreateEntityQuery(
             typeof(DeterministicSimulation)
         );
-
-        var job = new DeterminismCheckJob
+        
+        var job = new DeterminismCheckJob()
         {
             transform = GetComponentTypeHandle<LocalTransform>(true),
-            ResultsNativeArray = resultsArray // Pass the native array to the job
+            ResultsNativeArray = resultsArray
         };
-
-        job.Schedule(m_Query, Dependency).Complete();
+        var handle = job.ScheduleParallel(m_Query, this.Dependency);
+        handle.Complete();
         
         // Combine the results
         ulong hash = 0;
