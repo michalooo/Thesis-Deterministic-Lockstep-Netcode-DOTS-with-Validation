@@ -123,7 +123,7 @@ public partial class ClientBehaviour : SystemBase
         {
             SceneManager.LoadScene("Game");
             
-            for (int i = 0; i < rpc.networkIDs.Length; i++)
+            for (int i = 0; i < rpc.NetworkIDs.Length; i++)
             {
                 // Create a new entity
                 Entity newEntity = EntityManager.CreateEntity();
@@ -131,10 +131,10 @@ public partial class ClientBehaviour : SystemBase
                 // Set the PlayerInputData component for the entity
                 EntityManager.AddComponentData(newEntity, new PlayerInputDataToUse
                 {
-                    playerNetworkId = rpc.networkIDs[i],
+                    playerNetworkId = rpc.NetworkIDs[i],
                     horizontalInput = 0, 
                     verticalInput = 0,
-                    initialPosition = rpc.initialPositions[i]
+                    initialPosition = rpc.InitialPositions[i]
                 });
                 EntityManager.AddComponentData(newEntity, new PlayerInputDataToSend
                 {
@@ -143,13 +143,14 @@ public partial class ClientBehaviour : SystemBase
                 });
                 EntityManager.AddComponentData(newEntity, new TickRateInfo
                 {
-                    delayTime = 1f / rpc.tickrate,
-                    tickRate = rpc.tickrate,
-                    currentTick = 1
+                    delayTime = 1f / rpc.Tickrate,
+                    tickRate = rpc.Tickrate,
+                    currentTick = 1,
+                    hashForTheTick = 0
                 });
                 EntityManager.AddComponentData(newEntity, new GhostOwner
                 {
-                    networkId = rpc.networkIDs[i]
+                    networkId = rpc.NetworkIDs[i]
                 });
                 EntityManager.AddComponentData(newEntity, new NetworkConnectionReference
                 {
@@ -158,7 +159,7 @@ public partial class ClientBehaviour : SystemBase
                     Connection = m_Connection
                 });
                 EntityManager.AddComponentData(newEntity, new GhostOwnerIsLocal());
-                if(rpc.networkIDs[i] != rpc.connectionID)  EntityManager.SetComponentEnabled<GhostOwnerIsLocal>(newEntity, false);
+                if(rpc.NetworkIDs[i] != rpc.ConnectionID)  EntityManager.SetComponentEnabled<GhostOwnerIsLocal>(newEntity, false);
                 EntityManager.SetComponentEnabled<PlayerInputDataToSend>(newEntity, false);
             }
         }
@@ -170,8 +171,8 @@ public partial class ClientBehaviour : SystemBase
         // Update player data based on received RPC
         NativeList<int> networkIDs = new NativeList<int>(16, Allocator.Temp);
         NativeList<Vector2> inputs = new NativeList<Vector2>(16, Allocator.Temp);
-        networkIDs = rpc.networkIDs;
-        inputs = rpc.inputs;
+        networkIDs = rpc.NetworkIDs;
+        inputs = rpc.Inputs;
     
         // Update player cubes based on received data, I need a job that for each component of type Player will enable it and change input values there
         // Enable component on player which has info about current position of the player

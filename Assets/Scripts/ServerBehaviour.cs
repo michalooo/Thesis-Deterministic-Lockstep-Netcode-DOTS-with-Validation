@@ -26,6 +26,7 @@ public partial class ServerBehaviour : SystemBase
     NativeList<int> m_NetworkIDs;
     
     private Dictionary<int, List<PlayerInputData>> everyTickInputBuffer;
+    private Dictionary<int, List<ulong>> everyTickHashBuffer;
 
     private int tickRate = 30;
     private int currentTick = 1;
@@ -69,6 +70,7 @@ public partial class ServerBehaviour : SystemBase
         m_PlayerInputs = new NativeList<Vector2>(16, Allocator.Persistent);
         
         everyTickInputBuffer = new Dictionary<int, List<PlayerInputData>>();
+        everyTickHashBuffer = new Dictionary<int, List<ulong>>();
     
         var endpoint = NetworkEndpoint.AnyIpv4.WithPort(7777);
         if (m_Driver.Bind(endpoint) != 0)
@@ -196,29 +198,31 @@ public partial class ServerBehaviour : SystemBase
         
         RpcStartDeterministicSimulation rpc = new RpcStartDeterministicSimulation
         {
-            networkIDs = m_NetworkIDs,
-            initialPositions = spawnPositions,
-            tickrate = tickRate
+            NetworkIDs = m_NetworkIDs,
+            InitialPositions = spawnPositions,
+            Tickrate = tickRate
         };
         
         for (int i = 0; i < m_Connections.Length; i++)
         {
-            rpc.Serialize(m_Driver, m_Connections[i], i+1, simulatorPipeline);
+            rpc.ConnectionID = i + 1;
+            rpc.Serialize(m_Driver, m_Connections[i], simulatorPipeline);
         }
     }
     
-    private void SendRPCWithPlayersInputUpdate(NativeList<int> networkIDs, NativeList<Vector2> playerInputs)
+    private void SendRPCWithPlayersInputUpdate(NativeList<int> networkIDs, NativeList<Vector2> playerInputs, int desyncHappend)
     {
         RpcPlayersDataUpdate rpc = new RpcPlayersDataUpdate
         {
-            networkIDs = networkIDs,
-            inputs = playerInputs,
-            tick = tickRate
+            NetworkIDs = networkIDs,
+            Inputs = playerInputs,
+            Tick = tickRate
         };
         
         for (int i = 0; i < m_Connections.Length; i++)
         {
-            rpc.Serialize(m_Driver, m_Connections[i], 0, simulatorPipeline);
+            rpc.DesyncHappend = desyncHappend; // set if desync happend, 0 - no desync, 1 - desync
+            rpc.Serialize(m_Driver, m_Connections[i], simulatorPipeline);
         }
     }
     
@@ -226,31 +230,46 @@ public partial class ServerBehaviour : SystemBase
     {
         var inputData = new PlayerInputData
         {
-            networkID = rpc.connectionID,
-            input = rpc.playerInput
+            networkID = rpc.ConnectionID,
+            input = rpc.PlayerInput
         };
         
-        if (!everyTickInputBuffer.ContainsKey(rpc.currentTick))
+        if (!everyTickInputBuffer.ContainsKey(rpc.CurrentTick))
         {
-            everyTickInputBuffer[rpc.currentTick] = new List<PlayerInputData>();
+            everyTickInputBuffer[rpc.CurrentTick] = new List<PlayerInputData>();
+        }
+        if (!everyTickHashBuffer.ContainsKey(rpc.CurrentTick))
+        {
+            everyTickHashBuffer[rpc.CurrentTick] = new List<ulong>();
         }
         
         // This tick already exists in the buffer. Check if the player already has inputs saved for this tick
-        foreach (var oldInputData in everyTickInputBuffer[rpc.currentTick])
+        foreach (var oldInputData in everyTickInputBuffer[rpc.CurrentTick])
         {
-            if (oldInputData.networkID == rpc.connectionID)
+            if (oldInputData.networkID == rpc.ConnectionID)
             {
-                Debug.LogError("Already received input from network ID " + rpc.connectionID + " for tick " + rpc.currentTick);
+                Debug.LogError("Already received input from network ID " + rpc.ConnectionID + " for tick " + rpc.CurrentTick);
                 return; // Stop executing the function here, since we don't want to add the new inputData
             }
         }
         
-        everyTickInputBuffer[rpc.currentTick].Add(inputData);
+        // This hash already exists in the buffer. Check if the player already has hash saved for this tick
+        foreach (var oldInputData in everyTickHashBuffer[rpc.CurrentTick])
+        {
+            if (oldInputData == rpc.HashForCurrentTick)
+            {
+                Debug.LogError("Already received hash from network ID " + rpc.ConnectionID + " for tick " + rpc.CurrentTick);
+                return; // Stop executing the function here, since we don't want to add the new inputData
+            }
+        }
+        
+        everyTickInputBuffer[rpc.CurrentTick].Add(inputData);
+        everyTickHashBuffer[rpc.CurrentTick].Add(rpc.HashForCurrentTick);
     }
     
     private void CheckIfAllDataReceivedAndSendToClients()
     {
-        if (everyTickInputBuffer[currentTick].Count == m_Connections.Length)
+        if (everyTickInputBuffer[currentTick].Count == m_Connections.Length && everyTickHashBuffer[currentTick].Count == m_Connections.Length)
         { 
             // We've received a full set of data for this tick, so process it
             // This means creating new NativeLists of network IDs and inputs and sending them with SendRPCWithPlayersInput
@@ -262,16 +281,30 @@ public partial class ServerBehaviour : SystemBase
                 networkIDs.Add(inputData.networkID);
                 inputs.Add(inputData.input);
             }
+            
+            // check if every hash is the same
+            ulong firstHash = everyTickHashBuffer[currentTick][0];
+            int desyncHappend = 0;
+            for (int i = 1; i < everyTickHashBuffer[currentTick].Count; i++)
+            {
+                if (firstHash != everyTickHashBuffer[currentTick][i])
+                {
+                    // Hashes are not equal - handle this scenario
+                    desyncHappend = 1;
+                    i = everyTickHashBuffer[currentTick].Count;
+                }
+            }
 
             // Send the RPC to all connections
-            SendRPCWithPlayersInputUpdate(networkIDs, inputs);
+            SendRPCWithPlayersInputUpdate(networkIDs, inputs, desyncHappend);
             
             // Clean up the temporary lists
             networkIDs.Dispose();
             inputs.Dispose();
 
-            // Finally, remove this tick from the buffer, since we're done processing it
+            // Remove this tick from the buffer, since we're done processing it
             everyTickInputBuffer.Remove(currentTick);
+            everyTickHashBuffer.Remove(currentTick);
             currentTick++;
         }
         else if (everyTickInputBuffer[currentTick - 1].Count == m_Connections.Length)

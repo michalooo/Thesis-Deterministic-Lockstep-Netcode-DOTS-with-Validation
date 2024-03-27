@@ -25,6 +25,7 @@ struct TickRateInfo : IComponentData
     public float delayTime;
     public int tickRate;
     public int currentTick;
+    public ulong hashForTheTick;
 }
 
 public struct NetworkConnectionReference : IComponentData

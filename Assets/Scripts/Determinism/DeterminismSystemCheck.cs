@@ -41,6 +41,12 @@ public partial class DeterminismCheckSystem : SystemBase
         // Save the results for the future
         var currentTick = everyTickHashBuffer.Count + 1;
         everyTickHashBuffer[currentTick] = hash;
+        
+        // Save Hash in the tickRateInfo component
+        foreach (var tickRateInfo in SystemAPI.Query<RefRW<TickRateInfo>>().WithAll<GhostOwnerIsLocal>())
+        {
+            tickRateInfo.ValueRW.hashForTheTick = hash;
+        }
     }
     
     protected override void OnDestroy()
