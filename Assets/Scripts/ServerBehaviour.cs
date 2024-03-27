@@ -127,7 +127,7 @@ public partial class ServerBehaviour : SystemBase
                 switch (cmd)
                 {
                     case NetworkEvent.Type.Data:
-                        HandleRpc(stream);
+                        HandleRpc(stream, m_Connections[i]);
                         break;
                     case NetworkEvent.Type.Disconnect:
                         Debug.Log("Client disconnected from the server.");
@@ -151,7 +151,7 @@ public partial class ServerBehaviour : SystemBase
         }
     }
     
-    void HandleRpc(DataStreamReader stream)
+    void HandleRpc(DataStreamReader stream, NetworkConnection connection)
     {
         var id = (RpcID) stream.ReadInt(); // problem here is if we would like to unread this so ideally we just want to peek the value
         if (!Enum.IsDefined(typeof(RpcID), id))
@@ -165,7 +165,7 @@ public partial class ServerBehaviour : SystemBase
             case RpcID.BroadcastPlayerInputToServer:
                 var rpc = new RpcBroadcastPlayerInputToServer();
                 rpc.Deserialize(stream);
-                SaveTheData(rpc);
+                SaveTheData(rpc, connection);
                 CheckIfAllDataReceivedAndSendToClients();
                 break;
             default:
@@ -183,7 +183,7 @@ public partial class ServerBehaviour : SystemBase
         for (int i = 0; i < m_Connections.Length; i++)
         {
             // Example: Collect network IDs and positions of players
-            m_NetworkIDs.Add(i + 1); // Example network ID
+            m_NetworkIDs.Add(m_Connections[i].GetHashCode()); // set unique Network ID
             m_PlayerInputs.Add(new Vector2(0, 0)); // Example input
         }
     }
@@ -205,7 +205,7 @@ public partial class ServerBehaviour : SystemBase
         
         for (int i = 0; i < m_Connections.Length; i++)
         {
-            rpc.ConnectionID = i + 1;
+            rpc.NetworkID = m_Connections[i].GetHashCode();
             rpc.Serialize(m_Driver, m_Connections[i], simulatorPipeline);
         }
     }
@@ -226,11 +226,11 @@ public partial class ServerBehaviour : SystemBase
         }
     }
     
-    private void SaveTheData(RpcBroadcastPlayerInputToServer rpc)
+    private void SaveTheData(RpcBroadcastPlayerInputToServer rpc, NetworkConnection connection)
     {
         var inputData = new PlayerInputData
         {
-            networkID = rpc.ConnectionID,
+            networkID = connection.GetHashCode(),
             input = rpc.PlayerInput
         };
         
@@ -246,9 +246,9 @@ public partial class ServerBehaviour : SystemBase
         // This tick already exists in the buffer. Check if the player already has inputs saved for this tick
         foreach (var oldInputData in everyTickInputBuffer[rpc.CurrentTick])
         {
-            if (oldInputData.networkID == rpc.ConnectionID)
+            if (oldInputData.networkID == connection.GetHashCode())
             {
-                Debug.LogError("Already received input from network ID " + rpc.ConnectionID + " for tick " + rpc.CurrentTick);
+                Debug.LogError("Already received input from network ID " + connection.GetHashCode() + " for tick " + rpc.CurrentTick);
                 return; // Stop executing the function here, since we don't want to add the new inputData
             }
         }
@@ -258,7 +258,7 @@ public partial class ServerBehaviour : SystemBase
         {
             if (oldInputData == rpc.HashForCurrentTick)
             {
-                Debug.LogError("Already received hash from network ID " + rpc.ConnectionID + " for tick " + rpc.CurrentTick);
+                Debug.LogError("Already received hash from network ID " + connection.GetHashCode() + " for tick " + rpc.CurrentTick);
                 return; // Stop executing the function here, since we don't want to add the new inputData
             }
         }

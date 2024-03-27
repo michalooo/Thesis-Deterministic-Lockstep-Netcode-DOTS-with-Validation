@@ -26,16 +26,16 @@ public struct RpcStartDeterministicSimulation: INetcodeRPC
     public NativeList<int> NetworkIDs { get; set; }
     public NativeList<Vector3> InitialPositions {get; set; }
     public int Tickrate { get; set; }
-    public int ConnectionID { get; set; } //networkID
+    public int NetworkID { get; set; }
 
     public RpcID GetID => RpcID.StartDeterministicSimulation;
 
-    public RpcStartDeterministicSimulation(NativeList<int>? networkIDs, NativeList<Vector3>? initialPositions, int? tickrate, int? connectionID)
+    public RpcStartDeterministicSimulation(NativeList<int>? networkIDs, NativeList<Vector3>? initialPositions, int? tickrate, int? networkID)
     {
         NetworkIDs = networkIDs ?? new NativeList<int>(0, Allocator.Temp);
         InitialPositions = initialPositions ?? new NativeList<Vector3>(0, Allocator.Temp);
         Tickrate = tickrate ?? 0;
-        ConnectionID = connectionID ?? 0;
+        NetworkID = networkID ?? 0;
     }
 
     public void Serialize(NetworkDriver mDriver, NetworkConnection connection, NetworkPipeline? pipeline = null) // set connection ID before sending
@@ -54,7 +54,7 @@ public struct RpcStartDeterministicSimulation: INetcodeRPC
             writer.WriteFloat(InitialPositions[i].z);
         }
         writer.WriteInt(Tickrate);
-        writer.WriteInt(ConnectionID);
+        writer.WriteInt(NetworkID);
         
         if (writer.HasFailedWrites) // check out
         {
@@ -82,7 +82,7 @@ public struct RpcStartDeterministicSimulation: INetcodeRPC
         }
 
         Tickrate = reader.ReadInt();
-        ConnectionID = reader.ReadInt();
+        NetworkID = reader.ReadInt();
 
         Debug.Log("RPC from server about starting the game received");
     }
@@ -108,7 +108,7 @@ public struct RpcPlayersDataUpdate: INetcodeRPC
         DesyncHappend = 0;
     }
 
-    public void Serialize(NetworkDriver mDriver, NetworkConnection connection, NetworkPipeline? pipeline = null) // set connection ID and desync before sending
+    public void Serialize(NetworkDriver mDriver, NetworkConnection connection, NetworkPipeline? pipeline = null) // set networkIDs and desync before sending
     {
         DataStreamWriter writer;
         if(!pipeline.HasValue) mDriver.BeginSend(connection, out writer);
@@ -170,21 +170,19 @@ public struct RpcBroadcastPlayerInputToServer: INetcodeRPC
 {
     public Vector2 PlayerInput { get; set; } // Horizontal + Vertical input
     public int CurrentTick { get; set; }
-    public int ConnectionID { get; set; } // possible removal
     public ulong HashForCurrentTick { get; set; }
 
     public RpcID GetID => RpcID.BroadcastPlayerInputToServer;
 
 
-    public RpcBroadcastPlayerInputToServer(Vector2? playerInput, int? currentTick, int? connectionID)
+    public RpcBroadcastPlayerInputToServer(Vector2? playerInput, int? currentTick)
     {
         PlayerInput = playerInput ?? Vector2.zero;
         CurrentTick = currentTick ?? 0;
-        ConnectionID = connectionID ?? 0;
         HashForCurrentTick = 0;
     }
 
-    public void Serialize(NetworkDriver mDriver, NetworkConnection connection, NetworkPipeline? pipeline = null) // set connection ID and hash before sending
+    public void Serialize(NetworkDriver mDriver, NetworkConnection connection, NetworkPipeline? pipeline = null) // set Hash before sending
     {
         DataStreamWriter writer;
         if(!pipeline.HasValue) mDriver.BeginSend(connection, out writer);
@@ -194,7 +192,6 @@ public struct RpcBroadcastPlayerInputToServer: INetcodeRPC
         writer.WriteInt((int) PlayerInput.x); // Horizontal input
         writer.WriteInt((int) PlayerInput.y); // Vertical input
         writer.WriteInt(CurrentTick);
-        writer.WriteInt(ConnectionID);
         writer.WriteULong(HashForCurrentTick);
         
         if (writer.HasFailedWrites) 
@@ -213,7 +210,6 @@ public struct RpcBroadcastPlayerInputToServer: INetcodeRPC
         // ID is read in the scope above in order to use a proper deserializer
         PlayerInput = new Vector2(reader.ReadInt(), reader.ReadInt());
         CurrentTick = reader.ReadInt();
-        ConnectionID = reader.ReadInt();
         HashForCurrentTick = reader.ReadULong();
        
 

@@ -15,7 +15,7 @@ public partial class PlayerInputGatherAndSendSystem : SystemBase
 
     protected override void OnUpdate()
     {
-        foreach (var (inputDataToSend, connectionReference, tickRateInfo, owner, connectionEntity) in SystemAPI.Query<RefRW<PlayerInputDataToSend>, RefRO<NetworkConnectionReference>, RefRW<TickRateInfo>, RefRO<GhostOwner>>().WithAll<PlayerSpawned>().WithEntityAccess())
+        foreach (var (inputDataToSend, connectionReference, tickRateInfo, connectionEntity) in SystemAPI.Query<RefRW<PlayerInputDataToSend>, RefRO<NetworkConnectionReference>, RefRW<TickRateInfo>>().WithAll<PlayerSpawned>().WithEntityAccess())
         {
             int horizontalInput = Input.GetKey("left") ? -1 : Input.GetKey("right") ? 1 : 0;
             int verticalInput = Input.GetKey("down") ? -1 : Input.GetKey("up") ? 1 : 0;
@@ -27,10 +27,8 @@ public partial class PlayerInputGatherAndSendSystem : SystemBase
             {
                 PlayerInput = new Vector2(inputDataToSend.ValueRO.horizontalInput, inputDataToSend.ValueRO.verticalInput),
                 CurrentTick = tickRateInfo.ValueRO.currentTick,
-                ConnectionID = tickRateInfo.ValueRO.currentTick
             };
-
-            rpc.ConnectionID = owner.ValueRO.networkId; // setting connection ID
+            
             rpc.HashForCurrentTick = tickRateInfo.ValueRO.hashForTheTick; // setting hash
             rpc.Serialize(connectionReference.ValueRO.Driver, connectionReference.ValueRO.Connection, connectionReference.ValueRO.SimulatorPipeline);
             tickRateInfo.ValueRW.currentTick++;

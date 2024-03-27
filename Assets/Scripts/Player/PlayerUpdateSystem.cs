@@ -2,8 +2,6 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
-using UnityEditor;
-using UnityEngine;
 
 // This system is responsible for updating all of players positions based on their input component (updated by the server) if they are spawned and if
 // UpdatePlayerPosition component is enabled. After updating those positions this component will be disabled

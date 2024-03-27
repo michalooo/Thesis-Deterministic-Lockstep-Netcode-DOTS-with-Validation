@@ -159,7 +159,7 @@ public partial class ClientBehaviour : SystemBase
                     Connection = m_Connection
                 });
                 EntityManager.AddComponentData(newEntity, new GhostOwnerIsLocal());
-                if(rpc.NetworkIDs[i] != rpc.ConnectionID)  EntityManager.SetComponentEnabled<GhostOwnerIsLocal>(newEntity, false);
+                if(rpc.NetworkIDs[i] != rpc.NetworkID)  EntityManager.SetComponentEnabled<GhostOwnerIsLocal>(newEntity, false);
                 EntityManager.SetComponentEnabled<PlayerInputDataToSend>(newEntity, false);
             }
         }

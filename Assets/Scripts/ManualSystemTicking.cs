@@ -1,6 +1,8 @@
 using Unity.Entities;
 
+public partial class ConnectionHandleSystemGroup : ComponentSystemGroup { }
 
+[UpdateAfter(typeof(ConnectionHandleSystemGroup))]
 public partial class InputGatherSystemGroup : ComponentSystemGroup { }
 
 [UpdateAfter(typeof(InputGatherSystemGroup))]
@@ -16,9 +18,6 @@ public partial class DeterminismSystemGroup : ComponentSystemGroup //IRateManage
     //
     // public float Timestep { get; set; }
 }
-
-[UpdateBefore(typeof(InputGatherSystemGroup))]
-public partial class ConnectionHandleSystemGroup : ComponentSystemGroup { }
 
 
 
