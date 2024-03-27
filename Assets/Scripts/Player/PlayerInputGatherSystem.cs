@@ -22,8 +22,15 @@ public partial class PlayerInputGatherAndSendSystem : SystemBase
 
             inputDataToSend.ValueRW.horizontalInput = horizontalInput;
             inputDataToSend.ValueRW.verticalInput = verticalInput;
-                
-            RpcUtils.SendRPCWithPlayerInput(connectionReference.ValueRO.Driver, connectionReference.ValueRO.SimulatorPipeline, connectionReference.ValueRO.Connection, inputDataToSend.ValueRO, owner.ValueRO, tickRateInfo.ValueRO.currentTick);
+            
+            RpcBroadcastPlayerInputToServer rpc = new RpcBroadcastPlayerInputToServer
+            {
+                playerInput = new Vector2(inputDataToSend.ValueRO.horizontalInput, inputDataToSend.ValueRO.verticalInput),
+                currentTick = tickRateInfo.ValueRO.currentTick,
+                connectionID = tickRateInfo.ValueRO.currentTick
+            };
+            
+            rpc.Serialize(connectionReference.ValueRO.Driver, connectionReference.ValueRO.Connection, owner.ValueRO.networkId, connectionReference.ValueRO.SimulatorPipeline);
             tickRateInfo.ValueRW.currentTick++;
             EntityManager.SetComponentEnabled<PlayerInputDataToSend>(connectionEntity, false);
         }

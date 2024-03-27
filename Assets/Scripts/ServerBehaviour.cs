@@ -151,22 +151,23 @@ public partial class ServerBehaviour : SystemBase
     
     void HandleRpc(DataStreamReader stream)
     {
-        var id = (RpcDefinitions.RpcID) stream.ReadInt(); // problem here is if we would like to unread this so ideally we just want to peek the value
-        if (!Enum.IsDefined(typeof(RpcDefinitions.RpcID), id))
+        var id = (RpcID) stream.ReadInt(); // problem here is if we would like to unread this so ideally we just want to peek the value
+        if (!Enum.IsDefined(typeof(RpcID), id))
         {
             Debug.LogError("Received invalid RPC ID: " + id);
             return;
         }
-
+        
         switch (id)
         {
-            case RpcDefinitions.RpcID.SendPlayerInputToServer:
-                var rpc = RpcUtils.DeserializeClientUpdatePlayerRPC(stream);
+            case RpcID.BroadcastPlayerInputToServer:
+                var rpc = new RpcBroadcastPlayerInputToServer();
+                rpc.Deserialize(stream);
                 SaveTheData(rpc);
                 CheckIfAllDataReceivedAndSendToClients();
                 break;
             default:
-                Debug.LogWarning("Received unknown RPC ID.");
+                Debug.LogError("Received RPC ID not proceeded by the server: " + id);
                 break;
         }
     }
@@ -192,21 +193,36 @@ public partial class ServerBehaviour : SystemBase
         {
             spawnPositions.Add(new Vector3(10 + Random.Range(-5f, 5f),1,10 + Random.Range(-3f, 3f)));
         }
+        
+        RpcStartDeterministicSimulation rpc = new RpcStartDeterministicSimulation
+        {
+            networkIDs = m_NetworkIDs,
+            initialPositions = spawnPositions,
+            tickrate = tickRate
+        };
+        
         for (int i = 0; i < m_Connections.Length; i++)
         {
-            RpcUtils.SendRPCWithStartGameRequest(m_Driver, simulatorPipeline, m_Connections[i], m_NetworkIDs, spawnPositions, tickRate, i+1);
+            rpc.Serialize(m_Driver, m_Connections[i], i+1, simulatorPipeline);
         }
     }
     
     private void SendRPCWithPlayersInputUpdate(NativeList<int> networkIDs, NativeList<Vector2> playerInputs)
     {
+        RpcPlayersDataUpdate rpc = new RpcPlayersDataUpdate
+        {
+            networkIDs = networkIDs,
+            inputs = playerInputs,
+            tick = tickRate
+        };
+        
         for (int i = 0; i < m_Connections.Length; i++)
         {
-            RpcUtils.SendRPCWithPlayersInput(m_Driver, simulatorPipeline, m_Connections[i], networkIDs, playerInputs, tickRate);
+            rpc.Serialize(m_Driver, m_Connections[i], 0, simulatorPipeline);
         }
     }
     
-    private void SaveTheData(RpcDefinitions.RpcPlayerDataUpdate rpc)
+    private void SaveTheData(RpcBroadcastPlayerInputToServer rpc)
     {
         var inputData = new PlayerInputData
         {

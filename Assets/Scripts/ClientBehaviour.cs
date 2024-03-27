@@ -90,33 +90,34 @@ public partial class ClientBehaviour : SystemBase
 
     void HandleRpc(DataStreamReader stream)
     {
-        var id = (RpcDefinitions.RpcID) stream.ReadInt(); // problem here is if we would like to unread this so ideally we just want to peek the value
-        if (!Enum.IsDefined(typeof(RpcDefinitions.RpcID), id))
+        var id = (RpcID) stream.ReadInt(); // problem here is if we would like to unread this so ideally we just want to peek the value
+        if (!Enum.IsDefined(typeof(RpcID), id))
         {
             Debug.LogError("Received invalid RPC ID: " + id);
             return;
         }
         
-        
+        INetcodeRPC rpc;
         switch (id)
-        {
-            case RpcDefinitions.RpcID.BroadcastAllPlayersInputs:
-                var rpcUpdatePLayers = RpcUtils.DeserializeServerUpdatePlayersRPC(stream);
-                UpdatePlayersData(rpcUpdatePLayers);
+        { 
+            case RpcID.BroadcastAllPlayersInputsToClients:
+                rpc = new RpcPlayersDataUpdate();
+                rpc.Deserialize(stream);
+                UpdatePlayersData((RpcPlayersDataUpdate) rpc);
                 break;
-            case RpcDefinitions.RpcID.StartDeterministicSimulation:
-                Debug.Log("Starting game rpc");
-                var rpcStartGame = RpcUtils.DeserializeServerStartGameRpc(stream);
-                StartGame(rpcStartGame);
+            case RpcID.StartDeterministicSimulation:
+                rpc = new RpcStartDeterministicSimulation();
+                rpc.Deserialize(stream);
+                StartGame((RpcStartDeterministicSimulation) rpc);
                 break;
             default:
-                Debug.LogWarning("Received unknown RPC ID.");
+                Debug.LogError("Received RPC ID not proceeded by the client: " + id);
                 break;
         }
     }
     
     // This function at the start of the game will spawn all players
-    void StartGame(RpcDefinitions.RpcStartGameAndSpawnPlayers rpc)
+    void StartGame(RpcStartDeterministicSimulation rpc)
     {
         if(SceneManager.GetActiveScene().name != "Game")
         {
@@ -164,7 +165,7 @@ public partial class ClientBehaviour : SystemBase
     }
 
     // This function will be called when the server sends an RPC with updated players data and will update the PlayerInputDataToUse components and set them to enabled
-    void UpdatePlayersData(RpcDefinitions.RpcPlayersDataUpdate rpc)
+    void UpdatePlayersData(RpcPlayersDataUpdate rpc)
     {
         // Update player data based on received RPC
         NativeList<int> networkIDs = new NativeList<int>(16, Allocator.Temp);

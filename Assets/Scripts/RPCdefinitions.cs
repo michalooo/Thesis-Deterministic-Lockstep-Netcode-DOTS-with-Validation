@@ -5,191 +5,56 @@ using UnityEngine;
 
 public interface INetcodeRPC
 {
-    public static RpcDefinitions.RpcID GetID
-    {
-        get;
-    }
-}
-public static class RpcDefinitions //can be deleted
-{
-    // Definition of different RPC types
-    public enum RpcID
-    {
-        StartDeterministicSimulation,
-        BroadcastAllPlayersInputs,
-        SendPlayerInputToServer
-    }
-
-    // RPC that server sends to all clients at the start of the game, it contains info about all players network IDs so the corresponding
-    // connections entities can be created. Also contains information about expected tickRate
-    public struct RpcStartGameAndSpawnPlayers: INetcodeRPC //change name
-    {
-        public RpcID id;
-        public NativeList<int> networkIDs;
-        public NativeList<Vector3> initialPositions;
-        public int tickrate;
-        public int connectionID; //networkID
-        
-        public static RpcID GetID => RpcID.StartDeterministicSimulation; // check out
-    }
+    RpcID GetID { get; }
     
-    // RPC that server sends to all clients after reciving inputs from all of them. It contains info about all players network IDs so they can be identified
-    // as well as their corresponding inputs to apply and the tick for which those should be assigned
-    public struct RpcPlayersDataUpdate
-    {
-        public RpcID id;
-        public NativeList<int> networkIDs;
-        public NativeList<Vector2> inputs; 
-        public int tick;
-    }
-    
-    // RPC that clients send to the server at the beginning of each tick. It contains info about all player input
-    public struct RpcPlayerDataUpdate
-    {
-        public RpcID id;
-        public Vector2 playerInput;  // Horizontal + Vertical input
-        public int currentTick;
-        public int connectionID; // remove
-    }
+    void Serialize(NetworkDriver mDriver, NetworkConnection connection, int? connectionID, NetworkPipeline? simulatorPipeline = null);
+    void Deserialize(DataStreamReader reader);
 }
 
-
-
-
-
-
-public static class RpcUtils
+// Definition of different RPC types
+public enum RpcID
 {
-    // RPC serialization method that is used by the client to send its input to the server
-    public static void SendRPCWithPlayerInput(NetworkDriver mDriver, NetworkPipeline simulatorPipeline, NetworkConnection connection, PlayerInputDataToSend playerInput, GhostOwner owner, int tickNumber)
-    {
-        var rpcMessage = new RpcDefinitions.RpcPlayerDataUpdate
-        {
-            id = RpcDefinitions.RpcID.SendPlayerInputToServer,
-            playerInput = new Vector2(playerInput.horizontalInput, playerInput.verticalInput),
-            currentTick = tickNumber,
-            connectionID = owner.networkId
-        };
-        
-        mDriver.BeginSend(simulatorPipeline, connection, out var writer);
-        writer.WriteInt((int) rpcMessage.id);
-        writer.WriteInt((int) rpcMessage.playerInput.x); // Horizontal input
-        writer.WriteInt((int) rpcMessage.playerInput.y); // Vertical input
-        writer.WriteInt(rpcMessage.currentTick);
-        writer.WriteInt(rpcMessage.connectionID);
-        if (writer.HasFailedWrites) // check out
-        {
-            mDriver.AbortSend(writer);
-            throw new InvalidOperationException("Driver has failed writes.: " +
-                                                writer.Capacity); //driver too small for the schema of this rpc
-        }
+    StartDeterministicSimulation,
+    BroadcastAllPlayersInputsToClients,
+    BroadcastPlayerInputToServer
+}
 
-        mDriver.EndSend(writer);
-        Debug.Log("RPC send from client with input values");
-    }
+// RPC that server sends to all clients at the start of the game, it contains info about all players network IDs so the corresponding
+// connections entities can be created. Also contains information about expected tickRate
+public struct RpcStartDeterministicSimulation: INetcodeRPC
+{
+    public NativeList<int> networkIDs;
+    public NativeList<Vector3> initialPositions;
+    public int tickrate;
+    public int connectionID; //networkID
+        
+    public RpcID GetID => RpcID.StartDeterministicSimulation;
     
-    // RPC deserialization method that is used by the server to deserialize the input from the client
-    public static RpcDefinitions.RpcPlayerDataUpdate DeserializeClientUpdatePlayerRPC(DataStreamReader stream)
+    public RpcStartDeterministicSimulation(NativeList<int>? networkIDs, NativeList<Vector3>? initialPositions, int? tickrate, int? connectionID)
     {
-        RpcDefinitions.RpcPlayerDataUpdate rpcMessage = new RpcDefinitions.RpcPlayerDataUpdate
-        {
-            // ID is read in the scope above in order to use a proper deserializer
-            id = RpcDefinitions.RpcID.SendPlayerInputToServer,
-            playerInput = new Vector2(stream.ReadInt(), stream.ReadInt()),
-            currentTick = stream.ReadInt(),
-            connectionID = stream.ReadInt()
-        };
+        this.networkIDs = networkIDs ?? new NativeList<int>(0, Allocator.Temp);
+        this.initialPositions = initialPositions ?? new NativeList<Vector3>(0, Allocator.Temp);
+        this.tickrate = tickrate ?? 0;
+        this.connectionID = connectionID ?? 0;
+    }
 
-        Debug.Log("RPC recived in the server with player data update");
-        return rpcMessage;
-    }
-    
-    // RPC serialization method that is used by the server to send inputs off all clients to the server
-    public static void SendRPCWithPlayersInput(NetworkDriver mDriver, NetworkPipeline simulatorPipeline, NetworkConnection connection, NativeList<int> networkIDs, NativeList<Vector2> inputs, int tickRate)
+    public void Serialize(NetworkDriver mDriver, NetworkConnection connection, int? connectionID, NetworkPipeline? pipeline = null)
     {
-        var rpcMessage = new RpcDefinitions.RpcPlayersDataUpdate
-        {
-            id = RpcDefinitions.RpcID.BroadcastAllPlayersInputs,
-            networkIDs = networkIDs,
-            inputs = inputs,
-            tick = tickRate
-        };
+        DataStreamWriter writer;
+        if(!pipeline.HasValue) mDriver.BeginSend(connection, out writer);
+        else mDriver.BeginSend(pipeline.Value, connection, out writer);
         
-        mDriver.BeginSend(connection, out var writer);
-        writer.WriteInt((int) rpcMessage.id);
-        writer.WriteInt(rpcMessage.networkIDs.Length);
-        for (int i = 0; i < rpcMessage.networkIDs.Length; i++)
+        writer.WriteInt((int) GetID);
+        writer.WriteInt(networkIDs.Length);
+        for (int i = 0; i < networkIDs.Length; i++)
         {
-            writer.WriteInt(rpcMessage.networkIDs[i]);
+            writer.WriteInt(networkIDs[i]);
+            writer.WriteFloat(initialPositions[i].x);
+            writer.WriteFloat(initialPositions[i].y);
+            writer.WriteFloat(initialPositions[i].z);
         }
-        for (int i = 0; i < rpcMessage.inputs.Length; i++)
-        {
-            writer.WriteInt((int) rpcMessage.inputs[i].x);
-            writer.WriteInt((int) rpcMessage.inputs[i].y);
-        }
-        writer.WriteInt(rpcMessage.tick);
-        
-        if (writer.HasFailedWrites) // check out
-        {
-            mDriver.AbortSend(writer);
-            throw new InvalidOperationException("Driver has failed writes.: " +
-                                                writer.Capacity); //driver too small for the schema of this rpc
-        }
-        
-        mDriver.EndSend(writer);
-        Debug.Log("RPC with players input send from server");
-    }
-    
-    // RPC deserialization method that is used by the clients to deserialize the message from server with input from the other clients
-    public static RpcDefinitions.RpcPlayersDataUpdate DeserializeServerUpdatePlayersRPC(DataStreamReader stream)
-    {
-        RpcDefinitions.RpcPlayersDataUpdate rpcMessage = new RpcDefinitions.RpcPlayersDataUpdate();
-        // ID is read in the scope above in order to use a proper deserializer
-        int count = stream.ReadInt();
-        
-        rpcMessage.networkIDs = new NativeList<int>(count, Allocator.Temp);
-        rpcMessage.inputs = new NativeList<Vector2>(count, Allocator.Temp);
-        
-        for (int i = 0; i < count; i++)
-        {
-            rpcMessage.networkIDs.Add(stream.ReadInt());
-        }
-        
-        for (int i = 0; i < count; i++)
-        {
-            rpcMessage.inputs.Add(new Vector2(stream.ReadInt(), stream.ReadInt()));
-        }
-        
-        rpcMessage.tick = stream.ReadInt();
-        
-        Debug.Log("RPC from server with players data update received");
-        return rpcMessage;
-    }
-    
-    // RPC serialization method that is used by the server to send request to start game to the clients and the initial state of the game
-    public static void SendRPCWithStartGameRequest(NetworkDriver mDriver, NetworkPipeline simulatorPipeline, NetworkConnection connection, NativeList<int> networkIDs, NativeList<Vector3> initialPositions, int tickRate, int connectionID)
-    {
-        var rpcMessage = new RpcDefinitions.RpcStartGameAndSpawnPlayers()
-        {
-            id = RpcDefinitions.RpcID.StartDeterministicSimulation,
-            networkIDs = networkIDs,
-            initialPositions = initialPositions,
-            tickrate = tickRate,
-            connectionID = connectionID,
-        };
-        
-        mDriver.BeginSend(connection, out var writer);
-        writer.WriteInt((int) rpcMessage.id);
-        writer.WriteInt(rpcMessage.networkIDs.Length);
-        for (int i = 0; i < rpcMessage.networkIDs.Length; i++)
-        {
-            writer.WriteInt(rpcMessage.networkIDs[i]);
-            writer.WriteFloat(rpcMessage.initialPositions[i].x);
-            writer.WriteFloat(rpcMessage.initialPositions[i].y);
-            writer.WriteFloat(rpcMessage.initialPositions[i].z);
-        }
-        writer.WriteInt(rpcMessage.tickrate);
-        writer.WriteInt(rpcMessage.connectionID);
+        writer.WriteInt(tickrate);
+        writer.WriteInt(connectionID ?? 0);
         
         if (writer.HasFailedWrites) // check out
         {
@@ -202,26 +67,144 @@ public static class RpcUtils
         Debug.Log("RPC with start game request send from server");
     }
 
-    // RPC deserialization method that is used by the clients to deserialize the initial request from the server to start the game
-    public static RpcDefinitions.RpcStartGameAndSpawnPlayers DeserializeServerStartGameRpc(DataStreamReader stream)
+    public void Deserialize(DataStreamReader reader)
     {
-        RpcDefinitions.RpcStartGameAndSpawnPlayers rpcMessage = new RpcDefinitions.RpcStartGameAndSpawnPlayers();
         // ID is read in the scope above in order to use a proper deserializer
-        int count = stream.ReadInt();
+        int count = reader.ReadInt();
 
-        rpcMessage.networkIDs = new NativeList<int>(count, Allocator.Temp);
-        rpcMessage.initialPositions = new NativeList<Vector3>(count, Allocator.Temp);
+        networkIDs = new NativeList<int>(count, Allocator.Temp);
+        initialPositions = new NativeList<Vector3>(count, Allocator.Temp);
 
         for (int i = 0; i < count; i++)
         {
-            rpcMessage.networkIDs.Add(stream.ReadInt());
-            rpcMessage.initialPositions.Add(new Vector3(stream.ReadFloat(), stream.ReadFloat(), stream.ReadFloat()));
+            networkIDs.Add(reader.ReadInt());
+            initialPositions.Add(new Vector3(reader.ReadFloat(), reader.ReadFloat(), reader.ReadFloat()));
         }
 
-        rpcMessage.tickrate = stream.ReadInt();
-        rpcMessage.connectionID = stream.ReadInt();
+        tickrate = reader.ReadInt();
+        connectionID = reader.ReadInt();
 
         Debug.Log("RPC from server about starting the game received");
-        return rpcMessage;
+    }
+}
+    
+// RPC that server sends to all clients after reciving inputs from all of them. It contains info about all players network IDs so they can be identified
+// as well as their corresponding inputs to apply and the tick for which those should be assigned
+public struct RpcPlayersDataUpdate: INetcodeRPC
+{
+    public NativeList<int> networkIDs;
+    public NativeList<Vector2> inputs; 
+    public int tick;
+    
+    public RpcID GetID => RpcID.BroadcastAllPlayersInputsToClients;
+    
+    public RpcPlayersDataUpdate(NativeList<int>? networkIDs, NativeList<Vector2>? inputs, int? tick)
+    {
+        this.networkIDs = networkIDs ?? new NativeList<int>(0, Allocator.Temp);
+        this.inputs = inputs ?? new NativeList<Vector2>(0, Allocator.Temp);
+        this.tick = tick ?? 0;
+    }
+
+    public void Serialize(NetworkDriver mDriver, NetworkConnection connection, int? connectionID, NetworkPipeline? pipeline = null)
+    {
+        DataStreamWriter writer;
+        if(!pipeline.HasValue) mDriver.BeginSend(connection, out writer);
+        else mDriver.BeginSend(pipeline.Value, connection, out writer);
+        
+        writer.WriteInt((int) GetID);
+        writer.WriteInt(networkIDs.Length);
+        for (int i = 0; i < networkIDs.Length; i++)
+        {
+            writer.WriteInt(networkIDs[i]);
+        }
+        for (int i = 0; i < inputs.Length; i++)
+        {
+            writer.WriteInt((int) inputs[i].x);
+            writer.WriteInt((int) inputs[i].y);
+        }
+        writer.WriteInt(tick);
+        
+        if (writer.HasFailedWrites)
+        {
+            mDriver.AbortSend(writer);
+            throw new InvalidOperationException("Driver has failed writes.: " +
+                                                writer.Capacity); //driver too small for the schema of this rpc
+        }
+        
+        mDriver.EndSend(writer);
+        Debug.Log("RPC with players input send from server");
+    }
+
+    public void Deserialize(DataStreamReader reader)
+    {
+        // ID is read in the scope above in order to use a proper deserializer
+        int count = reader.ReadInt();
+        
+        networkIDs = new NativeList<int>(count, Allocator.Temp);
+        inputs = new NativeList<Vector2>(count, Allocator.Temp);
+        
+        for (int i = 0; i < count; i++)
+        {
+            networkIDs.Add(reader.ReadInt());
+        }
+        
+        for (int i = 0; i < count; i++)
+        {
+            inputs.Add(new Vector2(reader.ReadInt(), reader.ReadInt()));
+        }
+        
+        tick = reader.ReadInt();
+        
+        Debug.Log("RPC from server with players data update received");
+    }
+}
+    
+// RPC that clients send to the server at the beginning of each tick. It contains info about all player input
+public struct RpcBroadcastPlayerInputToServer: INetcodeRPC
+{
+    public Vector2 playerInput;  // Horizontal + Vertical input
+    public int currentTick;
+    public int connectionID; // remove
+    
+    public RpcID GetID => RpcID.BroadcastPlayerInputToServer;
+    
+    public RpcBroadcastPlayerInputToServer(Vector2? playerInput, int? currentTick, int? connectionID)
+    {
+        this.playerInput = playerInput ?? Vector2.zero;
+        this.currentTick = currentTick ?? 0;
+        this.connectionID = connectionID ?? 0;
+    }
+
+    public void Serialize(NetworkDriver mDriver, NetworkConnection connection, int? connectionID, NetworkPipeline? pipeline = null)
+    {
+        DataStreamWriter writer;
+        if(!pipeline.HasValue) mDriver.BeginSend(connection, out writer);
+        else mDriver.BeginSend(pipeline.Value, connection, out writer);
+        
+        writer.WriteInt((int) GetID); // error here with assigned ID, probably different serializer and deserializer
+        writer.WriteInt((int) playerInput.x); // Horizontal input
+        writer.WriteInt((int) playerInput.y); // Vertical input
+        writer.WriteInt(currentTick);
+        writer.WriteInt(connectionID ?? 0);
+        if (writer.HasFailedWrites) 
+        {
+            mDriver.AbortSend(writer);
+            throw new InvalidOperationException("Driver has failed writes.: " +
+                                                writer.Capacity); //driver too small for the schema of this rpc
+        }
+
+        mDriver.EndSend(writer);
+        Debug.Log("RPC send from client with input values");
+    }
+
+    public void Deserialize(DataStreamReader reader)
+    {
+        // ID is read in the scope above in order to use a proper deserializer
+        playerInput = new Vector2(reader.ReadInt(), reader.ReadInt());
+        currentTick = reader.ReadInt();
+        connectionID = reader.ReadInt();
+       
+
+        Debug.Log("RPC recived in the server with player data update");
     }
 }
