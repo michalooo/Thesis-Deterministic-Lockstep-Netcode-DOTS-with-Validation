@@ -50,7 +50,7 @@ public struct CommandTarget : IComponentData
 /// This is enabled for all ghosts on the server and for ghosts where the ghost owner network id matches the connection id on the client.
 /// </summary>
 public struct GhostOwnerIsLocal : IComponentData, IEnableableComponent
-{}
+{} // added to different entites so it may cause desync. 
 
 [UpdateInGroup(typeof(InputGatherSystemGroup))]
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]

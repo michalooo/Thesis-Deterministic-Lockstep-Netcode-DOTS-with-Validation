@@ -32,6 +32,7 @@ public partial class ServerBehaviour : SystemBase
     private int currentTick = 1;
     NativeList<Vector2> m_PlayerInputs;
 
+    // singleton to define (clientserver tickrate)
     [Tooltip("The maximum amount of packets the pipeline can keep track of. This used when a packet is delayed, the packet is stored in the pipeline processing buffer and can be later brought back.")]
     int maxPacketCount = 1000;
     [Tooltip("The maximum size of a packet which the simulator stores. If a packet exceeds this size it will bypass the simulator.")]
@@ -153,7 +154,9 @@ public partial class ServerBehaviour : SystemBase
     
     void HandleRpc(DataStreamReader stream, NetworkConnection connection)
     {
-        var id = (RpcID) stream.ReadInt(); // problem here is if we would like to unread this so ideally we just want to peek the value
+        var copyOfStream = stream;
+        copyOfStream.ReadInt();
+        var id = (RpcID) copyOfStream.ReadInt(); // for the future check if its within a valid range (id as bytes)
         if (!Enum.IsDefined(typeof(RpcID), id))
         {
             Debug.LogError("Received invalid RPC ID: " + id);
@@ -190,6 +193,7 @@ public partial class ServerBehaviour : SystemBase
     
     private void SendRPCtoStartGame()
     {
+        // register OnGameStart method where they can be used to spawn entities, separation between user code and package code
         NativeList<Vector3> spawnPositions = new NativeList<Vector3>(m_NetworkIDs.Length, Allocator.Temp);
         for (int j = 0; j < m_NetworkIDs.Length; j++) // Generate initial positions
         {

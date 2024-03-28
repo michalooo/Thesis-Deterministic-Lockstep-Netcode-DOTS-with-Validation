@@ -4,18 +4,18 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Transforms;
 
-[UpdateInGroup(typeof(DeterminismSystemGroup))]
+[UpdateInGroup(typeof(DeterministicSystemGroup))]
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
 public partial class DeterminismCheckSystem : SystemBase
 {
-    NativeArray<ulong> resultsArray;
+    NativeList<ulong> resultsArray;
     private EntityQuery m_Query;
     
     private Dictionary<int, ulong> everyTickHashBuffer;
     
     protected override void OnCreate()
     {
-        resultsArray = new NativeArray<ulong>(10000, Allocator.Persistent);
+        resultsArray = new NativeList<ulong>(128, Allocator.Persistent);
         everyTickHashBuffer = new Dictionary<int, ulong>();
     }
     
@@ -24,11 +24,15 @@ public partial class DeterminismCheckSystem : SystemBase
         m_Query = EntityManager.CreateEntityQuery(
             typeof(DeterministicSimulation)
         );
-        
+
+        var resultsArrayCapacity = m_Query.CalculateChunkCount();
+        if(resultsArray.Capacity < resultsArrayCapacity)
+            resultsArray.Capacity = resultsArrayCapacity;
+
         var job = new DeterminismCheckJob()
         {
             transform = GetComponentTypeHandle<LocalTransform>(true),
-            ResultsNativeArray = resultsArray
+            ResultsNativeArray = resultsArray.AsArray()
         };
         var handle = job.ScheduleParallel(m_Query, this.Dependency);
         handle.Complete();

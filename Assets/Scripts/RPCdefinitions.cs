@@ -12,7 +12,7 @@ public interface INetcodeRPC
 }
 
 // Definition of different RPC types
-public enum RpcID
+public enum RpcID : byte // chaged from int to byte
 {
     StartDeterministicSimulation,
     BroadcastAllPlayersInputsToClients,
@@ -32,9 +32,9 @@ public struct RpcStartDeterministicSimulation: INetcodeRPC
 
     public RpcStartDeterministicSimulation(NativeList<int>? networkIDs, NativeList<Vector3>? initialPositions, int? tickrate, int? networkID)
     {
-        NetworkIDs = networkIDs ?? new NativeList<int>(0, Allocator.Temp);
-        InitialPositions = initialPositions ?? new NativeList<Vector3>(0, Allocator.Temp);
-        Tickrate = tickrate ?? 0;
+        NetworkIDs = networkIDs ?? new NativeList<int>(8, Allocator.Temp);
+        InitialPositions = initialPositions ?? new NativeList<Vector3>(8, Allocator.Temp); //consideration
+        Tickrate = tickrate ?? 60;
         NetworkID = networkID ?? 0;
     }
 
@@ -56,7 +56,7 @@ public struct RpcStartDeterministicSimulation: INetcodeRPC
         writer.WriteInt(Tickrate);
         writer.WriteInt(NetworkID);
         
-        if (writer.HasFailedWrites) // check out
+        if (writer.HasFailedWrites) 
         {
             mDriver.AbortSend(writer);
             throw new InvalidOperationException("Driver has failed writes.: " +
@@ -69,7 +69,7 @@ public struct RpcStartDeterministicSimulation: INetcodeRPC
 
     public void Deserialize(DataStreamReader reader)
     {
-        // ID is read in the scope above in order to use a proper deserializer
+        reader.ReadInt(); // ID
         int count = reader.ReadInt();
 
         NetworkIDs = new NativeList<int>(count, Allocator.Temp);
@@ -141,7 +141,7 @@ public struct RpcPlayersDataUpdate: INetcodeRPC
 
     public void Deserialize(DataStreamReader reader)
     {
-        // ID is read in the scope above in order to use a proper deserializer
+        reader.ReadInt(); // ID
         int count = reader.ReadInt();
         
         NetworkIDs = new NativeList<int>(count, Allocator.Temp);
@@ -188,7 +188,7 @@ public struct RpcBroadcastPlayerInputToServer: INetcodeRPC
         if(!pipeline.HasValue) mDriver.BeginSend(connection, out writer);
         else mDriver.BeginSend(pipeline.Value, connection, out writer);
         
-        writer.WriteInt((int) GetID); // error here with assigned ID, probably different serializer and deserializer
+        writer.WriteInt((int) GetID);
         writer.WriteInt((int) PlayerInput.x); // Horizontal input
         writer.WriteInt((int) PlayerInput.y); // Vertical input
         writer.WriteInt(CurrentTick);
@@ -207,7 +207,7 @@ public struct RpcBroadcastPlayerInputToServer: INetcodeRPC
 
     public void Deserialize(DataStreamReader reader)
     {
-        // ID is read in the scope above in order to use a proper deserializer
+        reader.ReadInt(); // ID
         PlayerInput = new Vector2(reader.ReadInt(), reader.ReadInt());
         CurrentTick = reader.ReadInt();
         HashForCurrentTick = reader.ReadULong();

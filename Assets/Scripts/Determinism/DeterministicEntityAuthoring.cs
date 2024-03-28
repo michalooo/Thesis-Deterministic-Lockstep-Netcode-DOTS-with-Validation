@@ -5,13 +5,13 @@ public struct DeterministicSimulation : IComponentData
 {
 
 }
-public struct UseInDeterministicFastHashCalculation : IComponentData
-{
-}
+//public struct UseInDeterministicFastHashCalculation : IComponentData //comment for now. Maybe in performance, environment flag
+//{ // full hash per system for user experience
+//}
 
 public class DeterministicEntityAuthoring : MonoBehaviour
 {
-    public bool UseInDeterministicFastHashCalculation;
+    //public bool UseInDeterministicFastHashCalculation;
     // public bool UseAutoCommandTarget;
     
     class Baker : Baker<DeterministicEntityAuthoring>
@@ -20,7 +20,7 @@ public class DeterministicEntityAuthoring : MonoBehaviour
         {
             var entity = GetEntity(TransformUsageFlags.Dynamic);
             AddComponent<DeterministicSimulation>(entity);
-            if(authoring.UseInDeterministicFastHashCalculation) AddComponent<UseInDeterministicFastHashCalculation>(entity);
+            //if(authoring.UseInDeterministicFastHashCalculation) AddComponent<UseInDeterministicFastHashCalculation>(entity);
         }
     }
 }

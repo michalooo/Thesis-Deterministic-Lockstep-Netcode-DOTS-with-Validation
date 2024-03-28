@@ -17,17 +17,17 @@ public partial class PlayerUpdateSystem : SystemBase
     protected override void OnUpdate()
     {
         var commandBuffer = new EntityCommandBuffer(Allocator.Temp);
-        foreach (var (commandTaget, playerInputDataToUse, connectionEntity) in SystemAPI.Query<RefRO<CommandTarget>, RefRO<PlayerInputDataToUse>>().WithAll<PlayerSpawned>().WithEntityAccess())
+        foreach (var (commandTarget, playerInputDataToUse, connectionEntity) in SystemAPI.Query<RefRO<CommandTarget>, RefRO<PlayerInputDataToUse>>().WithAll<PlayerSpawned>().WithEntityAccess())
         {
             int horizontalInput = playerInputDataToUse.ValueRO.horizontalInput;
             int verticalInput = playerInputDataToUse.ValueRO.verticalInput;
                 
-            LocalToWorld targetTransform = SystemAPI.GetComponent<LocalToWorld>(commandTaget.ValueRO.targetEntity);
+            LocalToWorld targetTransform = SystemAPI.GetComponent<LocalToWorld>(commandTarget.ValueRO.targetEntity);
             float3 targetPosition = targetTransform.Position;
             targetPosition.x += horizontalInput;
             targetPosition.z += verticalInput;
 
-            commandBuffer.SetComponent(commandTaget.ValueRO.targetEntity, LocalTransform.FromPosition(targetPosition));
+            commandBuffer.SetComponent(commandTarget.ValueRO.targetEntity, LocalTransform.FromPosition(targetPosition));
                 
             commandBuffer.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity, false);
         }
