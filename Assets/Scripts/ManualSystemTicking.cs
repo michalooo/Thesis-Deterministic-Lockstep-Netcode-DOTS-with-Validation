@@ -2,15 +2,14 @@ using Unity.Entities;
 
 public partial class ConnectionHandleSystemGroup : ComponentSystemGroup { }
 
+[UpdateInGroup(typeof(DeterministicSimulationSystemGroup), OrderFirst = true)] 
+public partial class InputGatherSystemGroup : ComponentSystemGroup { }
+
+[UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
+public partial class MovementSystemGroup : ComponentSystemGroup { }
+
 [UpdateAfter(typeof(ConnectionHandleSystemGroup))]
-[UpdateInGroup(typeof(DeterministicSystemGroup), OrderFirst = true)] // check out
-public partial class InputGatherSystemGroup : ComponentSystemGroup { } // also in deterministic system
-
-[UpdateAfter(typeof(InputGatherSystemGroup))]
-public partial class MovementSystemGroup : ComponentSystemGroup { } //maybe add to determinsm
-
-[UpdateAfter(typeof(MovementSystemGroup))]
-public partial class DeterministicSystemGroup : ComponentSystemGroup //IRateManager How to implement?
+public partial class DeterministicSimulationSystemGroup : ComponentSystemGroup //IRateManager How to implement?
 {
     // public bool ShouldGroupUpdate(ComponentSystemGroup group)
     // {
@@ -35,7 +34,7 @@ public partial struct ManualSystemTicking : ISystem
 
         world.GetOrCreateSystem<InputGatherSystemGroup>();
         world.GetOrCreateSystem<MovementSystemGroup>();
-        world.GetOrCreateSystem<DeterministicSystemGroup>(); 
+        world.GetOrCreateSystem<DeterministicSimulationSystemGroup>(); 
         world.GetOrCreateSystem<ConnectionHandleSystemGroup>();
 
     }

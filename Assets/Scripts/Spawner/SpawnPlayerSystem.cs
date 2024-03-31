@@ -52,7 +52,7 @@ public struct CommandTarget : IComponentData
 public struct GhostOwnerIsLocal : IComponentData, IEnableableComponent
 {} // added to different entites so it may cause desync. 
 
-[UpdateInGroup(typeof(InputGatherSystemGroup))]
+[UpdateInGroup(typeof(InputGatherSystemGroup), OrderFirst = true)]
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     public partial class SpawnPlayerSystem : SystemBase
     {

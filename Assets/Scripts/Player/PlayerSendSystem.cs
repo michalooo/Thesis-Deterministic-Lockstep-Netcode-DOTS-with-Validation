@@ -1,8 +1,7 @@
 using Unity.Entities;
 using UnityEngine;
 
-[UpdateInGroup(typeof(DeterministicSystemGroup))]
-[UpdateAfter(typeof(DeterminismCheckSystem))]
+[UpdateInGroup(typeof(DeterministicSimulationSystemGroup), OrderLast = true)]
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
 public partial class PlayerSendSystem : SystemBase
 {

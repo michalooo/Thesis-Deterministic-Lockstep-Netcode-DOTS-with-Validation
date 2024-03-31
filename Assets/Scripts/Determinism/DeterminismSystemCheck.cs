@@ -4,7 +4,8 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Transforms;
 
-[UpdateInGroup(typeof(DeterministicSystemGroup))]
+[UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
+[UpdateAfter(typeof(MovementSystemGroup))]
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
 public partial class DeterminismCheckSystem : SystemBase
 {
