@@ -9,16 +9,38 @@ public partial class InputGatherSystemGroup : ComponentSystemGroup { }
 public partial class MovementSystemGroup : ComponentSystemGroup { }
 
 [UpdateAfter(typeof(ConnectionHandleSystemGroup))]
-public partial class DeterministicSimulationSystemGroup : ComponentSystemGroup //IRateManager How to implement?
-{
-    // public bool ShouldGroupUpdate(ComponentSystemGroup group)
-    // {
-    //     return group. == SimulationSystemGroup;
-    // }
-    //
-    // public float Timestep { get; set; }
-}
+public partial class DeterministicSimulationSystemGroup : ComponentSystemGroup 
+{ }
 
+/*public partial class DeterministicSystemGroup : ComponentSystemGroup
+{
+    protected override void OnCreate()
+    {
+        RateManager = new DeterministicFixedStepRateManager();
+    }
+
+    public struct DeterministicFixedStepRateManager : IRateManager
+    {
+        public bool ShouldGroupUpdate(ComponentSystemGroup group)
+        {
+            ref var networkTime = ref SystemAPI.GetSingletonRW<NetworkTime>().ValueRW;
+            if (networkTime.SimulationTime < networkTime.RealTime)
+            {
+                networkTime.SimulationTime += fixedStepDeltaTime;
+                networkTime.NumTimesTickedThisFrame++;
+                group.World.PushTime(new TimeData());
+                return true;
+            }
+
+            for (int i = 0; i < networkTime.NumTimesTickedThisFrame; i++)
+                group.World.PopTime();
+            networkTime.NumTimesTickedThisFrame = 0;
+            return false;
+        }
+
+        public float Timestep { get; set; }
+    }
+}*/
 
 
 
