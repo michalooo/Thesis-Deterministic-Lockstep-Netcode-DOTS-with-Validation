@@ -22,7 +22,7 @@ public struct DeterminismCheckJob : IJobChunk
         ulong hash = 0;
         
         var transforms = chunk.GetNativeArray(ref transform); // LocalTransform can already be broken because of floats
-        var data = transforms.Reinterpret<byte>(UnsafeUtility.SizeOf<LocalTransform>() * transforms.Length);
+        var data = transforms.Reinterpret<byte>(UnsafeUtility.SizeOf<LocalTransform>());
         
         foreach (var t in data)
             hash = TypeHash.CombineFNV1A64(hash, t);

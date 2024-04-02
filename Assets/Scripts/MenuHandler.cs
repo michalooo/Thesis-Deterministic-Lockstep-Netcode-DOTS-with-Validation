@@ -25,6 +25,7 @@ public class MenuHandler : MonoBehaviour
         if(Is2ClientSimulation.isOn)
         {
             var client2 = CreateClientWorld("ClientWorld2");
+            var client3 = CreateClientWorld("ClientWorld3");
         }
         
         SceneManager.LoadScene("Loading");
