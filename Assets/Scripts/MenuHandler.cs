@@ -1,9 +1,13 @@
 using Unity.Entities;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class MenuHandler : MonoBehaviour
 {
+
+    [SerializeField] private Toggle Is2ClientSimulation;
+    
     public void QuitGame()
     {
         #if UNITY_EDITOR
@@ -17,6 +21,11 @@ public class MenuHandler : MonoBehaviour
         Debug.Log($"[HostGame]");
         var server = CreateServerWorld("ServerWorld");
         var client = CreateClientWorld("ClientWorld");
+        
+        if(Is2ClientSimulation.isOn)
+        {
+            var client2 = CreateClientWorld("ClientWorld2");
+        }
         
         SceneManager.LoadScene("Loading");
         
