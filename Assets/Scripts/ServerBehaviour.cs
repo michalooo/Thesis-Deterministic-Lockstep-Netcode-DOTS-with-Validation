@@ -242,27 +242,18 @@ public partial class ServerBehaviour : SystemBase
         {
             everyTickInputBuffer[rpc.CurrentTick] = new List<PlayerInputData>();
         }
+        
         if (!everyTickHashBuffer.ContainsKey(rpc.CurrentTick))
         {
             everyTickHashBuffer[rpc.CurrentTick] = new List<ulong>();
         }
         
-        // This tick already exists in the buffer. Check if the player already has inputs saved for this tick
+        // This tick already exists in the buffer. Check if the player already has inputs saved for this tick. No need to check for hash in that case because those should be send together and hash can be the same (if everything is correct) so we will get for example 3 same hashes
         foreach (var oldInputData in everyTickInputBuffer[rpc.CurrentTick])
         {
             if (oldInputData.networkID == connection.GetHashCode())
             {
                 Debug.LogError("Already received input from network ID " + connection.GetHashCode() + " for tick " + rpc.CurrentTick);
-                return; // Stop executing the function here, since we don't want to add the new inputData
-            }
-        }
-        
-        // This hash already exists in the buffer. Check if the player already has hash saved for this tick
-        foreach (var oldInputData in everyTickHashBuffer[rpc.CurrentTick])
-        {
-            if (oldInputData == rpc.HashForCurrentTick)
-            {
-                Debug.LogError("Already received hash from network ID " + connection.GetHashCode() + " for tick " + rpc.CurrentTick);
                 return; // Stop executing the function here, since we don't want to add the new inputData
             }
         }
@@ -311,7 +302,7 @@ public partial class ServerBehaviour : SystemBase
             everyTickHashBuffer.Remove(currentTick);
             currentTick++;
         }
-        else if (everyTickInputBuffer[currentTick - 1].Count == m_Connections.Length)
+        else if (everyTickInputBuffer[currentTick].Count == m_Connections.Length)
         {
             Debug.LogError("Too many player inputs saved in one tick");
             return;
