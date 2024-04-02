@@ -90,25 +90,27 @@ public partial class ClientBehaviour : SystemBase
 
     void HandleRpc(DataStreamReader stream)
     {
-        var id = (RpcID) stream.ReadInt(); // problem here is if we would like to unread this so ideally we just want to peek the value
+        var copyOfStream = stream;
+        var id = (RpcID) copyOfStream.ReadByte(); // for the future check if its within a valid range (id as bytes)
         if (!Enum.IsDefined(typeof(RpcID), id))
         {
             Debug.LogError("Received invalid RPC ID: " + id);
             return;
         }
         
-        INetcodeRPC rpc;
+        Debug.Log("client " + id);
+        
         switch (id)
         { 
             case RpcID.BroadcastAllPlayersInputsToClients:
-                rpc = new RpcPlayersDataUpdate();
-                rpc.Deserialize(stream);
-                UpdatePlayersData((RpcPlayersDataUpdate) rpc);
+                var rpcPlayersDataUpdate = new RpcPlayersDataUpdate();
+                rpcPlayersDataUpdate.Deserialize(stream);
+                UpdatePlayersData(rpcPlayersDataUpdate);
                 break;
             case RpcID.StartDeterministicSimulation:
-                rpc = new RpcStartDeterministicSimulation();
-                rpc.Deserialize(stream);
-                StartGame((RpcStartDeterministicSimulation) rpc);
+                var rpcStartDeterministicSimulation = new RpcStartDeterministicSimulation();
+                rpcStartDeterministicSimulation.Deserialize(stream);
+                StartGame(rpcStartDeterministicSimulation);
                 break;
             default:
                 Debug.LogError("Received RPC ID not proceeded by the client: " + id);

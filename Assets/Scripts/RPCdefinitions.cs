@@ -12,7 +12,7 @@ public interface INetcodeRPC
 }
 
 // Definition of different RPC types
-public enum RpcID : byte // chaged from int to byte
+public enum RpcID : byte
 {
     StartDeterministicSimulation,
     BroadcastAllPlayersInputsToClients,
@@ -44,7 +44,7 @@ public struct RpcStartDeterministicSimulation: INetcodeRPC
         if(!pipeline.HasValue) mDriver.BeginSend(connection, out writer);
         else mDriver.BeginSend(pipeline.Value, connection, out writer);
         
-        writer.WriteInt((int) GetID);
+        writer.WriteByte((byte) GetID);
         writer.WriteInt(NetworkIDs.Length);
         for (int i = 0; i < NetworkIDs.Length; i++)
         {
@@ -69,7 +69,7 @@ public struct RpcStartDeterministicSimulation: INetcodeRPC
 
     public void Deserialize(DataStreamReader reader)
     {
-        reader.ReadInt(); // ID
+        reader.ReadByte(); // ID
         int count = reader.ReadInt();
 
         NetworkIDs = new NativeList<int>(count, Allocator.Temp);
@@ -114,7 +114,7 @@ public struct RpcPlayersDataUpdate: INetcodeRPC
         if(!pipeline.HasValue) mDriver.BeginSend(connection, out writer);
         else mDriver.BeginSend(pipeline.Value, connection, out writer);
         
-        writer.WriteInt((int) GetID);
+        writer.WriteByte((byte) GetID);
         writer.WriteInt(NetworkIDs.Length);
         for (int i = 0; i < NetworkIDs.Length; i++)
         {
@@ -141,7 +141,7 @@ public struct RpcPlayersDataUpdate: INetcodeRPC
 
     public void Deserialize(DataStreamReader reader)
     {
-        reader.ReadInt(); // ID
+        reader.ReadByte(); // ID
         int count = reader.ReadInt();
         
         NetworkIDs = new NativeList<int>(count, Allocator.Temp);
@@ -188,7 +188,7 @@ public struct RpcBroadcastPlayerInputToServer: INetcodeRPC
         if(!pipeline.HasValue) mDriver.BeginSend(connection, out writer);
         else mDriver.BeginSend(pipeline.Value, connection, out writer);
         
-        writer.WriteInt((int) GetID);
+        writer.WriteByte((byte) GetID);
         writer.WriteInt((int) PlayerInput.x); // Horizontal input
         writer.WriteInt((int) PlayerInput.y); // Vertical input
         writer.WriteInt(CurrentTick);
@@ -207,7 +207,7 @@ public struct RpcBroadcastPlayerInputToServer: INetcodeRPC
 
     public void Deserialize(DataStreamReader reader)
     {
-        reader.ReadInt(); // ID
+        reader.ReadByte(); // ID
         PlayerInput = new Vector2(reader.ReadInt(), reader.ReadInt());
         CurrentTick = reader.ReadInt();
         HashForCurrentTick = reader.ReadULong();

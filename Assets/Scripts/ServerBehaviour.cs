@@ -155,8 +155,7 @@ public partial class ServerBehaviour : SystemBase
     void HandleRpc(DataStreamReader stream, NetworkConnection connection)
     {
         var copyOfStream = stream;
-        copyOfStream.ReadInt();
-        var id = (RpcID) copyOfStream.ReadInt(); // for the future check if its within a valid range (id as bytes)
+        var id = (RpcID) copyOfStream.ReadByte(); // for the future check if its within a valid range (id as bytes)
         if (!Enum.IsDefined(typeof(RpcID), id))
         {
             Debug.LogError("Received invalid RPC ID: " + id);
@@ -207,6 +206,7 @@ public partial class ServerBehaviour : SystemBase
             Tickrate = tickRate
         };
         
+        Debug.Log("server " + rpc.GetID);
         for (int i = 0; i < m_Connections.Length; i++)
         {
             rpc.NetworkID = m_Connections[i].GetHashCode();

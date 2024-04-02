@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
+using Unity.Mathematics;
 using Unity.Transforms;
 
 [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
@@ -27,8 +28,12 @@ public partial class DeterminismCheckSystem : SystemBase
         );
 
         var resultsArrayCapacity = m_Query.CalculateChunkCount();
-        if(resultsArray.Capacity < resultsArrayCapacity)
-            resultsArray.Capacity = resultsArrayCapacity;
+        resultsArray.Clear(); // Clear the array to avoid data from old frames
+        var length = math.ceilpow2(resultsArrayCapacity);
+        resultsArray.Capacity = length;
+        resultsArray.Length = length; // refine this part at some point
+        
+            
 
         var job = new DeterminismCheckJob()
         {
