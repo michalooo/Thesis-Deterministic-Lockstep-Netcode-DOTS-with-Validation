@@ -2,6 +2,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
+using UnityEngine;
 
 // This system is responsible for updating all of players positions based on their input component (updated by the server) if they are spawned and if
 // UpdatePlayerPosition component is enabled. After updating those positions this component will be disabled
@@ -19,6 +20,13 @@ public partial class PlayerUpdateSystem : SystemBase
         var commandBuffer = new EntityCommandBuffer(Allocator.Temp);
         foreach (var (commandTarget, playerInputDataToUse, connectionEntity) in SystemAPI.Query<RefRO<CommandTarget>, RefRO<PlayerInputDataToUse>>().WithAll<PlayerSpawned>().WithEntityAccess())
         {
+            // if (playerInputDataToUse.ValueRO.horizontalInput == -5 || playerInputDataToUse.ValueRO.verticalInput == -5)
+            // {
+            //     Debug.Log("Entity disconnected with ID: " + playerInputDataToUse.ValueRO.playerNetworkId);
+            //     EntityManager.DestroyEntity(connectionEntity);
+            //     continue;
+            // }
+            
             int horizontalInput = playerInputDataToUse.ValueRO.horizontalInput;
             int verticalInput = playerInputDataToUse.ValueRO.verticalInput;
                 

@@ -14,20 +14,20 @@ public partial class PlayerInputGatherAndSendSystem : SystemBase
 
     protected override void OnUpdate()
     {
-        foreach (var (inputDataToSend, connectionReference, tickRateInfo, connectionEntity) in SystemAPI.Query<RefRW<PlayerInputDataToSend>, RefRO<NetworkConnectionReference>, RefRW<TickRateInfo>>().WithAll<PlayerSpawned>().WithEntityAccess())
+        foreach (var (inputDataToSend, connectionReference, tickRateInfo, connectionEntity) in SystemAPI.Query<RefRW<PlayerInputDataToSend>, RefRO<NetworkConnectionReference>, RefRW<TickRateInfo>>().WithAll<PlayerSpawned, GhostOwnerIsLocal>().WithEntityAccess())
         {
             int horizontalInput = 0;
             int verticalInput = 0;
-            
+
             if (World.Name == "ClientWorld")
-            {
-                horizontalInput = Input.GetKey(KeyCode.LeftArrow) ? -1 : Input.GetKey(KeyCode.RightArrow) ? 1 : 0;
-                verticalInput = Input.GetKey(KeyCode.DownArrow) ? -1 : Input.GetKey(KeyCode.UpArrow) ? 1 : 0;
-            }
-            else if (World.Name == "ClientWorld2")
             {
                 horizontalInput = Input.GetKey(KeyCode.A) ? -1 : Input.GetKey(KeyCode.D) ? 1 : 0;
                 verticalInput = Input.GetKey(KeyCode.S) ? -1 : Input.GetKey(KeyCode.W) ? 1 : 0;
+            }
+            else
+            {
+                horizontalInput = Input.GetKey(KeyCode.LeftArrow) ? -1 : Input.GetKey(KeyCode.RightArrow) ? 1 : 0;
+                verticalInput = Input.GetKey(KeyCode.DownArrow) ? -1 : Input.GetKey(KeyCode.UpArrow) ? 1 : 0;
             }
             
 

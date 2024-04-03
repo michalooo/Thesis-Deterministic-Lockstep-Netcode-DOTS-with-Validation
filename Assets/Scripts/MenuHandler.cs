@@ -21,13 +21,15 @@ public class MenuHandler : MonoBehaviour
     public void HostGame()
     {
         Debug.Log($"[HostGame]");
-        var server = CreateServerWorld("ServerWorld");
+        CreateServerWorld("ServerWorld");
         var client = CreateClientWorld("ClientWorld");
         
         if(Is2ClientSimulation.isOn)
         {
-            var client2 = CreateClientWorld("ClientWorld2");
-            var client3 = CreateClientWorld("ClientWorld3");
+            for(int i = 0; i < 2; i++)
+            {
+                CreateClientWorld($"ClientWorld{i+1}");
+            }
         }
         
         SceneManager.LoadScene("Loading");
@@ -39,7 +41,7 @@ public class MenuHandler : MonoBehaviour
     public void ConnectToGame()
     {
         Debug.Log($"[ConnectToServer]");
-        var client = CreateClientWorld("ClientWorld");
+        var client = CreateClientWorld("ClientWorld2");
         DestroyLocalSimulationWorld();
         
         SceneManager.LoadScene("Loading");

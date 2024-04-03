@@ -283,33 +283,33 @@ public partial class ServerBehaviour : SystemBase
                     networkID = i,
                     input = rpc.PlayerInput
                 };
+                
+                if (!everyTickInputBuffer.ContainsKey(rpc.CurrentTick))
+                {
+                    everyTickInputBuffer[rpc.CurrentTick] = new List<PlayerInputData>();
+                }
+        
+                if (!everyTickHashBuffer.ContainsKey(rpc.CurrentTick))
+                {
+                    everyTickHashBuffer[rpc.CurrentTick] = new List<ulong>();
+                }
+        
+                // This tick already exists in the buffer. Check if the player already has inputs saved for this tick. No need to check for hash in that case because those should be send together and hash can be the same (if everything is correct) so we will get for example 3 same hashes
+                foreach (var oldInputData in everyTickInputBuffer[rpc.CurrentTick])
+                {
+                    if (oldInputData.networkID == i)
+                    {
+                        Debug.LogError("Already received input from network ID " + i + " for tick " + rpc.CurrentTick);
+                        return; // Stop executing the function here, since we don't want to add the new inputData
+                    }
+                }
+        
+                everyTickInputBuffer[rpc.CurrentTick].Add(inputData);
+                everyTickHashBuffer[rpc.CurrentTick].Add(rpc.HashForCurrentTick);
             }
         }
-        
-        if (!everyTickInputBuffer.ContainsKey(rpc.CurrentTick))
-        {
-            everyTickInputBuffer[rpc.CurrentTick] = new List<PlayerInputData>();
-        }
-        
-        if (!everyTickHashBuffer.ContainsKey(rpc.CurrentTick))
-        {
-            everyTickHashBuffer[rpc.CurrentTick] = new List<ulong>();
-        }
-        
-        // This tick already exists in the buffer. Check if the player already has inputs saved for this tick. No need to check for hash in that case because those should be send together and hash can be the same (if everything is correct) so we will get for example 3 same hashes
-        foreach (var oldInputData in everyTickInputBuffer[rpc.CurrentTick])
-        {
-            if (oldInputData.networkID == connection.GetHashCode())
-            {
-                Debug.LogError("Already received input from network ID " + connection.GetHashCode() + " for tick " + rpc.CurrentTick);
-                return; // Stop executing the function here, since we don't want to add the new inputData
-            }
-        }
-        
-        everyTickInputBuffer[rpc.CurrentTick].Add(inputData);
-        everyTickHashBuffer[rpc.CurrentTick].Add(rpc.HashForCurrentTick);
     }
-    
+
     private int GetActiveConnectionCount()
     {
         int count = 0;
@@ -326,7 +326,7 @@ public partial class ServerBehaviour : SystemBase
     
     private void CheckIfAllDataReceivedAndSendToClients()
     {
-        if (everyTickInputBuffer[currentTick].Count == GetActiveConnectionCount() && everyTickHashBuffer[currentTick].Count == GetActiveConnectionCount())
+        if (everyTickInputBuffer[currentTick].Count >= GetActiveConnectionCount() && everyTickHashBuffer[currentTick].Count >= GetActiveConnectionCount()) // >= because of possibility of player disconnection
         { 
             // We've received a full set of data for this tick, so process it
             // This means creating new NativeLists of network IDs and inputs and sending them with SendRPCWithPlayersInput
@@ -369,15 +369,15 @@ public partial class ServerBehaviour : SystemBase
             everyTickHashBuffer.Remove(currentTick);
             currentTick++;
         }
-        else if (everyTickInputBuffer[currentTick].Count == GetActiveConnectionCount())
-        {
-            Debug.LogError("Too many player inputs saved in one tick");
-            return;
-        }
-        else
-        {
-            return;
-        }
+        // else if (everyTickInputBuffer[currentTick].Count == GetActiveConnectionCount())
+        // {
+        //     Debug.LogError("Too many player inputs saved in one tick");
+        //     return;
+        // }
+        // else
+        // {
+        //     return;
+        // }
     }
 
 }

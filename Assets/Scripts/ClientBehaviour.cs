@@ -102,6 +102,13 @@ public partial class ClientBehaviour : SystemBase
                     break;
             }
         }
+
+        if (SceneManager.GetActiveScene().name == "Game" && Input.GetKey(KeyCode.C) && World.Name == "ClientWorld2") // Simulation of disconnection
+        {
+            m_Connection.Disconnect(m_Driver);
+            m_Connection = default;
+            SceneManager.LoadScene("Loading");
+        }
     }
 
     void HandleRpc(DataStreamReader stream)
@@ -113,8 +120,6 @@ public partial class ClientBehaviour : SystemBase
             Debug.LogError("Received invalid RPC ID: " + id);
             return;
         }
-        
-        Debug.Log("client " + id);
         
         switch (id)
         { 
@@ -195,25 +200,34 @@ public partial class ClientBehaviour : SystemBase
         // Enable component on player which has info about current position of the player
         // Create a characterController script on player which will check if this component is enabled and then update the position of the player and disable that component
         var commandBuffer = new EntityCommandBuffer(Allocator.TempJob);
-        
-        Entities
-            .WithAll<PlayerInputDataToUse, PlayerInputDataToSend>()
-            .WithEntityQueryOptions(EntityQueryOptions.IgnoreComponentEnabledState)
-            .ForEach((Entity entity, ref PlayerInputDataToUse playerInputData) =>
+
+        foreach (var (playerInputData, connectionEntity) in SystemAPI
+                     .Query<RefRW<PlayerInputDataToUse>>()
+                     .WithOptions(EntityQueryOptions.IgnoreComponentEnabledState)
+                     .WithAll<PlayerInputDataToSend>().WithEntityAccess())
+        {
+            var idExists = false;
+            for (int i = 0; i < networkIDs.Length; i++)
             {
-                for (int i = 0; i < networkIDs.Length; i++)
+                if (playerInputData.ValueRO.playerNetworkId == networkIDs[i])
                 {
-                    if (playerInputData.playerNetworkId == networkIDs[i])
-                    {
-                        playerInputData.horizontalInput = (int)inputs[i].x;
-                        playerInputData.verticalInput = (int)inputs[i].y;
-                        commandBuffer.SetComponentEnabled<PlayerInputDataToUse>(entity, true);
-                        commandBuffer.SetComponentEnabled<PlayerInputDataToSend>(entity, false);
-                    }
+                    idExists = true;
+                    playerInputData.ValueRW.horizontalInput = (int)inputs[i].x;
+                    playerInputData.ValueRW.verticalInput = (int)inputs[i].y;
+                    EntityManager.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity, true);
+                    EntityManager.SetComponentEnabled<PlayerInputDataToSend>(connectionEntity, false);
                 }
-            }).Run();
+            }
+            
+            if (!idExists) //To show that the player disconnected
+            {
+                Debug.Log("Destroying entity with ID: " + playerInputData.ValueRO.playerNetworkId);
+                commandBuffer.DestroyEntity(connectionEntity);
+                // playerInputData.ValueRW.horizontalInput = -5;
+                // playerInputData.ValueRW.verticalInput = -5;
+            }
+        }
         
         commandBuffer.Playback(EntityManager);
-        
     }
 }
