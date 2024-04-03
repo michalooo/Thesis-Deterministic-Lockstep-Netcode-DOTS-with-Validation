@@ -31,6 +31,8 @@ public partial class ServerBehaviour : SystemBase
     private int tickRate = 30;
     private int currentTick = 1;
     NativeList<Vector2> m_PlayerInputs;
+    
+    private bool desync = false;
 
     // singleton to define (clientserver tickrate)
     [Tooltip("The maximum amount of packets the pipeline can keep track of. This used when a packet is delayed, the packet is stored in the pipeline processing buffer and can be later brought back.")]
@@ -206,7 +208,6 @@ public partial class ServerBehaviour : SystemBase
             Tickrate = tickRate
         };
         
-        Debug.Log("server " + rpc.GetID);
         for (int i = 0; i < m_Connections.Length; i++)
         {
             rpc.NetworkID = m_Connections[i].GetHashCode();
@@ -214,7 +215,7 @@ public partial class ServerBehaviour : SystemBase
         }
     }
     
-    private void SendRPCWithPlayersInputUpdate(NativeList<int> networkIDs, NativeList<Vector2> playerInputs, int desyncHappend)
+    private void SendRPCWithPlayersInputUpdate(NativeList<int> networkIDs, NativeList<Vector2> playerInputs)
     {
         RpcPlayersDataUpdate rpc = new RpcPlayersDataUpdate
         {
@@ -225,7 +226,6 @@ public partial class ServerBehaviour : SystemBase
         
         for (int i = 0; i < m_Connections.Length; i++)
         {
-            rpc.DesyncHappend = desyncHappend; // set if desync happend, 0 - no desync, 1 - desync
             rpc.Serialize(m_Driver, m_Connections[i], simulatorPipeline);
         }
     }
@@ -279,19 +279,24 @@ public partial class ServerBehaviour : SystemBase
             
             // check if every hash is the same
             ulong firstHash = everyTickHashBuffer[currentTick][0];
-            int desyncHappend = 0;
             for (int i = 1; i < everyTickHashBuffer[currentTick].Count; i++)
             {
                 if (firstHash != everyTickHashBuffer[currentTick][i])
                 {
                     // Hashes are not equal - handle this scenario
-                    desyncHappend = 1;
+                    Debug.LogError("DESCYNCRONIZATION HAPPEND! HASHES ARE NOT EQUAL! " + "Ticks: " + currentTick + " Hashes: " + firstHash + " and " + everyTickHashBuffer[currentTick][i]);
+                    desync = true;
                     i = everyTickHashBuffer[currentTick].Count;
                 }
             }
-
-            // Send the RPC to all connections
-            SendRPCWithPlayersInputUpdate(networkIDs, inputs, desyncHappend);
+            if (!desync)
+            {
+                Debug.Log("All hashes are equal: " + firstHash + ". Number of hashes: " +
+                          everyTickHashBuffer[currentTick].Count + ". Tick: " + currentTick);
+                
+                // Send the RPC to all connections
+                SendRPCWithPlayersInputUpdate(networkIDs, inputs);
+            }
             
             // Clean up the temporary lists
             networkIDs.Dispose();

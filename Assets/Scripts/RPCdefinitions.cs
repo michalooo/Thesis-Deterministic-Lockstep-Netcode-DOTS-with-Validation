@@ -2,6 +2,7 @@ using System;
 using Unity.Collections;
 using Unity.Networking.Transport;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public interface INetcodeRPC
 {
@@ -95,7 +96,6 @@ public struct RpcPlayersDataUpdate: INetcodeRPC
     public NativeList<int> NetworkIDs { get; set; }
     public NativeList<Vector2> Inputs { get; set; }
     public int Tick { get; set; }
-    public int DesyncHappend { get; set; }
 
     public RpcID GetID => RpcID.BroadcastAllPlayersInputsToClients;
 
@@ -105,10 +105,9 @@ public struct RpcPlayersDataUpdate: INetcodeRPC
         NetworkIDs = networkIDs ?? new NativeList<int>(0, Allocator.Temp);
         Inputs = inputs ?? new NativeList<Vector2>(0, Allocator.Temp);
         Tick = tick ?? 0;
-        DesyncHappend = 0;
     }
 
-    public void Serialize(NetworkDriver mDriver, NetworkConnection connection, NetworkPipeline? pipeline = null) // set networkIDs and desync before sending
+    public void Serialize(NetworkDriver mDriver, NetworkConnection connection, NetworkPipeline? pipeline = null) // set networkIDs before sending
     {
         DataStreamWriter writer;
         if(!pipeline.HasValue) mDriver.BeginSend(connection, out writer);
@@ -126,7 +125,6 @@ public struct RpcPlayersDataUpdate: INetcodeRPC
             writer.WriteInt((int) Inputs[i].y);
         }
         writer.WriteInt(Tick);
-        writer.WriteInt(DesyncHappend);
         
         if (writer.HasFailedWrites)
         {
@@ -158,8 +156,6 @@ public struct RpcPlayersDataUpdate: INetcodeRPC
         }
         
         Tick = reader.ReadInt();
-        DesyncHappend = reader.ReadInt();
-        if (DesyncHappend == 1) Debug.LogError("Desync happened");
         
         Debug.Log("RPC from server with players data update received");
     }
@@ -192,7 +188,11 @@ public struct RpcBroadcastPlayerInputToServer: INetcodeRPC
         writer.WriteInt((int) PlayerInput.x); // Horizontal input
         writer.WriteInt((int) PlayerInput.y); // Vertical input
         writer.WriteInt(CurrentTick);
-        writer.WriteULong(HashForCurrentTick);
+        if (Input.GetKey(KeyCode.R))
+        {
+            writer.WriteULong(HashForCurrentTick + (ulong) Random.Range(0, 100));
+        }
+        else writer.WriteULong(HashForCurrentTick);
         
         if (writer.HasFailedWrites) 
         {
