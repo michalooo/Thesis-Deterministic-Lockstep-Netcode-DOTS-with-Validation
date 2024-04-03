@@ -6,7 +6,6 @@ using Unity.Networking.Transport;
 using Unity.Networking.Transport.Utilities;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using Random = UnityEngine.Random;
 
 // This is the script responsible for handling the server side of the network, with connections etc
 
@@ -25,11 +24,11 @@ public partial class ServerBehaviour : SystemBase
     
     NetworkDriver m_Driver;
     NetworkPipeline simulatorPipeline;
-    NativeList<NetworkConnection> m_Connections;
     NativeList<int> m_NetworkIDs;
     
     private Dictionary<int, List<PlayerInputData>> everyTickInputBuffer;
     private Dictionary<int, List<ulong>> everyTickHashBuffer;
+    private NativeArray<NetworkConnection> connectedPlayers; // This is an array of all possible connection slots in the game and players that are already connected
 
     private int tickRate = 30;
     private int currentTick = 1;
@@ -71,7 +70,7 @@ public partial class ServerBehaviour : SystemBase
         m_Driver = NetworkDriver.Create(settings);
         simulatorPipeline = m_Driver.CreatePipeline(typeof(SimulatorPipelineStage));
         
-        m_Connections = new NativeList<NetworkConnection>(16, Allocator.Persistent);
+        connectedPlayers = new NativeArray<NetworkConnection>(16, Allocator.Persistent);
         m_NetworkIDs = new NativeList<int>(16, Allocator.Persistent);
         m_PlayerInputs = new NativeList<Vector2>(16, Allocator.Persistent);
         
@@ -107,52 +106,73 @@ public partial class ServerBehaviour : SystemBase
         if (m_Driver.IsCreated)
         {
             m_Driver.Dispose();
-            m_Connections.Dispose();
+            connectedPlayers.Dispose();
             m_NetworkIDs.Dispose();
             m_PlayerInputs.Dispose();
         }
+    }
+    
+    private void AcceptAndHandleConnections()
+    {
+        // Accept new connections
+        NetworkConnection c;
+        while ((c = m_Driver.Accept()) != default)
+        {
+            // Find the first available spot in connectedPlayers array
+            int index = FindFreePlayerSlot();
+            if (index != -1)
+            {
+                // Assign the connection to the first available spot
+                connectedPlayers[index] = c; // Assign network ID based on the index
+                Debug.Log("Accepted a connection with network ID: " + index);
+            }
+            else
+            {
+                Debug.LogWarning("Cannot accept more connections. Server is full.");
+                c.Disconnect(m_Driver);
+            }
+        }
+    }
+    
+    private int FindFreePlayerSlot()
+    {
+        for (int i = 0; i < connectedPlayers.Length; i++)
+        {
+            if (!connectedPlayers[i].IsCreated)
+            {
+                return i;
+            }
+        }
+        return -1; // No free slot found
     }
 
     protected override void OnUpdate()
     {
         m_Driver.ScheduleUpdate().Complete();
-        
-        // Clean up connections.
-        for (int i = 0; i < m_Connections.Length; i++)
-        {
-            if (!m_Connections[i].IsCreated)
-            {
-                m_Connections.RemoveAtSwapBack(i);
-                i--;
-            }
-        }
 
         if (SceneManager.GetActiveScene().name != "Game") // We are not accepting new connections while in game
         {
-            // Accept new connections.
-            NetworkConnection c;
-            while ((c = m_Driver.Accept()) != default)
-            {
-                m_Connections.Add(c);
-                Debug.Log("Accepted a connection.");
-            }
+            AcceptAndHandleConnections();
         }
     
-        for (int i = 0; i < m_Connections.Length; i++)
+        for (int i = 0; i < connectedPlayers.Length; i++)
         {
-            DataStreamReader stream;
-            NetworkEvent.Type cmd;
-            while ((cmd = m_Driver.PopEventForConnection(m_Connections[i], out stream)) != NetworkEvent.Type.Empty)
+            if (connectedPlayers[i].IsCreated)
             {
-                switch (cmd)
+                DataStreamReader stream;
+                NetworkEvent.Type cmd;
+                while ((cmd = m_Driver.PopEventForConnection(connectedPlayers[i], out stream)) != NetworkEvent.Type.Empty)
                 {
-                    case NetworkEvent.Type.Data:
-                        HandleRpc(stream, m_Connections[i]);
-                        break;
-                    case NetworkEvent.Type.Disconnect:
-                        Debug.Log("Client disconnected from the server.");
-                        m_Connections[i] = default;
-                        break;
+                    switch (cmd)
+                    {
+                        case NetworkEvent.Type.Data:
+                            HandleRpc(stream, connectedPlayers[i]);
+                            break;
+                        case NetworkEvent.Type.Disconnect: // handling disconnect
+                            Debug.Log("Client disconnected from the server.");
+                            connectedPlayers[i] = default;
+                            break;
+                    }
                 }
             }
         }
@@ -201,11 +221,14 @@ public partial class ServerBehaviour : SystemBase
         m_PlayerInputs.Clear();
 
         // Collect data from all players
-        for (int i = 0; i < m_Connections.Length; i++)
+        for (int i = 0; i < connectedPlayers.Length; i++)
         {
             // Example: Collect network IDs and positions of players
-            m_NetworkIDs.Add(m_Connections[i].GetHashCode()); // set unique Network ID
-            m_PlayerInputs.Add(new Vector2(0, 0)); // Example input
+            if (connectedPlayers[i].IsCreated)
+            {
+                m_NetworkIDs.Add(i); // set unique Network ID
+                m_PlayerInputs.Add(new Vector2(0, 0)); // Example input
+            }
         }
     }
     
@@ -219,10 +242,13 @@ public partial class ServerBehaviour : SystemBase
             Tickrate = tickRate
         };
         
-        for (int i = 0; i < m_Connections.Length; i++)
+        for (int i = 0; i < connectedPlayers.Length; i++)
         {
-            rpc.NetworkID = m_Connections[i].GetHashCode();
-            rpc.Serialize(m_Driver, m_Connections[i], simulatorPipeline);
+            if (connectedPlayers[i].IsCreated)
+            {
+                rpc.NetworkID = i;
+                rpc.Serialize(m_Driver, connectedPlayers[i], simulatorPipeline);
+            }
         }
     }
     
@@ -235,19 +261,30 @@ public partial class ServerBehaviour : SystemBase
             Tick = tickRate
         };
         
-        for (int i = 0; i < m_Connections.Length; i++)
+        for (int i = 0; i < connectedPlayers.Length; i++)
         {
-            rpc.Serialize(m_Driver, m_Connections[i], simulatorPipeline);
+            if (connectedPlayers[i].IsCreated)
+            {
+                rpc.Serialize(m_Driver, connectedPlayers[i], simulatorPipeline);
+            }
         }
     }
     
     private void SaveTheData(RpcBroadcastPlayerInputToServer rpc, NetworkConnection connection)
     {
-        var inputData = new PlayerInputData
+        var inputData = new PlayerInputData();
+        for(int i=0; i<connectedPlayers.Length; i++)
         {
-            networkID = connection.GetHashCode(),
-            input = rpc.PlayerInput
-        };
+            if (connectedPlayers[i].Equals(connection))
+            {
+                Debug.Log("Received input from network ID " + i + " for tick " + rpc.CurrentTick);
+                inputData = new PlayerInputData
+                {
+                    networkID = i,
+                    input = rpc.PlayerInput
+                };
+            }
+        }
         
         if (!everyTickInputBuffer.ContainsKey(rpc.CurrentTick))
         {
@@ -273,9 +310,23 @@ public partial class ServerBehaviour : SystemBase
         everyTickHashBuffer[rpc.CurrentTick].Add(rpc.HashForCurrentTick);
     }
     
+    private int GetActiveConnectionCount()
+    {
+        int count = 0;
+        for (int i = 0; i < connectedPlayers.Length; i++)
+        {
+            if (connectedPlayers[i].IsCreated)
+            {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    
     private void CheckIfAllDataReceivedAndSendToClients()
     {
-        if (everyTickInputBuffer[currentTick].Count == m_Connections.Length && everyTickHashBuffer[currentTick].Count == m_Connections.Length)
+        if (everyTickInputBuffer[currentTick].Count == GetActiveConnectionCount() && everyTickHashBuffer[currentTick].Count == GetActiveConnectionCount())
         { 
             // We've received a full set of data for this tick, so process it
             // This means creating new NativeLists of network IDs and inputs and sending them with SendRPCWithPlayersInput
@@ -318,7 +369,7 @@ public partial class ServerBehaviour : SystemBase
             everyTickHashBuffer.Remove(currentTick);
             currentTick++;
         }
-        else if (everyTickInputBuffer[currentTick].Count == m_Connections.Length)
+        else if (everyTickInputBuffer[currentTick].Count == GetActiveConnectionCount())
         {
             Debug.LogError("Too many player inputs saved in one tick");
             return;
