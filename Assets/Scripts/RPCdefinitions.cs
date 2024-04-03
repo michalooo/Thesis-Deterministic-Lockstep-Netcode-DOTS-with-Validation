@@ -25,7 +25,6 @@ public enum RpcID : byte
 public struct RpcStartDeterministicSimulation: INetcodeRPC
 {
     public NativeList<int> NetworkIDs { get; set; }
-    public NativeList<Vector3> InitialPositions {get; set; }
     public int Tickrate { get; set; }
     public int NetworkID { get; set; }
 
@@ -34,7 +33,6 @@ public struct RpcStartDeterministicSimulation: INetcodeRPC
     public RpcStartDeterministicSimulation(NativeList<int>? networkIDs, NativeList<Vector3>? initialPositions, int? tickrate, int? networkID)
     {
         NetworkIDs = networkIDs ?? new NativeList<int>(8, Allocator.Temp);
-        InitialPositions = initialPositions ?? new NativeList<Vector3>(8, Allocator.Temp); //consideration
         Tickrate = tickrate ?? 60;
         NetworkID = networkID ?? 0;
     }
@@ -50,9 +48,6 @@ public struct RpcStartDeterministicSimulation: INetcodeRPC
         for (int i = 0; i < NetworkIDs.Length; i++)
         {
             writer.WriteInt(NetworkIDs[i]);
-            writer.WriteFloat(InitialPositions[i].x);
-            writer.WriteFloat(InitialPositions[i].y);
-            writer.WriteFloat(InitialPositions[i].z);
         }
         writer.WriteInt(Tickrate);
         writer.WriteInt(NetworkID);
@@ -74,12 +69,10 @@ public struct RpcStartDeterministicSimulation: INetcodeRPC
         int count = reader.ReadInt();
 
         NetworkIDs = new NativeList<int>(count, Allocator.Temp);
-        InitialPositions = new NativeList<Vector3>(count, Allocator.Temp);
 
         for (int i = 0; i < count; i++)
         {
             NetworkIDs.Add(reader.ReadInt());
-            InitialPositions.Add(new Vector3(reader.ReadFloat(), reader.ReadFloat(), reader.ReadFloat()));
         }
 
         Tickrate = reader.ReadInt();

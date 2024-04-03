@@ -212,16 +212,10 @@ public partial class ServerBehaviour : SystemBase
     private void SendRPCtoStartGame()
     {
         // register OnGameStart method where they can be used to spawn entities, separation between user code and package code
-        NativeList<Vector3> spawnPositions = new NativeList<Vector3>(m_NetworkIDs.Length, Allocator.Temp);
-        for (int j = 0; j < m_NetworkIDs.Length; j++) // Generate initial positions
-        {
-            spawnPositions.Add(new Vector3(10 + Random.Range(-5f, 5f),1,10 + Random.Range(-3f, 3f)));
-        }
         
         RpcStartDeterministicSimulation rpc = new RpcStartDeterministicSimulation
         {
             NetworkIDs = m_NetworkIDs,
-            InitialPositions = spawnPositions,
             Tickrate = tickRate
         };
         

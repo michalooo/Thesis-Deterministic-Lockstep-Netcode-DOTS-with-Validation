@@ -152,7 +152,6 @@ public partial class ClientBehaviour : SystemBase
                     playerNetworkId = rpc.NetworkIDs[i],
                     horizontalInput = 0, 
                     verticalInput = 0,
-                    initialPosition = rpc.InitialPositions[i]
                 });
                 EntityManager.AddComponentData(newEntity, new PlayerInputDataToSend
                 {

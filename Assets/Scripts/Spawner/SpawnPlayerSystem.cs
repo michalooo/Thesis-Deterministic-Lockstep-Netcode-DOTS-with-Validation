@@ -17,7 +17,6 @@ public struct PlayerInputDataToUse : IComponentData, IEnableableComponent
     public int playerNetworkId;
     public int horizontalInput;
     public int verticalInput;
-    public Vector3 initialPosition;
 }
 
 struct TickRateInfo : IComponentData
@@ -73,7 +72,7 @@ public struct GhostOwnerIsLocal : IComponentData, IEnableableComponent
                 commandBuffer.AddComponent<PlayerSpawned>(connectionEntity);
                 var player = commandBuffer.Instantiate(prefab);
                 commandBuffer.AddComponent(connectionEntity, new CommandTarget(){targetEntity = player});
-                commandBuffer.SetComponent(player, LocalTransform.FromPosition(inputDataToUse.ValueRO.initialPosition));
+                commandBuffer.SetComponent(player, LocalTransform.FromPosition(new Vector3(5 + inputDataToUse.ValueRO.playerNetworkId,1,5 + inputDataToUse.ValueRO.playerNetworkId))); 
                 commandBuffer.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity, false);
                 
                 // Add the player to the linked entity group on the connection so it is destroyed
