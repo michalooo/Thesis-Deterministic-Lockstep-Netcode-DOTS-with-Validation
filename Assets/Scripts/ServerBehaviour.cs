@@ -20,6 +20,9 @@ public struct PlayerInputData
 [UpdateInGroup(typeof(ConnectionHandleSystemGroup))]
 public partial class ServerBehaviour : SystemBase
 {
+    const ushort k_NetworkPort = 7979;
+    private MenuHandler _menuHandler;
+    
     NetworkDriver m_Driver;
     NetworkPipeline simulatorPipeline;
     NativeList<NetworkConnection> m_Connections;
@@ -74,15 +77,29 @@ public partial class ServerBehaviour : SystemBase
         
         everyTickInputBuffer = new Dictionary<int, List<PlayerInputData>>();
         everyTickHashBuffer = new Dictionary<int, List<ulong>>();
+        _menuHandler = GameObject.Find("MenuManager").GetComponent<MenuHandler>();
     
-        var endpoint = NetworkEndpoint.AnyIpv4.WithPort(7777);
+        var port = ParsePortOrDefault(_menuHandler.Port.text);
+        var endpoint = NetworkEndpoint.AnyIpv4.WithPort(port);
+        
         if (m_Driver.Bind(endpoint) != 0)
         {
-            Debug.LogError("Failed to bind to port 7777.");
+            Debug.LogError("Failed to bind to port 7979.");
             return;
         }
     
         m_Driver.Listen();
+    }
+    
+    private UInt16 ParsePortOrDefault(string s)
+    {
+        if (!UInt16.TryParse(s, out var port))
+        {
+            Debug.LogWarning($"Unable to parse port, using default port {k_NetworkPort}");
+            return k_NetworkPort;
+        }
+
+        return port;
     }
 
     protected override void OnDestroy()

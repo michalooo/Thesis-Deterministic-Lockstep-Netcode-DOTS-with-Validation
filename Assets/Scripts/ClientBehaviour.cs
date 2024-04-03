@@ -12,6 +12,9 @@ using UnityEngine.SceneManagement;
 [UpdateInGroup(typeof(ConnectionHandleSystemGroup))]
 public partial class ClientBehaviour : SystemBase
 {
+    const ushort k_NetworkPort = 7979;
+    private MenuHandler _menuHandler;
+    
     NetworkDriver m_Driver;
     NetworkConnection m_Connection;
     NetworkSettings clientSimulatorParameters;
@@ -36,6 +39,8 @@ public partial class ClientBehaviour : SystemBase
     
     protected override void OnCreate()
     {
+        _menuHandler = GameObject.Find("MenuManager").GetComponent<MenuHandler>();
+        
         clientSimulatorParameters = new NetworkSettings();
         clientSimulatorParameters.WithSimulatorStageParameters(
             maxPacketCount: maxPacketCount,
@@ -50,8 +55,19 @@ public partial class ClientBehaviour : SystemBase
         m_Driver = NetworkDriver.Create(clientSimulatorParameters);
         simulatorPipeline = m_Driver.CreatePipeline(typeof(SimulatorPipelineStage));
         
-        var endpoint = NetworkEndpoint.LoopbackIpv4.WithPort(7777);
+        var endpoint = NetworkEndpoint.Parse(_menuHandler.Address.text, ParsePortOrDefault(_menuHandler.Port.text)); //NetworkEndpoint.LoopbackIpv4.WithPort(k_NetworkPort);
         m_Connection = m_Driver.Connect(endpoint);
+    }
+    
+    private UInt16 ParsePortOrDefault(string s)
+    {
+        if (!UInt16.TryParse(s, out var port))
+        {
+            Debug.LogWarning($"Unable to parse port, using default port {k_NetworkPort}");
+            return k_NetworkPort;
+        }
+
+        return port;
     }
 
     protected override void OnDestroy()
@@ -75,7 +91,7 @@ public partial class ClientBehaviour : SystemBase
             switch (cmd)
             {
                 case NetworkEvent.Type.Connect:
-                    Debug.Log("Connected to server.");
+                    Debug.Log($"[ConnectToServer] Called on '{_menuHandler.Address.text}:{_menuHandler.Port.text}'.");
                     break;
                 case NetworkEvent.Type.Data:
                     HandleRpc(stream);
