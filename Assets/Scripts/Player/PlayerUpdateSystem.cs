@@ -20,24 +20,26 @@ public partial class PlayerUpdateSystem : SystemBase
         var commandBuffer = new EntityCommandBuffer(Allocator.Temp);
         foreach (var (commandTarget, playerInputDataToUse, connectionEntity) in SystemAPI.Query<RefRO<CommandTarget>, RefRO<PlayerInputDataToUse>>().WithAll<PlayerSpawned>().WithEntityAccess())
         {
-            // if (playerInputDataToUse.ValueRO.horizontalInput == -5 || playerInputDataToUse.ValueRO.verticalInput == -5)
-            // {
-            //     Debug.Log("Entity disconnected with ID: " + playerInputDataToUse.ValueRO.playerNetworkId);
-            //     EntityManager.DestroyEntity(connectionEntity);
-            //     continue;
-            // }
-            
-            int horizontalInput = playerInputDataToUse.ValueRO.horizontalInput;
-            int verticalInput = playerInputDataToUse.ValueRO.verticalInput;
+            if (playerInputDataToUse.ValueRO.playerDisconnected)
+            {
+                Debug.Log("Destroying entity with ID: " + playerInputDataToUse.ValueRO.playerNetworkId);
+                commandBuffer.DestroyEntity(commandTarget.ValueRO.targetEntity);
+                commandBuffer.DestroyEntity(connectionEntity);
+            }
+            else
+            {
+                int horizontalInput = playerInputDataToUse.ValueRO.horizontalInput;
+                int verticalInput = playerInputDataToUse.ValueRO.verticalInput;
                 
-            LocalToWorld targetTransform = SystemAPI.GetComponent<LocalToWorld>(commandTarget.ValueRO.targetEntity);
-            float3 targetPosition = targetTransform.Position;
-            targetPosition.x += horizontalInput;
-            targetPosition.z += verticalInput;
+                LocalToWorld targetTransform = SystemAPI.GetComponent<LocalToWorld>(commandTarget.ValueRO.targetEntity);
+                float3 targetPosition = targetTransform.Position;
+                targetPosition.x += horizontalInput;
+                targetPosition.z += verticalInput;
 
-            commandBuffer.SetComponent(commandTarget.ValueRO.targetEntity, LocalTransform.FromPosition(targetPosition));
+                commandBuffer.SetComponent(commandTarget.ValueRO.targetEntity, LocalTransform.FromPosition(targetPosition));
                 
-            commandBuffer.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity, false);
+                commandBuffer.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity, false);
+            }
         }
         
         commandBuffer.Playback(EntityManager);

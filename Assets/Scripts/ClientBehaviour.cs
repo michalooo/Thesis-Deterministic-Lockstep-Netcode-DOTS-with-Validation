@@ -157,6 +157,7 @@ public partial class ClientBehaviour : SystemBase
                     playerNetworkId = rpc.NetworkIDs[i],
                     horizontalInput = 0, 
                     verticalInput = 0,
+                    playerDisconnected = false,
                 });
                 EntityManager.AddComponentData(newEntity, new PlayerInputDataToSend
                 {
@@ -199,7 +200,6 @@ public partial class ClientBehaviour : SystemBase
         // Update player cubes based on received data, I need a job that for each component of type Player will enable it and change input values there
         // Enable component on player which has info about current position of the player
         // Create a characterController script on player which will check if this component is enabled and then update the position of the player and disable that component
-        var commandBuffer = new EntityCommandBuffer(Allocator.TempJob);
 
         foreach (var (playerInputData, connectionEntity) in SystemAPI
                      .Query<RefRW<PlayerInputDataToUse>>()
@@ -221,13 +221,10 @@ public partial class ClientBehaviour : SystemBase
             
             if (!idExists) //To show that the player disconnected
             {
-                Debug.Log("Destroying entity with ID: " + playerInputData.ValueRO.playerNetworkId);
-                commandBuffer.DestroyEntity(connectionEntity);
-                // playerInputData.ValueRW.horizontalInput = -5;
-                // playerInputData.ValueRW.verticalInput = -5;
+                playerInputData.ValueRW.playerDisconnected = true;
+                EntityManager.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity, true);
+                EntityManager.SetComponentEnabled<PlayerInputDataToSend>(connectionEntity, false);
             }
         }
-        
-        commandBuffer.Playback(EntityManager);
     }
 }

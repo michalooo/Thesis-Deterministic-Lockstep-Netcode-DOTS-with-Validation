@@ -171,6 +171,7 @@ public partial class ServerBehaviour : SystemBase
                         case NetworkEvent.Type.Disconnect: // handling disconnect
                             Debug.Log("Client disconnected from the server.");
                             connectedPlayers[i] = default;
+                            CheckIfAllDataReceivedAndSendToClients();
                             break;
                     }
                 }
@@ -326,7 +327,7 @@ public partial class ServerBehaviour : SystemBase
     
     private void CheckIfAllDataReceivedAndSendToClients()
     {
-        if (everyTickInputBuffer[currentTick].Count >= GetActiveConnectionCount() && everyTickHashBuffer[currentTick].Count >= GetActiveConnectionCount()) // >= because of possibility of player disconnection
+        if (everyTickInputBuffer[currentTick].Count == GetActiveConnectionCount() && everyTickHashBuffer[currentTick].Count == GetActiveConnectionCount())
         { 
             // We've received a full set of data for this tick, so process it
             // This means creating new NativeLists of network IDs and inputs and sending them with SendRPCWithPlayersInput
@@ -368,6 +369,10 @@ public partial class ServerBehaviour : SystemBase
             everyTickInputBuffer.Remove(currentTick);
             everyTickHashBuffer.Remove(currentTick);
             currentTick++;
+        }
+        else if(everyTickInputBuffer[currentTick].Count > GetActiveConnectionCount())
+        {
+            Debug.LogError("Too many player inputs saved in one tick");
         }
         // else if (everyTickInputBuffer[currentTick].Count == GetActiveConnectionCount())
         // {

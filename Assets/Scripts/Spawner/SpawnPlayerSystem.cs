@@ -17,6 +17,7 @@ public struct PlayerInputDataToUse : IComponentData, IEnableableComponent
     public int playerNetworkId;
     public int horizontalInput;
     public int verticalInput;
+    public bool playerDisconnected;
 }
 
 struct TickRateInfo : IComponentData
@@ -77,8 +78,8 @@ public struct GhostOwnerIsLocal : IComponentData, IEnableableComponent
                 
                 // Add the player to the linked entity group on the connection so it is destroyed
                 // automatically on disconnect (destroyed with connection entity destruction)
-                commandBuffer.AddBuffer<LinkedEntityGroup>(connectionEntity);
-                commandBuffer.AppendToBuffer(connectionEntity, new LinkedEntityGroup{Value = player});
+                // commandBuffer.AddBuffer<LinkedEntityGroup>(player);
+                // commandBuffer.AppendToBuffer(player, new LinkedEntityGroup{Value = connectionEntity});
             }
             
             commandBuffer.Playback(EntityManager);
