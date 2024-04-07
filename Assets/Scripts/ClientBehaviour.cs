@@ -133,6 +133,12 @@ public partial class ClientBehaviour : SystemBase
                 rpcStartDeterministicSimulation.Deserialize(stream);
                 StartGame(rpcStartDeterministicSimulation);
                 break;
+            case RpcID.PlayersDesyncronized:
+                var rpcPlayerDesyncronizationInfo = new RpcPlayerDesyncronizationInfo();
+                rpcPlayerDesyncronizationInfo.Deserialize(stream);
+                var determinismSystemGroup = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<DeterministicSimulationSystemGroup>();
+                determinismSystemGroup.Enabled = false;
+                break;
             default:
                 Debug.LogError("Received RPC ID not proceeded by the client: " + id);
                 break;

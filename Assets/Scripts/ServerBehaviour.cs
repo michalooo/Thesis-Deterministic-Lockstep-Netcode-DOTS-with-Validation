@@ -271,6 +271,19 @@ public partial class ServerBehaviour : SystemBase
         }
     }
     
+    private void SendRPCWithPlayersDesyncronizationInfo()
+    {
+        RpcPlayerDesyncronizationInfo rpc = new RpcPlayerDesyncronizationInfo{};
+        
+        for (int i = 0; i < connectedPlayers.Length; i++)
+        {
+            if (connectedPlayers[i].IsCreated)
+            {
+                rpc.Serialize(m_Driver, connectedPlayers[i], simulatorPipeline);
+            }
+        }
+    }
+    
     private void SaveTheData(RpcBroadcastPlayerInputToServer rpc, NetworkConnection connection)
     {
         var inputData = new PlayerInputData();
@@ -359,6 +372,9 @@ public partial class ServerBehaviour : SystemBase
                 
                 // Send the RPC to all connections
                 SendRPCWithPlayersInputUpdate(networkIDs, inputs);
+            }
+            else{
+                SendRPCWithPlayersDesyncronizationInfo();
             }
             
             // Clean up the temporary lists

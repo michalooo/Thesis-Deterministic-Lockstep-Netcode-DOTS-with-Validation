@@ -17,8 +17,40 @@ public enum RpcID : byte
 {
     StartDeterministicSimulation,
     BroadcastAllPlayersInputsToClients,
-    BroadcastPlayerInputToServer
+    BroadcastPlayerInputToServer,
+    PlayersDesyncronized
 }
+
+public struct RpcPlayerDesyncronizationInfo: INetcodeRPC
+{
+    public RpcID GetID => RpcID.PlayersDesyncronized;
+    public void Serialize(NetworkDriver mDriver, NetworkConnection connection, NetworkPipeline? pipeline = null) // set connection ID before sending
+    {
+        DataStreamWriter writer;
+        if(!pipeline.HasValue) mDriver.BeginSend(connection, out writer);
+        else mDriver.BeginSend(pipeline.Value, connection, out writer);
+        
+        writer.WriteByte((byte) GetID);
+
+        if (writer.HasFailedWrites) 
+        {
+            mDriver.AbortSend(writer);
+            throw new InvalidOperationException("Driver has failed writes.: " +
+                                                writer.Capacity); //driver too small for the schema of this rpc
+        }
+        
+        mDriver.EndSend(writer);
+        Debug.Log("RPC stating that players disconnected send from server");
+    }
+
+    public void Deserialize(DataStreamReader reader)
+    {
+        reader.ReadByte(); // ID
+       
+        Debug.Log("RPC stating that players disconnected received");
+    }
+}
+
 
 // RPC that server sends to all clients at the start of the game, it contains info about all players network IDs so the corresponding
 // connections entities can be created. Also contains information about expected tickRate
