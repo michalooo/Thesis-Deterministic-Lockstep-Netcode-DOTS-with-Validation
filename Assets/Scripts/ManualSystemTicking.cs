@@ -2,9 +2,6 @@ using Unity.Entities;
 
 public partial class ConnectionHandleSystemGroup : ComponentSystemGroup { }
 
-[UpdateInGroup(typeof(DeterministicSimulationSystemGroup), OrderFirst = true)] 
-public partial class InputGatherSystemGroup : ComponentSystemGroup { }
-
 [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
 public partial class MovementSystemGroup : ComponentSystemGroup { }
 
@@ -53,8 +50,7 @@ public partial struct ManualSystemTicking : ISystem
     public void OnCreate(ref SystemState state)
     {
         var world = World.DefaultGameObjectInjectionWorld;
-
-        world.GetOrCreateSystem<InputGatherSystemGroup>();
+        
         world.GetOrCreateSystem<MovementSystemGroup>();
         world.GetOrCreateSystem<DeterministicSimulationSystemGroup>(); 
         world.GetOrCreateSystem<ConnectionHandleSystemGroup>();

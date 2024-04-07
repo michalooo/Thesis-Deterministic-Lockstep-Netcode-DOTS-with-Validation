@@ -52,7 +52,7 @@ public struct CommandTarget : IComponentData
 public struct GhostOwnerIsLocal : IComponentData, IEnableableComponent
 {} // added to different entites so it may cause desync. 
 
-[UpdateInGroup(typeof(InputGatherSystemGroup), OrderFirst = true)]
+[UpdateBefore(typeof(DeterministicSimulationSystemGroup))]
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     public partial class SpawnPlayerSystem : SystemBase
     {
@@ -75,11 +75,6 @@ public struct GhostOwnerIsLocal : IComponentData, IEnableableComponent
                 commandBuffer.AddComponent(connectionEntity, new CommandTarget(){targetEntity = player});
                 commandBuffer.SetComponent(player, LocalTransform.FromPosition(new Vector3(5 + inputDataToUse.ValueRO.playerNetworkId,1,5 + inputDataToUse.ValueRO.playerNetworkId))); 
                 commandBuffer.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity, false);
-                
-                // Add the player to the linked entity group on the connection so it is destroyed
-                // automatically on disconnect (destroyed with connection entity destruction)
-                // commandBuffer.AddBuffer<LinkedEntityGroup>(player);
-                // commandBuffer.AppendToBuffer(player, new LinkedEntityGroup{Value = connectionEntity});
             }
             
             commandBuffer.Playback(EntityManager);

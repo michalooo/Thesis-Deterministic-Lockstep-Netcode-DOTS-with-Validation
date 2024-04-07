@@ -1,9 +1,10 @@
-using Unity.Entities;
+﻿using Unity.Entities;
 using UnityEngine;
 
 [UpdateInGroup(typeof(DeterministicSimulationSystemGroup), OrderLast = true)]
+[UpdateBefore(typeof(PlayerInputGatherAndSendSystem))]
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
-public partial class PlayerSendSystem : SystemBase
+public partial class CalculateTickSystem : SystemBase
 {
     protected override void OnCreate()
     {
@@ -14,10 +15,10 @@ public partial class PlayerSendSystem : SystemBase
     {
         var deltaTime = SystemAPI.Time.DeltaTime;
         
-        foreach (var (tickRateInfo, connectionEntity) in SystemAPI.Query<RefRW<TickRateInfo>>().WithAll<GhostOwnerIsLocal, PlayerSpawned>().WithDisabled<PlayerInputDataToSend>().WithEntityAccess())
+        foreach (var (tickRateInfo, connectionEntity) in SystemAPI.Query<RefRW<TickRateInfo>>().WithAll<GhostOwnerIsLocal, PlayerSpawned>().WithEntityAccess())
         {
             tickRateInfo.ValueRW.delayTime -= deltaTime;
-            if (tickRateInfo.ValueRO.delayTime < 0)
+            if (tickRateInfo.ValueRO.delayTime <= 0)
             {
                 tickRateInfo.ValueRW.delayTime = 1f / tickRateInfo.ValueRO.tickRate;
                 EntityManager.SetComponentEnabled<PlayerInputDataToSend>(connectionEntity, true);
