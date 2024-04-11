@@ -36,7 +36,7 @@ public struct InputsFromServerOnTheGivenTick
     public int tick;
     public RpcPlayersDataUpdate data;
     
-    public void Dispose()
+    public void Dispose() // does this really work??
     {
         tick = 0;
         data.Inputs.Dispose();
@@ -47,18 +47,17 @@ public struct InputsFromServerOnTheGivenTick
 // Define a component to store the fixed number of entries
 public struct StoredTicksAhead : IComponentData
 {
-    private const int MaxEntries = 12; // Maximum number of entries. Worth checking with the incoming tickAhead from the server
-    public NativeArray<InputsFromServerOnTheGivenTick> entries; // Array to store the entries
-
-    // Constructor to initialize the array
-    public StoredTicksAhead(bool initialize)
+    private const int MaxEntries = 20; // Maximum number of entries. Worth checking with the incoming tickAhead from the server
+    public NativeArray<InputsFromServerOnTheGivenTick> entries; 
+    
+    public StoredTicksAhead(bool shouldInitialize)
     {
         entries = new NativeArray<InputsFromServerOnTheGivenTick>(MaxEntries, Allocator.Persistent);
-        if (initialize)
+        if (shouldInitialize)
         {
             for (int i = 0; i < MaxEntries; i++)
             {
-                entries[i] = new InputsFromServerOnTheGivenTick { tick = 0, data = new RpcPlayersDataUpdate(null, null, 0) };
+                entries[i] = new InputsFromServerOnTheGivenTick { tick = 0, data = new RpcPlayersDataUpdate(null, null, 0) }; // tick = 0 means that the entry can be used
             }
         }
     }
@@ -66,9 +65,9 @@ public struct StoredTicksAhead : IComponentData
 
 public struct NetworkConnectionReference : IComponentData
 {
-    public NetworkDriver Driver;
-    public NetworkPipeline SimulatorPipeline;
-    public NetworkConnection Connection;
+    public NetworkDriver driver;
+    public NetworkPipeline simulatorPipeline;
+    public NetworkConnection connection;
 }
 
 public struct GhostOwner : IComponentData
@@ -81,12 +80,11 @@ public struct CommandTarget : IComponentData
     public Entity targetEntity;
 }
 
-/// <summary>
+/// <summary> 
 /// An enableable tag component used to track if a ghost with an owner is owned by the local host or not.
-/// This is enabled for all ghosts on the server and for ghosts where the ghost owner network id matches the connection id on the client.
 /// </summary>
 public struct GhostOwnerIsLocal : IComponentData, IEnableableComponent
-{} // added to different entites so it may cause desync. 
+{} // added to different entites so it may cause desync if comparing amount of components
 
 [UpdateBefore(typeof(DeterministicSimulationSystemGroup))]
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
@@ -109,7 +107,8 @@ public struct GhostOwnerIsLocal : IComponentData, IEnableableComponent
                 commandBuffer.AddComponent<PlayerSpawned>(connectionEntity);
                 var player = commandBuffer.Instantiate(prefab);
                 commandBuffer.AddComponent(connectionEntity, new CommandTarget(){targetEntity = player});
-                Debug.Log(5 + ghostOwner.ValueRO.networkId + " " + 1 + " " + 5 + ghostOwner.ValueRO.networkId);
+                
+                // Fix the position problem (those should be different but are the same)
                 commandBuffer.SetComponent(player, LocalTransform.FromPosition(new Vector3(5 + ghostOwner.ValueRO.networkId,1,5 + ghostOwner.ValueRO.networkId))); 
             }
             

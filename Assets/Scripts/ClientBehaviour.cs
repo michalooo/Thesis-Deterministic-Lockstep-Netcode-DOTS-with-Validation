@@ -6,19 +6,17 @@ using Unity.Networking.Transport;
 using Unity.Networking.Transport.Utilities;
 using UnityEngine.SceneManagement;
 
-// This is the script responsible for handling the client side of the network, with connections to server etc
-
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
 [UpdateInGroup(typeof(ConnectionHandleSystemGroup))]
 public partial class ClientBehaviour : SystemBase
 {
-    const ushort k_NetworkPort = 7979;
+    private const ushort KNetworkPort = 7979;
     private MenuHandler _menuHandler;
     
-    NetworkDriver m_Driver;
-    NetworkConnection m_Connection;
-    NetworkSettings clientSimulatorParameters;
-    NetworkPipeline simulatorPipeline;
+    private NetworkDriver _mDriver;
+    private NetworkConnection _mConnection;
+    private NetworkSettings _clientSimulatorParameters;
+    private NetworkPipeline _simulatorPipeline;
     
     [Tooltip("The maximum amount of packets the pipeline can keep track of. This used when a packet is delayed, the packet is stored in the pipeline processing buffer and can be later brought back.")]
     int maxPacketCount = 1000;
@@ -41,8 +39,8 @@ public partial class ClientBehaviour : SystemBase
     {
         _menuHandler = GameObject.Find("MenuManager").GetComponent<MenuHandler>();
         
-        clientSimulatorParameters = new NetworkSettings();
-        clientSimulatorParameters.WithSimulatorStageParameters(
+        _clientSimulatorParameters = new NetworkSettings();
+        _clientSimulatorParameters.WithSimulatorStageParameters(
             maxPacketCount: maxPacketCount,
             maxPacketSize: maxPacketSize,
             mode: mode,
@@ -52,41 +50,34 @@ public partial class ClientBehaviour : SystemBase
             packetDropPercentage: packetDropPercentage,
             packetDuplicationPercentage: packetDuplicationPercentage);
 
-        m_Driver = NetworkDriver.Create(clientSimulatorParameters);
-        simulatorPipeline = m_Driver.CreatePipeline(typeof(SimulatorPipelineStage));
+        _mDriver = NetworkDriver.Create(_clientSimulatorParameters);
+        _simulatorPipeline = _mDriver.CreatePipeline(typeof(SimulatorPipelineStage));
         
-        var endpoint = NetworkEndpoint.Parse(_menuHandler.Address.text, ParsePortOrDefault(_menuHandler.Port.text)); //NetworkEndpoint.LoopbackIpv4.WithPort(k_NetworkPort);
-        m_Connection = m_Driver.Connect(endpoint);
+        var endpoint = NetworkEndpoint.Parse(_menuHandler.Address.text, ParsePortOrDefault(_menuHandler.Port.text));
+        _mConnection = _mDriver.Connect(endpoint);
     }
     
-    private UInt16 ParsePortOrDefault(string s)
+    private ushort ParsePortOrDefault(string s)
     {
-        if (!UInt16.TryParse(s, out var port))
-        {
-            Debug.LogWarning($"Unable to parse port, using default port {k_NetworkPort}");
-            return k_NetworkPort;
-        }
+        if (ushort.TryParse(s, out var port)) return port;
+        Debug.LogWarning($"Unable to parse port, using default port {KNetworkPort}");
+        return KNetworkPort;
 
-        return port;
     }
 
     protected override void OnDestroy()
     {
-        m_Driver.Dispose();
+        _mDriver.Dispose();
     }
 
     protected override void OnUpdate()
     {
-        m_Driver.ScheduleUpdate().Complete();
+        _mDriver.ScheduleUpdate().Complete();
 
-        if (!m_Connection.IsCreated)
-        {
-            return;
-        }
+        if (!_mConnection.IsCreated) return;
 
-        DataStreamReader stream;
         NetworkEvent.Type cmd;
-        while ((cmd = m_Connection.PopEvent(m_Driver, out stream)) != NetworkEvent.Type.Empty)
+        while ((cmd = _mConnection.PopEvent(_mDriver, out var stream)) != NetworkEvent.Type.Empty)
         {
             switch (cmd)
             {
@@ -98,20 +89,24 @@ public partial class ClientBehaviour : SystemBase
                     break;
                 case NetworkEvent.Type.Disconnect:
                     Debug.Log("Disconnected from server.");
-                    m_Connection = default;
+                    _mConnection = default;
                     break;
+                case NetworkEvent.Type.Empty:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
         }
 
         if (SceneManager.GetActiveScene().name == "Game" && Input.GetKey(KeyCode.C) && World.Name == "ClientWorld2") // Simulation of disconnection
         {
-            m_Connection.Disconnect(m_Driver);
-            m_Connection = default;
+            _mConnection.Disconnect(_mDriver);
+            _mConnection = default;
             SceneManager.LoadScene("Loading");
         }
     }
 
-    void HandleRpc(DataStreamReader stream)
+    private void HandleRpc(DataStreamReader stream)
     {
         var copyOfStream = stream;
         var id = (RpcID) copyOfStream.ReadByte(); // for the future check if its within a valid range (id as bytes)
@@ -133,11 +128,14 @@ public partial class ClientBehaviour : SystemBase
                 rpcStartDeterministicSimulation.Deserialize(stream);
                 StartGame(rpcStartDeterministicSimulation);
                 break;
-            case RpcID.PlayersDesyncronized:
-                var rpcPlayerDesyncronizationInfo = new RpcPlayerDesyncronizationInfo();
-                rpcPlayerDesyncronizationInfo.Deserialize(stream);
+            case RpcID.PlayersDesynchronized: // Stop simulation
+                var rpcPlayerDesynchronizationInfo = new RpcPlayerDesynchronizationInfo();
+                rpcPlayerDesynchronizationInfo.Deserialize(stream);
                 var determinismSystemGroup = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<DeterministicSimulationSystemGroup>();
                 determinismSystemGroup.Enabled = false;
+                break;
+            case RpcID.BroadcastPlayerInputToServer:
+                Debug.LogError("This message should never be received by the client");
                 break;
             default:
                 Debug.LogError("Received RPC ID not proceeded by the client: " + id);
@@ -145,22 +143,19 @@ public partial class ClientBehaviour : SystemBase
         }
     }
     
-    // This function at the start of the game will spawn all players
-    void StartGame(RpcStartDeterministicSimulation rpc)
+    private void StartGame(RpcStartDeterministicSimulation rpc)
     {
         if(SceneManager.GetActiveScene().name != "Game")
         {
             SceneManager.LoadScene("Game");
-            
-            for (int i = 0; i < rpc.NetworkIDs.Length; i++)
-            {
-                // Create a new entity
-                Entity newEntity = EntityManager.CreateEntity();
 
-                // Set the PlayerInputData component for the entity
+            foreach (var playerNetworkId in rpc.NetworkIDs)
+            {
+                var newEntity = EntityManager.CreateEntity();
+                
                 EntityManager.AddComponentData(newEntity, new PlayerInputDataToUse
                 {
-                    playerNetworkId = rpc.NetworkIDs[i],
+                    playerNetworkId = playerNetworkId,
                     horizontalInput = 0, 
                     verticalInput = 0,
                     playerDisconnected = false,
@@ -172,10 +167,10 @@ public partial class ClientBehaviour : SystemBase
                 });
                 EntityManager.AddComponentData(newEntity, new TickRateInfo
                 {
-                    tickRate = rpc.Tickrate,
+                    tickRate = rpc.TickRate,
                     tickAheadValue = rpc.TickAhead,
                         
-                    delayTime = 1f / rpc.Tickrate,
+                    delayTime = 1f / rpc.TickRate,
                     currentSimulationTick = 0,
                     currentClientTickToSend = 0,
                     hashForTheTick = 0,
@@ -183,36 +178,30 @@ public partial class ClientBehaviour : SystemBase
                 });
                 EntityManager.AddComponentData(newEntity, new GhostOwner
                 {
-                    networkId = rpc.NetworkIDs[i]
+                    networkId = playerNetworkId
                 });
                 EntityManager.AddComponentData(newEntity, new NetworkConnectionReference
                 {
-                    Driver = m_Driver,
-                    SimulatorPipeline = simulatorPipeline,
-                    Connection = m_Connection
+                    driver = _mDriver,
+                    simulatorPipeline = _simulatorPipeline,
+                    connection = _mConnection
                 });
                 EntityManager.AddComponentData(newEntity, new GhostOwnerIsLocal());
-                EntityManager.AddComponentData<StoredTicksAhead>(newEntity, new StoredTicksAhead(true));
-                if(rpc.NetworkIDs[i] != rpc.NetworkID)  EntityManager.SetComponentEnabled<GhostOwnerIsLocal>(newEntity, false);
+                EntityManager.AddComponentData(newEntity, new StoredTicksAhead(true));
+                if(playerNetworkId != rpc.NetworkID)  EntityManager.SetComponentEnabled<GhostOwnerIsLocal>(newEntity, false);
                 EntityManager.SetComponentEnabled<PlayerInputDataToSend>(newEntity, false);
             }
         }
     }
 
     // This function will be called when the server sends an RPC with updated players data and will update the PlayerInputDataToUse components and set them to enabled
-    void UpdatePlayersData(RpcPlayersDataUpdate rpc) // When do I want to refresh the screen? When input from the server arrives or together with the tick??
+    void UpdatePlayersData(RpcPlayersDataUpdate rpc)
     {
-        Debug.Log("updating");
-        // Update player cubes based on received data, I need a job that for each component of type Player will enable it and change input values there
-        // Enable component on player which has info about current position of the player
-        // Create a characterController script on player which will check if this component is enabled and then update the position of the player and disable that component
-        
         foreach (var storedTicksAhead in SystemAPI.Query<RefRW<StoredTicksAhead>>().WithAll<GhostOwnerIsLocal>())
         {
             bool foundEmptySlot = false;
             for (int i = 0; i < storedTicksAhead.ValueRW.entries.Length; i++)
             {
-                Debug.Log("elo " + storedTicksAhead.ValueRO.entries[i].tick);
                 if (storedTicksAhead.ValueRO.entries[i].tick == 0) // Check if the tick value is 0, assuming 0 indicates an empty slot
                 {
                     storedTicksAhead.ValueRW.entries[i] = new InputsFromServerOnTheGivenTick { tick = rpc.Tick, data = rpc };
@@ -225,10 +214,6 @@ public partial class ClientBehaviour : SystemBase
             if (!foundEmptySlot)
             {
                 Debug.LogError("No empty slots available to store the value of a future tick from the server. " + "The current capacity is: " + storedTicksAhead.ValueRO.entries.Length + " This error means an implementation problem");
-                for (int i = 0; i < storedTicksAhead.ValueRW.entries.Length; i++)
-                {
-                    Debug.LogError("One of the ticks is " + storedTicksAhead.ValueRO.entries[i].tick);
-                }
             }
             // Always current tick is less or equal to the server tick and the difference between them can be max tickAhead
         }

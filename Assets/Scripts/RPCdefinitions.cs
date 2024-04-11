@@ -4,7 +4,7 @@ using Unity.Networking.Transport;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
-public interface INetcodeRPC
+public interface INetcodeRPC // Interface for RPCs, all RPCs must implement this interface to ensure that we can get id from it, serialize it and deserialize it
 {
     RpcID GetID { get; }
     
@@ -12,19 +12,18 @@ public interface INetcodeRPC
     void Deserialize(DataStreamReader reader);
 }
 
-// Definition of different RPC types
-public enum RpcID : byte
+public enum RpcID : byte // Enum with all possible RPCs, this is used to identify the RPCs when serializing and deserializing them (one byte is enough space to cover them)
 {
     StartDeterministicSimulation,
     BroadcastAllPlayersInputsToClients,
     BroadcastPlayerInputToServer,
-    PlayersDesyncronized
+    PlayersDesynchronized
 }
 
-public struct RpcPlayerDesyncronizationInfo: INetcodeRPC
+public struct RpcPlayerDesynchronizationInfo: INetcodeRPC // RPC that is being send by the server when clients are desynchronized. Used to stop game execution
 {
-    public RpcID GetID => RpcID.PlayersDesyncronized;
-    public void Serialize(NetworkDriver mDriver, NetworkConnection connection, NetworkPipeline? pipeline = null) // set connection ID before sending
+    public RpcID GetID => RpcID.PlayersDesynchronized;
+    public void Serialize(NetworkDriver mDriver, NetworkConnection connection, NetworkPipeline? pipeline = null)
     {
         DataStreamWriter writer;
         if(!pipeline.HasValue) mDriver.BeginSend(connection, out writer);
@@ -35,8 +34,7 @@ public struct RpcPlayerDesyncronizationInfo: INetcodeRPC
         if (writer.HasFailedWrites) 
         {
             mDriver.AbortSend(writer);
-            throw new InvalidOperationException("Driver has failed writes.: " +
-                                                writer.Capacity); //driver too small for the schema of this rpc
+            throw new InvalidOperationException("Driver has failed writes.: " + writer.Capacity);
         }
         
         mDriver.EndSend(writer);
@@ -53,23 +51,15 @@ public struct RpcPlayerDesyncronizationInfo: INetcodeRPC
 
 
 // RPC that server sends to all clients at the start of the game, it contains info about all players network IDs so the corresponding
-// connections entities can be created. Also contains information about expected tickRate
+// connections entities can be created. Also contains information about expected tickRate etc
 public struct RpcStartDeterministicSimulation: INetcodeRPC
 {
-    public NativeList<int> NetworkIDs { get; set; }
-    public int Tickrate { get; set; }
-    public int TickAhead { get; set; }
-    public int NetworkID { get; set; }
+    public NativeList<int> NetworkIDs { get; set; } // all of connected players ID so we can assign them to prefabs and connections
+    public int TickRate { get; set; } // game tick rate set by the server
+    public int TickAhead { get; set; } // how many ticks in the future should user send (should be corrected so it can be adjusted to the ping)
+    public int NetworkID { get; set; } // ID for this specific connection so we can set GhostOwnerIsLocal
 
     public RpcID GetID => RpcID.StartDeterministicSimulation;
-
-    public RpcStartDeterministicSimulation(NativeList<int>? networkIDs, NativeList<Vector3>? initialPositions, int? tickrate, int? networkID, int? tickAhead)
-    {
-        NetworkIDs = networkIDs ?? new NativeList<int>(8, Allocator.Temp);
-        Tickrate = tickrate ?? 60;
-        TickAhead = tickAhead ?? 0;
-        NetworkID = networkID ?? 0;
-    }
 
     public void Serialize(NetworkDriver mDriver, NetworkConnection connection, NetworkPipeline? pipeline = null) // set connection ID before sending
     {
@@ -83,15 +73,14 @@ public struct RpcStartDeterministicSimulation: INetcodeRPC
         {
             writer.WriteInt(NetworkIDs[i]);
         }
-        writer.WriteInt(Tickrate);
+        writer.WriteInt(TickRate);
         writer.WriteInt(TickAhead);
         writer.WriteInt(NetworkID);
         
         if (writer.HasFailedWrites) 
         {
             mDriver.AbortSend(writer);
-            throw new InvalidOperationException("Driver has failed writes.: " +
-                                                writer.Capacity); //driver too small for the schema of this rpc
+            throw new InvalidOperationException("Driver has failed writes.: " + writer.Capacity); 
         }
         
         mDriver.EndSend(writer);
@@ -110,7 +99,7 @@ public struct RpcStartDeterministicSimulation: INetcodeRPC
             NetworkIDs.Add(reader.ReadInt());
         }
 
-        Tickrate = reader.ReadInt();
+        TickRate = reader.ReadInt();
         TickAhead = reader.ReadInt();
         NetworkID = reader.ReadInt();
 
@@ -118,16 +107,15 @@ public struct RpcStartDeterministicSimulation: INetcodeRPC
     }
 }
     
-// RPC that server sends to all clients after reciving inputs from all of them. It contains info about all players network IDs so they can be identified
+// RPC that server sends to all clients after receiving inputs from all of them. It contains info about all players network IDs so they can be identified
 // as well as their corresponding inputs to apply and the tick for which those should be assigned
 public struct RpcPlayersDataUpdate: INetcodeRPC
 {
-    public NativeList<int> NetworkIDs { get; set; }
-    public NativeList<Vector2> Inputs { get; set; }
-    public int Tick { get; set; }
+    public NativeList<int> NetworkIDs { get; set; } // all of connected players ID so we can assign them to prefabs and connections
+    public NativeList<Vector2> Inputs { get; set; } // all of connected players inputs that should be applied
+    public int Tick { get; set; } // on which tick it should be applied (so for example first tick send can be received back as tick 9
 
     public RpcID GetID => RpcID.BroadcastAllPlayersInputsToClients;
-
 
     public RpcPlayersDataUpdate(NativeList<int>? networkIDs, NativeList<Vector2>? inputs, int? tick)
     {
@@ -158,8 +146,7 @@ public struct RpcPlayersDataUpdate: INetcodeRPC
         if (writer.HasFailedWrites)
         {
             mDriver.AbortSend(writer);
-            throw new InvalidOperationException("Driver has failed writes.: " +
-                                                writer.Capacity); //driver too small for the schema of this rpc
+            throw new InvalidOperationException("Driver has failed writes.: " + writer.Capacity);
         }
         
         mDriver.EndSend(writer);
@@ -190,7 +177,7 @@ public struct RpcPlayersDataUpdate: INetcodeRPC
     }
 }
     
-// RPC that clients send to the server at the beginning of each tick. It contains info about all player input
+// RPC that clients send to the server at the end of each tick. It contains info about all player input
 public struct RpcBroadcastPlayerInputToServer: INetcodeRPC
 {
     public Vector2 PlayerInput { get; set; } // Horizontal + Vertical input
@@ -198,14 +185,6 @@ public struct RpcBroadcastPlayerInputToServer: INetcodeRPC
     public ulong HashForCurrentTick { get; set; }
 
     public RpcID GetID => RpcID.BroadcastPlayerInputToServer;
-
-
-    public RpcBroadcastPlayerInputToServer(Vector2? playerInput, int? currentTick)
-    {
-        PlayerInput = playerInput ?? Vector2.zero;
-        CurrentTick = currentTick ?? 0;
-        HashForCurrentTick = 0;
-    }
 
     public void Serialize(NetworkDriver mDriver, NetworkConnection connection, NetworkPipeline? pipeline = null) // set Hash before sending
     {
@@ -226,8 +205,7 @@ public struct RpcBroadcastPlayerInputToServer: INetcodeRPC
         if (writer.HasFailedWrites) 
         {
             mDriver.AbortSend(writer);
-            throw new InvalidOperationException("Driver has failed writes.: " +
-                                                writer.Capacity); //driver too small for the schema of this rpc
+            throw new InvalidOperationException("Driver has failed writes.: " + writer.Capacity);
         }
 
         mDriver.EndSend(writer);
@@ -240,8 +218,7 @@ public struct RpcBroadcastPlayerInputToServer: INetcodeRPC
         PlayerInput = new Vector2(reader.ReadInt(), reader.ReadInt());
         CurrentTick = reader.ReadInt();
         HashForCurrentTick = reader.ReadULong();
-       
-
-        Debug.Log("RPC recived in the server with player data update");
+        
+        Debug.Log("RPC received in the server with player data update");
     }
 }

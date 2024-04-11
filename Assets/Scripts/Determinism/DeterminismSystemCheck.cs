@@ -8,47 +8,45 @@ using Unity.Transforms;
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
 public partial class DeterminismCheckSystem : SystemBase
 {
-    NativeList<ulong> resultsArray;
-    private EntityQuery m_Query;
+    private NativeList<ulong> _resultsArray;
+    private EntityQuery _mQuery;
     
-    private Dictionary<int, ulong> everyTickHashBuffer;
+    private Dictionary<int, ulong> _everyTickHashBuffer;
     
     protected override void OnCreate()
     {
-        resultsArray = new NativeList<ulong>(128, Allocator.Persistent);
-        everyTickHashBuffer = new Dictionary<int, ulong>();
+        _resultsArray = new NativeList<ulong>(128, Allocator.Persistent);
+        _everyTickHashBuffer = new Dictionary<int, ulong>();
     }
     
     protected override void OnUpdate()
     {
-        m_Query = EntityManager.CreateEntityQuery(
+        _mQuery = EntityManager.CreateEntityQuery(
             typeof(DeterministicSimulation)
         );
 
-        var resultsArrayCapacity = m_Query.CalculateChunkCount();
-        resultsArray.Clear(); // Clear the array to avoid data from old frames
+        var resultsArrayCapacity = _mQuery.CalculateChunkCount();
+        _resultsArray.Clear(); // Clear the array to avoid data from old frames
         var length = math.ceilpow2(resultsArrayCapacity);
-        resultsArray.Capacity = length;
-        resultsArray.Length = length; // refine this part at some point
-        
-            
+        _resultsArray.Capacity = length;
+        _resultsArray.Length = length; // refine this part at some point
 
         var job = new DeterminismCheckJob()
         {
             transform = GetComponentTypeHandle<LocalTransform>(true),
-            ResultsNativeArray = resultsArray.AsArray()
+            ResultsNativeArray = _resultsArray.AsArray()
         };
-        var handle = job.ScheduleParallel(m_Query, this.Dependency);
+        var handle = job.ScheduleParallel(_mQuery, this.Dependency);
         handle.Complete();
         
         // Combine the results
         ulong hash = 0;
-        foreach (var result in resultsArray)
+        foreach (var result in _resultsArray)
             hash = TypeHash.CombineFNV1A64(hash, result);
         
         // Save the results for the future
-        var currentTick = everyTickHashBuffer.Count + 1;
-        everyTickHashBuffer[currentTick] = hash;
+        var currentTick = _everyTickHashBuffer.Count + 1;
+        _everyTickHashBuffer[currentTick] = hash;
         
         // Save Hash in the tickRateInfo component
         foreach (var tickRateInfo in SystemAPI.Query<RefRW<TickRateInfo>>().WithAll<GhostOwnerIsLocal>())
@@ -59,6 +57,6 @@ public partial class DeterminismCheckSystem : SystemBase
     
     protected override void OnDestroy()
     {
-        resultsArray.Dispose();
+        _resultsArray.Dispose();
     }
 }

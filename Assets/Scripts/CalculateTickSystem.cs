@@ -9,92 +9,53 @@ public partial class CalculateTickSystem : SystemBase
 {
     protected override void OnCreate()
     {
-        RequireForUpdate<PlayerInputDataToSend>(); // delete
+        RequireForUpdate<PlayerSpawned>(); // Start to tick directly after players are spawned
     }
 
-    protected override void OnUpdate() // If I want to send my input I should also check if(lastServerTickRecieved < currentClientTickToSend - tickPeriod)
+    protected override void OnUpdate()
     {
         var deltaTime = SystemAPI.Time.DeltaTime;
         
         foreach (var (tickRateInfo, storedTicksAhead, connectionEntity) in SystemAPI.Query<RefRW<TickRateInfo>, RefRW<StoredTicksAhead>>().WithAll<GhostOwnerIsLocal, PlayerSpawned>().WithEntityAccess())
         {
             tickRateInfo.ValueRW.delayTime -= deltaTime;
-            if (tickRateInfo.ValueRO.delayTime <= 0)
+            if (tickRateInfo.ValueRO.delayTime <= 0) // We are ready to try to send the next tick
             {
-                // 1) If current Tick to send is less or equal to tickAhead time then upgrade it and do nothing about the presentation update
-                // 2) If current Tick is greater than tickAhead check if we can proceed with presentation step (if we have it in the array)
-                //  if YES then proceed with both
-                // if NO then disable deterministic simulation group and wait for the next tick
-                // change and enable playerInputDataToUse or disable/enable DeterministicSimulation System Group
-
-                if (tickRateInfo.ValueRO.currentClientTickToSend <= tickRateInfo.ValueRO.tickAheadValue)
+                if (tickRateInfo.ValueRO.currentClientTickToSend <= tickRateInfo.ValueRO.tickAheadValue) // If current Tick to send is less or equal to tickAhead then upgrade it and do nothing about the presentation update (it should mean we are processing those first ticks)
                 {
                     tickRateInfo.ValueRW.currentClientTickToSend++;
                     EntityManager.SetComponentEnabled<PlayerInputDataToSend>(connectionEntity, true);
                 }
-                else
+                else // otherwise we can try to proceed with presentation step
                 {
-                    Debug.Log("current simulation tick: " + tickRateInfo.ValueRO.currentSimulationTick);
-                    Debug.Log("current tick to send: " + tickRateInfo.ValueRO.currentClientTickToSend);
-                    for(int i=0; i<storedTicksAhead.ValueRO.entries.Length; i++)
+                    for(int i=0; i<storedTicksAhead.ValueRO.entries.Length; i++) // Let's see if the tick we would like to present is already in the array
                     {
-                        Debug.Log("stored tick " + storedTicksAhead.ValueRO.entries[i].tick);
                         if(storedTicksAhead.ValueRO.entries[i].tick == tickRateInfo.ValueRO.currentSimulationTick + tickRateInfo.ValueRO.tickAheadValue) // Here the only problem would be if let's say 12 inputs arrived before the next one and our array is full
-                        {
-                            Debug.Log("found one");
+                        { 
+                            // If we found on we can increment both ticks (current presentation tick and tick we will send to server)
                             tickRateInfo.ValueRW.currentClientTickToSend++;
                             tickRateInfo.ValueRW.currentSimulationTick++;
                             
-                            UpdateComponentsData(storedTicksAhead.ValueRO.entries[i].data);
+                            UpdateComponentsData(storedTicksAhead.ValueRO.entries[i].data); // first update the component data before we will remove the info from the array to make space for more
                             storedTicksAhead.ValueRW.entries[i].Dispose();
                             storedTicksAhead.ValueRW.entries[i] = new InputsFromServerOnTheGivenTick { tick = 0 };
                             EntityManager.SetComponentEnabled<PlayerInputDataToSend>(connectionEntity, true);
-                            EntityManager.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity, true); // We are assuming that client input to Send will be always x ticks in from of the simulation one
-                            
-                            
+                            EntityManager.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity, true); // We are assuming that client input to Send will be always x ticks in front of the simulation one (because we are upgrading them both)
                             break;
                         }
                     }
                 }
-                
-                tickRateInfo.ValueRW.delayTime = 1f / tickRateInfo.ValueRO.tickRate;
-                
-                
-                
-                
-                // check something with ahead tick???
-                // we can progress if the difference between currentClientPresentationTick and clientInputTickToSend is less than the value 
-                // we should increment currentClientPresentationTick first (if we can)
-                // then we should compare the values
-                // if we can proceed we can increase clientInputTickToSend
-                
-                // if the next tick from the server is ready to use then upgrade both this and the clientTickToSend
-                
-                
-                // if current tick to send is within the approved range (simulation tick should be always smaller/equal to client tick to send) then upgrade client tick to send
-
-
-                // if current tick to send is equal to the delay 
-
-                // check if we need to change currentClientPresentationTick based on the array of ticks from server
-                // if(currentClientPresentationTick + difference <= clientInputTickToSend) proceed
-                
-                // check if we have input from the server for the next tick
-                // if we do, increase clientTick, enable Deterministic Simulation System Group (to update inputs and send new to the server)
-                // if not then just disable deterministic group and reset delay time (so waiting one more tick)
-                
+                // If the tick to present wasn't found we are stopping to wait for inputs which just mean that PlayerInputDataToSend and PlayerInputDataToUse won't be enabled and used by other systems
+                tickRateInfo.ValueRW.delayTime = 1f / tickRateInfo.ValueRO.tickRate; // reset the time until next tick
             }
         }
     }
     
-    void UpdateComponentsData(RpcPlayersDataUpdate rpc) // When do I want to refresh the screen? When input from the server arrives or together with the tick??
+    // Update player data based on received RPC
+    private void UpdateComponentsData(RpcPlayersDataUpdate rpc) // When do I want to refresh the screen? When input from the server arrives or together with the tick??
     {
-        // Update player data based on received RPC
-        NativeList<int> networkIDs = new NativeList<int>(16, Allocator.Temp);
-        NativeList<Vector2> inputs = new NativeList<Vector2>(16, Allocator.Temp);
-        networkIDs = rpc.NetworkIDs;
-        inputs = rpc.Inputs;
-        
+        var networkIDs = rpc.NetworkIDs;
+        var inputs = rpc.Inputs;
         
         foreach (var (playerInputData, connectionEntity) in SystemAPI
                      .Query<RefRW<PlayerInputDataToUse>>()
@@ -109,17 +70,17 @@ public partial class CalculateTickSystem : SystemBase
                     idExists = true;
                     playerInputData.ValueRW.horizontalInput = (int)inputs[i].x;
                     playerInputData.ValueRW.verticalInput = (int)inputs[i].y;
-                    EntityManager.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity, true);
-                    EntityManager.SetComponentEnabled<PlayerInputDataToSend>(connectionEntity, false);
+                    
                 }
             }
             
-            if (!idExists) //To show that the player disconnected
+            if (!idExists) // To show that the player disconnected
             {
                 playerInputData.ValueRW.playerDisconnected = true;
-                EntityManager.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity, true);
-                EntityManager.SetComponentEnabled<PlayerInputDataToSend>(connectionEntity, false);
             }
+            
+            EntityManager.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity, true);
+            EntityManager.SetComponentEnabled<PlayerInputDataToSend>(connectionEntity, false);
         }
     }
 }

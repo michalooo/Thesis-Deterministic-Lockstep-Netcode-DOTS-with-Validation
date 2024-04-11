@@ -1,7 +1,7 @@
 using Unity.Entities;
 using UnityEngine;
 
-// This system is responsible for gathering this player's input and storing it in the PlayerInputData component
+// This system is responsible for gathering this player's input and sending it to the server
 [UpdateInGroup(typeof(DeterministicSimulationSystemGroup), OrderLast = true)]
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
 public partial class PlayerInputGatherAndSendSystem : SystemBase
@@ -19,7 +19,7 @@ public partial class PlayerInputGatherAndSendSystem : SystemBase
             int horizontalInput;
             int verticalInput;
 
-            if (World.Name == "ClientWorld2")
+            if (World.Name == "ClientWorld2") // for local testing purposes
             {
                 horizontalInput = Input.GetKey(KeyCode.A) ? -1 : Input.GetKey(KeyCode.D) ? 1 : 0;
                 verticalInput = Input.GetKey(KeyCode.S) ? -1 : Input.GetKey(KeyCode.W) ? 1 : 0;
@@ -34,19 +34,18 @@ public partial class PlayerInputGatherAndSendSystem : SystemBase
                 Debug.LogError("Invalid world name!");
                 return;
             }
-            
 
             inputDataToSend.ValueRW.horizontalInput = horizontalInput;
             inputDataToSend.ValueRW.verticalInput = verticalInput;
             
-            RpcBroadcastPlayerInputToServer rpc = new RpcBroadcastPlayerInputToServer
+            var rpc = new RpcBroadcastPlayerInputToServer
             {
                 PlayerInput = new Vector2(inputDataToSend.ValueRO.horizontalInput, inputDataToSend.ValueRO.verticalInput),
                 CurrentTick = tickRateInfo.ValueRO.currentClientTickToSend,
+                HashForCurrentTick = tickRateInfo.ValueRO.hashForTheTick 
             };
-            
-            rpc.HashForCurrentTick = tickRateInfo.ValueRO.hashForTheTick; // setting hash
-            rpc.Serialize(connectionReference.ValueRO.Driver, connectionReference.ValueRO.Connection, connectionReference.ValueRO.SimulatorPipeline);
+
+            rpc.Serialize(connectionReference.ValueRO.driver, connectionReference.ValueRO.connection, connectionReference.ValueRO.simulatorPipeline);
             EntityManager.SetComponentEnabled<PlayerInputDataToSend>(connectionEntity, false);
         }
     }

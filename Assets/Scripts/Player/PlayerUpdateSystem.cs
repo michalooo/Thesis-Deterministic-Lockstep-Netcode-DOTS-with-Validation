@@ -28,11 +28,11 @@ public partial class PlayerUpdateSystem : SystemBase
             }
             else
             {
-                int horizontalInput = playerInputDataToUse.ValueRO.horizontalInput;
-                int verticalInput = playerInputDataToUse.ValueRO.verticalInput;
+                var horizontalInput = playerInputDataToUse.ValueRO.horizontalInput;
+                var verticalInput = playerInputDataToUse.ValueRO.verticalInput;
                 
-                LocalToWorld targetTransform = SystemAPI.GetComponent<LocalToWorld>(commandTarget.ValueRO.targetEntity);
-                float3 targetPosition = targetTransform.Position;
+                var targetTransform = SystemAPI.GetComponent<LocalToWorld>(commandTarget.ValueRO.targetEntity);
+                var targetPosition = targetTransform.Position;
                 targetPosition.x += horizontalInput;
                 targetPosition.z += verticalInput;
 

@@ -21,7 +21,7 @@ public struct DeterminismCheckJob : IJobChunk
 #endif
         ulong hash = 0;
         
-        var transforms = chunk.GetNativeArray(ref transform); // LocalTransform can already be broken because of floats
+        var transforms = chunk.GetNativeArray(ref transform); // LocalTransform can already be broken because of floats. Test on different devices
         var data = transforms.Reinterpret<byte>(UnsafeUtility.SizeOf<LocalTransform>());
         
         foreach (var t in data)
