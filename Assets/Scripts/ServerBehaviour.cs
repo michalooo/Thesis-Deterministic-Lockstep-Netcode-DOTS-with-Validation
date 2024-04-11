@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Mathematics;
 using Unity.Networking.Transport;
 using Unity.Networking.Transport.Utilities;
 using UnityEngine;
@@ -31,7 +32,9 @@ public partial class ServerBehaviour : SystemBase
     private NativeArray<NetworkConnection> connectedPlayers; // This is an array of all possible connection slots in the game and players that are already connected
 
     private int tickRate = 30;
+    private int tickAhead = 0;
     private int currentTick = 1;
+    private int lastTickRecived = 0;
     NativeList<Vector2> m_PlayerInputs;
     
     private bool desync = false;
@@ -56,6 +59,8 @@ public partial class ServerBehaviour : SystemBase
 
     protected override void OnCreate()
     {
+        tickAhead = Mathf.CeilToInt(0.15f * tickRate);
+        currentTick = tickAhead;
         var settings = new NetworkSettings();
         settings.WithSimulatorStageParameters(
             maxPacketCount: maxPacketCount,
@@ -240,7 +245,8 @@ public partial class ServerBehaviour : SystemBase
         RpcStartDeterministicSimulation rpc = new RpcStartDeterministicSimulation
         {
             NetworkIDs = m_NetworkIDs,
-            Tickrate = tickRate
+            Tickrate = tickRate,
+            TickAhead = tickAhead
         };
         
         for (int i = 0; i < connectedPlayers.Length; i++)
@@ -259,7 +265,7 @@ public partial class ServerBehaviour : SystemBase
         {
             NetworkIDs = networkIDs,
             Inputs = playerInputs,
-            Tick = tickRate
+            Tick = lastTickRecived
         };
         
         for (int i = 0; i < connectedPlayers.Length; i++)
@@ -320,6 +326,7 @@ public partial class ServerBehaviour : SystemBase
         
                 everyTickInputBuffer[rpc.CurrentTick].Add(inputData);
                 everyTickHashBuffer[rpc.CurrentTick].Add(rpc.HashForCurrentTick);
+                lastTickRecived = rpc.CurrentTick;
             }
         }
     }
@@ -340,35 +347,35 @@ public partial class ServerBehaviour : SystemBase
     
     private void CheckIfAllDataReceivedAndSendToClients()
     {
-        if (everyTickInputBuffer[currentTick].Count == GetActiveConnectionCount() && everyTickHashBuffer[currentTick].Count == GetActiveConnectionCount())
+        if (everyTickInputBuffer[lastTickRecived].Count == GetActiveConnectionCount() && everyTickHashBuffer[lastTickRecived].Count == GetActiveConnectionCount())
         { 
             // We've received a full set of data for this tick, so process it
             // This means creating new NativeLists of network IDs and inputs and sending them with SendRPCWithPlayersInput
             var networkIDs = new NativeList<int>(Allocator.Temp);
             var inputs = new NativeList<Vector2>(Allocator.Temp);
 
-            foreach (var inputData in everyTickInputBuffer[currentTick])
+            foreach (var inputData in everyTickInputBuffer[lastTickRecived])
             {
                 networkIDs.Add(inputData.networkID);
                 inputs.Add(inputData.input);
             }
             
             // check if every hash is the same
-            ulong firstHash = everyTickHashBuffer[currentTick][0];
-            for (int i = 1; i < everyTickHashBuffer[currentTick].Count; i++)
+            ulong firstHash = everyTickHashBuffer[lastTickRecived][0];
+            for (int i = 1; i < everyTickHashBuffer[lastTickRecived].Count; i++)
             {
-                if (firstHash != everyTickHashBuffer[currentTick][i])
+                if (firstHash != everyTickHashBuffer[lastTickRecived][i])
                 {
                     // Hashes are not equal - handle this scenario
-                    Debug.LogError("DESCYNCRONIZATION HAPPEND! HASHES ARE NOT EQUAL! " + "Ticks: " + currentTick + " Hashes: " + firstHash + " and " + everyTickHashBuffer[currentTick][i]);
+                    Debug.LogError("DESCYNCRONIZATION HAPPEND! HASHES ARE NOT EQUAL! " + "Ticks: " + lastTickRecived + " Hashes: " + firstHash + " and " + everyTickHashBuffer[currentTick][i]);
                     desync = true;
-                    i = everyTickHashBuffer[currentTick].Count;
+                    i = everyTickHashBuffer[lastTickRecived].Count;
                 }
             }
             if (!desync)
             {
                 Debug.Log("All hashes are equal: " + firstHash + ". Number of hashes: " +
-                          everyTickHashBuffer[currentTick].Count + ". Tick: " + currentTick);
+                          everyTickHashBuffer[lastTickRecived].Count + ". Tick: " + lastTickRecived);
                 
                 // Send the RPC to all connections
                 SendRPCWithPlayersInputUpdate(networkIDs, inputs);
@@ -382,15 +389,15 @@ public partial class ServerBehaviour : SystemBase
             inputs.Dispose();
 
             // Remove this tick from the buffer, since we're done processing it
-            everyTickInputBuffer.Remove(currentTick);
-            everyTickHashBuffer.Remove(currentTick);
-            currentTick++;
+            everyTickInputBuffer.Remove(lastTickRecived);
+            everyTickHashBuffer.Remove(lastTickRecived);
+            lastTickRecived++;
         }
-        else if(everyTickInputBuffer[currentTick].Count > GetActiveConnectionCount())
+        else if(everyTickInputBuffer[lastTickRecived].Count > GetActiveConnectionCount())
         {
             Debug.LogError("Too many player inputs saved in one tick");
         }
-        // else if (everyTickInputBuffer[currentTick].Count == GetActiveConnectionCount())
+        // else if (everyTickInputBuffer[lastTickRecived].Count == GetActiveConnectionCount())
         // {
         //     Debug.LogError("Too many player inputs saved in one tick");
         //     return;

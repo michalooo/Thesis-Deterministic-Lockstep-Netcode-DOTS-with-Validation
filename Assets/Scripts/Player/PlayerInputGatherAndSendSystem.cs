@@ -42,12 +42,11 @@ public partial class PlayerInputGatherAndSendSystem : SystemBase
             RpcBroadcastPlayerInputToServer rpc = new RpcBroadcastPlayerInputToServer
             {
                 PlayerInput = new Vector2(inputDataToSend.ValueRO.horizontalInput, inputDataToSend.ValueRO.verticalInput),
-                CurrentTick = tickRateInfo.ValueRO.currentTick,
+                CurrentTick = tickRateInfo.ValueRO.currentClientTickToSend,
             };
             
             rpc.HashForCurrentTick = tickRateInfo.ValueRO.hashForTheTick; // setting hash
             rpc.Serialize(connectionReference.ValueRO.Driver, connectionReference.ValueRO.Connection, connectionReference.ValueRO.SimulatorPipeline);
-            tickRateInfo.ValueRW.currentTick++;
             EntityManager.SetComponentEnabled<PlayerInputDataToSend>(connectionEntity, false);
         }
     }

@@ -172,10 +172,14 @@ public partial class ClientBehaviour : SystemBase
                 });
                 EntityManager.AddComponentData(newEntity, new TickRateInfo
                 {
-                    delayTime = 1f / rpc.Tickrate,
                     tickRate = rpc.Tickrate,
-                    currentTick = 1,
-                    hashForTheTick = 0
+                    tickAheadValue = rpc.TickAhead,
+                        
+                    delayTime = 1f / rpc.Tickrate,
+                    currentSimulationTick = 0,
+                    currentClientTickToSend = 0,
+                    hashForTheTick = 0,
+                    
                 });
                 EntityManager.AddComponentData(newEntity, new GhostOwner
                 {
@@ -188,6 +192,7 @@ public partial class ClientBehaviour : SystemBase
                     Connection = m_Connection
                 });
                 EntityManager.AddComponentData(newEntity, new GhostOwnerIsLocal());
+                EntityManager.AddComponentData<StoredTicksAhead>(newEntity, new StoredTicksAhead(true));
                 if(rpc.NetworkIDs[i] != rpc.NetworkID)  EntityManager.SetComponentEnabled<GhostOwnerIsLocal>(newEntity, false);
                 EntityManager.SetComponentEnabled<PlayerInputDataToSend>(newEntity, false);
             }
@@ -195,42 +200,37 @@ public partial class ClientBehaviour : SystemBase
     }
 
     // This function will be called when the server sends an RPC with updated players data and will update the PlayerInputDataToUse components and set them to enabled
-    void UpdatePlayersData(RpcPlayersDataUpdate rpc)
+    void UpdatePlayersData(RpcPlayersDataUpdate rpc) // When do I want to refresh the screen? When input from the server arrives or together with the tick??
     {
-        // Update player data based on received RPC
-        NativeList<int> networkIDs = new NativeList<int>(16, Allocator.Temp);
-        NativeList<Vector2> inputs = new NativeList<Vector2>(16, Allocator.Temp);
-        networkIDs = rpc.NetworkIDs;
-        inputs = rpc.Inputs;
-    
+        Debug.Log("updating");
         // Update player cubes based on received data, I need a job that for each component of type Player will enable it and change input values there
         // Enable component on player which has info about current position of the player
         // Create a characterController script on player which will check if this component is enabled and then update the position of the player and disable that component
-
-        foreach (var (playerInputData, connectionEntity) in SystemAPI
-                     .Query<RefRW<PlayerInputDataToUse>>()
-                     .WithOptions(EntityQueryOptions.IgnoreComponentEnabledState)
-                     .WithAll<PlayerInputDataToSend>().WithEntityAccess())
+        
+        foreach (var storedTicksAhead in SystemAPI.Query<RefRW<StoredTicksAhead>>().WithAll<GhostOwnerIsLocal>())
         {
-            var idExists = false;
-            for (int i = 0; i < networkIDs.Length; i++)
+            bool foundEmptySlot = false;
+            for (int i = 0; i < storedTicksAhead.ValueRW.entries.Length; i++)
             {
-                if (playerInputData.ValueRO.playerNetworkId == networkIDs[i])
+                Debug.Log("elo " + storedTicksAhead.ValueRO.entries[i].tick);
+                if (storedTicksAhead.ValueRO.entries[i].tick == 0) // Check if the tick value is 0, assuming 0 indicates an empty slot
                 {
-                    idExists = true;
-                    playerInputData.ValueRW.horizontalInput = (int)inputs[i].x;
-                    playerInputData.ValueRW.verticalInput = (int)inputs[i].y;
-                    EntityManager.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity, true);
-                    EntityManager.SetComponentEnabled<PlayerInputDataToSend>(connectionEntity, false);
+                    storedTicksAhead.ValueRW.entries[i] = new InputsFromServerOnTheGivenTick { tick = rpc.Tick, data = rpc };
+                    foundEmptySlot = true;
+                    break; // Exit the loop after finding an empty slot
+                    // Packages can be unreliable so it's better to give them random slot and later check the tick
                 }
             }
-            
-            if (!idExists) //To show that the player disconnected
+    
+            if (!foundEmptySlot)
             {
-                playerInputData.ValueRW.playerDisconnected = true;
-                EntityManager.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity, true);
-                EntityManager.SetComponentEnabled<PlayerInputDataToSend>(connectionEntity, false);
+                Debug.LogError("No empty slots available to store the value of a future tick from the server. " + "The current capacity is: " + storedTicksAhead.ValueRO.entries.Length + " This error means an implementation problem");
+                for (int i = 0; i < storedTicksAhead.ValueRW.entries.Length; i++)
+                {
+                    Debug.LogError("One of the ticks is " + storedTicksAhead.ValueRO.entries[i].tick);
+                }
             }
+            // Always current tick is less or equal to the server tick and the difference between them can be max tickAhead
         }
     }
 }

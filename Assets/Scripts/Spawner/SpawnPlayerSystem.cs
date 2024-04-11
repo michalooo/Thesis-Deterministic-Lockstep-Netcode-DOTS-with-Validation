@@ -22,10 +22,46 @@ public struct PlayerInputDataToUse : IComponentData, IEnableableComponent
 
 struct TickRateInfo : IComponentData
 {
-    public float delayTime;
     public int tickRate;
-    public int currentTick;
+    public int tickAheadValue;
+    
+    public float delayTime;
+    public int currentSimulationTick; // Received simulation tick from the server
+    public int currentClientTickToSend; // We are sending input for the tick in the future
     public ulong hashForTheTick;
+}
+
+public struct InputsFromServerOnTheGivenTick
+{
+    public int tick;
+    public RpcPlayersDataUpdate data;
+    
+    public void Dispose()
+    {
+        tick = 0;
+        data.Inputs.Dispose();
+        data.NetworkIDs.Dispose();
+    }
+}
+
+// Define a component to store the fixed number of entries
+public struct StoredTicksAhead : IComponentData
+{
+    private const int MaxEntries = 12; // Maximum number of entries. Worth checking with the incoming tickAhead from the server
+    public NativeArray<InputsFromServerOnTheGivenTick> entries; // Array to store the entries
+
+    // Constructor to initialize the array
+    public StoredTicksAhead(bool initialize)
+    {
+        entries = new NativeArray<InputsFromServerOnTheGivenTick>(MaxEntries, Allocator.Persistent);
+        if (initialize)
+        {
+            for (int i = 0; i < MaxEntries; i++)
+            {
+                entries[i] = new InputsFromServerOnTheGivenTick { tick = 0, data = new RpcPlayersDataUpdate(null, null, 0) };
+            }
+        }
+    }
 }
 
 public struct NetworkConnectionReference : IComponentData
@@ -66,15 +102,15 @@ public struct GhostOwnerIsLocal : IComponentData, IEnableableComponent
             var prefab = SystemAPI.GetSingleton<Spawner>().Player;
             var commandBuffer = new EntityCommandBuffer(Allocator.Temp);
             
-            foreach (var (inputDataToUse, connectionEntity) in SystemAPI.Query<RefRW<PlayerInputDataToUse>>().WithNone<PlayerSpawned, PlayerInputDataToSend>().WithEntityAccess())
+            foreach (var (ghostOwner, connectionEntity) in SystemAPI.Query<RefRW<GhostOwner>>().WithNone<PlayerSpawned, PlayerInputDataToSend>().WithEntityAccess())
             {
-                Debug.Log($"Spawning player for connection {inputDataToUse.ValueRO.playerNetworkId}");
+                Debug.Log($"Spawning player for connection {ghostOwner.ValueRO.networkId}");
                         
                 commandBuffer.AddComponent<PlayerSpawned>(connectionEntity);
                 var player = commandBuffer.Instantiate(prefab);
                 commandBuffer.AddComponent(connectionEntity, new CommandTarget(){targetEntity = player});
-                commandBuffer.SetComponent(player, LocalTransform.FromPosition(new Vector3(5 + inputDataToUse.ValueRO.playerNetworkId,1,5 + inputDataToUse.ValueRO.playerNetworkId))); 
-                commandBuffer.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity, false);
+                Debug.Log(5 + ghostOwner.ValueRO.networkId + " " + 1 + " " + 5 + ghostOwner.ValueRO.networkId);
+                commandBuffer.SetComponent(player, LocalTransform.FromPosition(new Vector3(5 + ghostOwner.ValueRO.networkId,1,5 + ghostOwner.ValueRO.networkId))); 
             }
             
             commandBuffer.Playback(EntityManager);

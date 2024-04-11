@@ -58,14 +58,16 @@ public struct RpcStartDeterministicSimulation: INetcodeRPC
 {
     public NativeList<int> NetworkIDs { get; set; }
     public int Tickrate { get; set; }
+    public int TickAhead { get; set; }
     public int NetworkID { get; set; }
 
     public RpcID GetID => RpcID.StartDeterministicSimulation;
 
-    public RpcStartDeterministicSimulation(NativeList<int>? networkIDs, NativeList<Vector3>? initialPositions, int? tickrate, int? networkID)
+    public RpcStartDeterministicSimulation(NativeList<int>? networkIDs, NativeList<Vector3>? initialPositions, int? tickrate, int? networkID, int? tickAhead)
     {
         NetworkIDs = networkIDs ?? new NativeList<int>(8, Allocator.Temp);
         Tickrate = tickrate ?? 60;
+        TickAhead = tickAhead ?? 0;
         NetworkID = networkID ?? 0;
     }
 
@@ -82,6 +84,7 @@ public struct RpcStartDeterministicSimulation: INetcodeRPC
             writer.WriteInt(NetworkIDs[i]);
         }
         writer.WriteInt(Tickrate);
+        writer.WriteInt(TickAhead);
         writer.WriteInt(NetworkID);
         
         if (writer.HasFailedWrites) 
@@ -108,6 +111,7 @@ public struct RpcStartDeterministicSimulation: INetcodeRPC
         }
 
         Tickrate = reader.ReadInt();
+        TickAhead = reader.ReadInt();
         NetworkID = reader.ReadInt();
 
         Debug.Log("RPC from server about starting the game received");
@@ -127,8 +131,8 @@ public struct RpcPlayersDataUpdate: INetcodeRPC
 
     public RpcPlayersDataUpdate(NativeList<int>? networkIDs, NativeList<Vector2>? inputs, int? tick)
     {
-        NetworkIDs = networkIDs ?? new NativeList<int>(0, Allocator.Temp);
-        Inputs = inputs ?? new NativeList<Vector2>(0, Allocator.Temp);
+        NetworkIDs = networkIDs ?? new NativeList<int>(0, Allocator.Persistent);
+        Inputs = inputs ?? new NativeList<Vector2>(0, Allocator.Persistent);
         Tick = tick ?? 0;
     }
 
@@ -167,8 +171,8 @@ public struct RpcPlayersDataUpdate: INetcodeRPC
         reader.ReadByte(); // ID
         int count = reader.ReadInt();
         
-        NetworkIDs = new NativeList<int>(count, Allocator.Temp);
-        Inputs = new NativeList<Vector2>(count, Allocator.Temp);
+        NetworkIDs = new NativeList<int>(count, Allocator.Persistent);
+        Inputs = new NativeList<Vector2>(count, Allocator.Persistent);
         
         for (int i = 0; i < count; i++)
         {
