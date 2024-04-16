@@ -4,6 +4,9 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
 
+/// <summary>
+/// System to check the determinism of the simulation. It will hash the necessary component of all entities with the DeterministicSimulation component.
+/// </summary>
 [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
 public partial class DeterminismCheckSystem : SystemBase

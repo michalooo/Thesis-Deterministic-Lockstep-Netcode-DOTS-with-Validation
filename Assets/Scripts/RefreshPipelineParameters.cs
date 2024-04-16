@@ -3,6 +3,11 @@ using Unity.Networking.Transport.Utilities;
 
 public static class NetworkSimulatorSettings
 {
+    /// <summary>
+    /// Function to refresh the simulation pipeline parameters during execution
+    /// </summary>
+    /// <param name="parameters"></param>
+    /// <param name="driver"></param>
     public static void RefreshSimulationPipelineParametersLive(in SimulatorUtility.Parameters parameters,
         ref NetworkDriver driver)
     {

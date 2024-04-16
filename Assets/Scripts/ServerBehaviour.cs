@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Mathematics;
 using Unity.Networking.Transport;
 using Unity.Networking.Transport.Utilities;
 using UnityEngine;
@@ -10,12 +9,18 @@ using UnityEngine.SceneManagement;
 
 // This is the script responsible for handling the server side of the network, with connections etc
 
+/// <summary>
+/// Struct used to store player single input data to be send to server. It contains information about player networkID and inputs (currently horizontal+vertical).
+/// </summary>
 public struct PlayerInputData
 {
     public int networkID;
     public Vector2 input;  
 }
 
+/// <summary>
+/// System responsible for handling the server side of the network, with connections etc
+/// </summary>
 [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
 [UpdateInGroup(typeof(ConnectionHandleSystemGroup))]
 public partial class ServerBehaviour : SystemBase
@@ -93,6 +98,11 @@ public partial class ServerBehaviour : SystemBase
         _mDriver.Listen();
     }
     
+    /// <summary>
+    /// Function to parse the port from the input field. If the port is not a valid number, the default port is used.
+    /// </summary>
+    /// <param name="s">Port string value</param>
+    /// <returns>Port to use</returns>
     private UInt16 ParsePortOrDefault(string s)
     {
         if (!UInt16.TryParse(s, out var port))
@@ -113,6 +123,9 @@ public partial class ServerBehaviour : SystemBase
         _mPlayerInputs.Dispose();
     }
     
+    /// <summary>
+    /// Function used to accept new connections and assign them to the first available slot in the connectedPlayers array. If there are no available slots, the connection is disconnected.
+    /// </summary>
     private void AcceptAndHandleConnections()
     {
         // Accept new connections
@@ -135,6 +148,10 @@ public partial class ServerBehaviour : SystemBase
         }
     }
     
+    /// <summary>
+    /// Function used to find the first free slot in the connectedPlayers array.
+    /// </summary>
+    /// <returns>Empty slot number or -1 otherwise</returns>
     private int FindFreePlayerSlot()
     {
         for (int i = 0; i < _connectedPlayers.Length; i++)
@@ -190,6 +207,11 @@ public partial class ServerBehaviour : SystemBase
         }
     }
     
+    /// <summary>
+    /// Function used to handle incoming RPCs from clients.
+    /// </summary>
+    /// <param name="stream">Stream from which the data arrived</param>
+    /// <param name="connection">Client connection to check for RPC</param>
     private void HandleRpc(DataStreamReader stream, NetworkConnection connection)
     {
         var copyOfStream = stream;
@@ -214,6 +236,9 @@ public partial class ServerBehaviour : SystemBase
         }
     }
     
+    /// <summary>
+    /// Function used to set initial player data (network IDs and positions).
+    /// </summary>
     private void CollectInitialPlayerData()
     {
         _mNetworkIDs.Clear();
@@ -231,6 +256,9 @@ public partial class ServerBehaviour : SystemBase
         }
     }
     
+    /// <summary>
+    /// Function used to send RPC to clients to start the game.
+    /// </summary>
     private void SendRPCtoStartGame()
     {
         // register OnGameStart method where they can be used to spawn entities, separation between user code and package code
@@ -252,6 +280,11 @@ public partial class ServerBehaviour : SystemBase
         }
     }
     
+    /// <summary>
+    /// Function used to send RPC to clients with all players inputs.
+    /// </summary>
+    /// <param name="networkIDs">List of client IDs</param>
+    /// <param name="playerInputs">List of client inputs</param>
     private void SendRPCWithPlayersInputUpdate(NativeList<int> networkIDs, NativeList<Vector2> playerInputs)
     {
         var rpc = new RpcPlayersDataUpdate
@@ -270,6 +303,9 @@ public partial class ServerBehaviour : SystemBase
         }
     }
     
+    /// <summary>
+    /// Function used to send RPC to clients with information about desynchronization.
+    /// </summary>
     private void SendRPCWithPlayersDesynchronizationInfo()
     {
         var rpc = new RpcPlayerDesynchronizationInfo{};
@@ -283,6 +319,11 @@ public partial class ServerBehaviour : SystemBase
         }
     }
     
+    /// <summary>
+    /// Function used to save player inputs to the buffer when those arrive.
+    /// </summary>
+    /// <param name="rpc">RPC that arrived</param>
+    /// <param name="connection">Connection from which it arrived</param>
     private void SaveTheData(RpcBroadcastPlayerInputToServer rpc, NetworkConnection connection)
     {
         for(var i=0; i<_connectedPlayers.Length; i++)
@@ -321,6 +362,10 @@ public partial class ServerBehaviour : SystemBase
         }
     }
 
+    /// <summary>
+    /// Function used to get the number of active connections.
+    /// </summary>
+    /// <returns>Amount of active connections</returns>
     private int GetActiveConnectionCount()
     {
         var count = 0;
@@ -334,7 +379,9 @@ public partial class ServerBehaviour : SystemBase
         return count;
     }
 
-    
+    /// <summary>
+    /// Function used to check if all data for the current tick has been received. If so it sends it to clients
+    /// </summary>
     private void CheckIfAllDataReceivedAndSendToClients()
     {
         var desynchronized = false;

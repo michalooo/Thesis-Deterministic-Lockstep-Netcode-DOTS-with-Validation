@@ -10,6 +10,9 @@ public class MenuHandler : MonoBehaviour
     public InputField Address;
     public InputField Port;
     
+    /// <summary>
+    /// Function to quit the game 
+    /// </summary>
     public void QuitGame()
     {
         #if UNITY_EDITOR
@@ -18,6 +21,9 @@ public class MenuHandler : MonoBehaviour
         Application.Quit();
     }
 
+    /// <summary>
+    /// Function to start the game as a host
+    /// </summary>
     public void HostGame()
     {
         Debug.Log($"[HostGame]");
@@ -38,6 +44,9 @@ public class MenuHandler : MonoBehaviour
         World.DefaultGameObjectInjectionWorld ??= client;
     }
 
+    /// <summary>
+    /// Function to connect to a game
+    /// </summary>
     public void ConnectToGame()
     {
         Debug.Log($"[ConnectToServer]");
@@ -49,6 +58,11 @@ public class MenuHandler : MonoBehaviour
         World.DefaultGameObjectInjectionWorld ??= client;
     }
     
+    /// <summary>
+    /// Function that creates server world
+    /// </summary>
+    /// <param name="name">Server world name</param>
+    /// <returns>Created server world</returns>
     public static World CreateServerWorld(string name)
     {
 #if UNITY_CLIENT && !UNITY_SERVER && !UNITY_EDITOR
@@ -68,6 +82,11 @@ public class MenuHandler : MonoBehaviour
 #endif
     }
     
+    /// <summary>
+    /// Function that creates client world
+    /// </summary>
+    /// <param name="name">Client world name</param>
+    /// <returns>Created client world</returns>
     public static World CreateClientWorld(string name)
     {
 #if UNITY_SERVER && !UNITY_EDITOR
@@ -86,6 +105,9 @@ public class MenuHandler : MonoBehaviour
 #endif
     }
     
+    /// <summary>
+    /// Function that destroys local simulation world
+    /// </summary>
     protected void DestroyLocalSimulationWorld()
     {
         foreach (var world in World.All)

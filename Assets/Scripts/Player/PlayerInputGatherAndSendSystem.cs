@@ -1,7 +1,9 @@
 using Unity.Entities;
 using UnityEngine;
 
-// This system is responsible for gathering this player's input and sending it to the server
+/// <summary>
+/// System that gathers the player's input and sends it to the server
+/// </summary>
 [UpdateInGroup(typeof(DeterministicSimulationSystemGroup), OrderLast = true)]
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
 public partial class PlayerInputGatherAndSendSystem : SystemBase

@@ -6,7 +6,9 @@ using Unity.Entities;
 using Unity.Transforms;
 using UnityEngine;
 
-// We are adding results to this array and when the job is done we should combine it (parallel)
+/// <summary>
+/// Job that will run on chunks to check and hash the components in them.
+/// </summary>
 [BurstCompile]
 public struct DeterminismCheckJob : IJobChunk
 {

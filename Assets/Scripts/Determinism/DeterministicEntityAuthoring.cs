@@ -1,6 +1,9 @@
 using Unity.Entities;
 using UnityEngine;
 
+/// <summary>
+/// Tag component to mark an entity as part of the deterministic simulation checks.
+/// </summary>
 public struct DeterministicSimulation : IComponentData
 {
 
@@ -9,6 +12,9 @@ public struct DeterministicSimulation : IComponentData
 //{ // full hash per system for user experience
 //}
 
+/// <summary>
+/// Behaviour to add the DeterministicSimulation component to an entity.
+/// </summary>
 public class DeterministicEntityAuthoring : MonoBehaviour
 {
     //public bool UseInDeterministicFastHashCalculation;

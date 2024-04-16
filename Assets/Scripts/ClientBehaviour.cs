@@ -6,6 +6,9 @@ using Unity.Networking.Transport;
 using Unity.Networking.Transport.Utilities;
 using UnityEngine.SceneManagement;
 
+/// <summary>
+/// System that handles the client side of the game. It is responsible for handling connections.
+/// </summary>
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
 [UpdateInGroup(typeof(ConnectionHandleSystemGroup))]
 public partial class ClientBehaviour : SystemBase
@@ -57,6 +60,11 @@ public partial class ClientBehaviour : SystemBase
         _mConnection = _mDriver.Connect(endpoint);
     }
     
+    /// <summary>
+    /// Function to parse the port from the input field. If the port is not a valid number, the default port is used.
+    /// </summary>
+    /// <param name="s">Port string value</param>
+    /// <returns>Port to use</returns>
     private ushort ParsePortOrDefault(string s)
     {
         if (ushort.TryParse(s, out var port)) return port;
@@ -106,6 +114,10 @@ public partial class ClientBehaviour : SystemBase
         }
     }
 
+    /// <summary>
+    /// Function used to handle incoming RPCs from server.
+    /// </summary>
+    /// <param name="stream">Stream from which the data arrived</param>
     private void HandleRpc(DataStreamReader stream)
     {
         var copyOfStream = stream;
@@ -143,6 +155,10 @@ public partial class ClientBehaviour : SystemBase
         }
     }
     
+    /// <summary>
+    /// Function to start the game. It will load the game scene and create entities for each player connection with all necessary components.
+    /// </summary>
+    /// <param name="rpc">RPC from the server that contains parameters for game and request to start the game</param>
     private void StartGame(RpcStartDeterministicSimulation rpc)
     {
         if(SceneManager.GetActiveScene().name != "Game")
@@ -187,35 +203,24 @@ public partial class ClientBehaviour : SystemBase
                     connection = _mConnection
                 });
                 EntityManager.AddComponentData(newEntity, new GhostOwnerIsLocal());
-                EntityManager.AddComponentData(newEntity, new StoredTicksAhead(true));
+                EntityManager.AddComponentData(newEntity, new StoredTicksAhead(false));
                 if(playerNetworkId != rpc.NetworkID)  EntityManager.SetComponentEnabled<GhostOwnerIsLocal>(newEntity, false);
                 EntityManager.SetComponentEnabled<PlayerInputDataToSend>(newEntity, false);
             }
         }
     }
 
-    // This function will be called when the server sends an RPC with updated players data and will update the PlayerInputDataToUse components and set them to enabled
+    /// <summary>
+    /// Function to update the players data from incoming RPC. It will update the buffer that contains all inputs from the server.
+    /// </summary>
+    /// <param name="rpc">RPC from the server with input data from each player for the given tick</param>
     void UpdatePlayersData(RpcPlayersDataUpdate rpc)
     {
         foreach (var storedTicksAhead in SystemAPI.Query<RefRW<StoredTicksAhead>>().WithAll<GhostOwnerIsLocal>())
         {
-            bool foundEmptySlot = false;
-            for (int i = 0; i < storedTicksAhead.ValueRW.entries.Length; i++)
-            {
-                if (storedTicksAhead.ValueRO.entries[i].tick == 0) // Check if the tick value is 0, assuming 0 indicates an empty slot
-                {
-                    storedTicksAhead.ValueRW.entries[i] = new InputsFromServerOnTheGivenTick { tick = rpc.Tick, data = rpc };
-                    foundEmptySlot = true;
-                    break; // Exit the loop after finding an empty slot
-                    // Packages can be unreliable so it's better to give them random slot and later check the tick
-                }
-            }
-    
-            if (!foundEmptySlot)
-            {
-                Debug.LogError("No empty slots available to store the value of a future tick from the server. " + "The current capacity is: " + storedTicksAhead.ValueRO.entries.Length + " This error means an implementation problem");
-            }
-            // Always current tick is less or equal to the server tick and the difference between them can be max tickAhead
+            storedTicksAhead.ValueRW.entries.Enqueue(rpc);
+            // Are packages reliable with reliable pipeline so those will always arrive in order?
+            // Always current tick is less or equal to the server tick
         }
     }
 }

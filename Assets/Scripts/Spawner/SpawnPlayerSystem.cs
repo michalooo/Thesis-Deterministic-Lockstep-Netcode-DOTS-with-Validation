@@ -4,14 +4,23 @@ using Unity.Networking.Transport;
 using Unity.Transforms;
 using UnityEngine;
 
+/// <summary>
+/// Component used to tag connections for which a player prefab was spawned
+/// </summary>
 public struct PlayerSpawned : IComponentData { }
 
+/// <summary>
+/// Component used to store the player input data to send to the server
+/// </summary>
 public struct PlayerInputDataToSend : IComponentData, IEnableableComponent
 {
     public int horizontalInput;
     public int verticalInput;
 }
 
+/// <summary>
+/// Component used to store the player input data to use for simulation
+/// </summary>
 public struct PlayerInputDataToUse : IComponentData, IEnableableComponent
 {
     public int playerNetworkId;
@@ -20,6 +29,9 @@ public struct PlayerInputDataToUse : IComponentData, IEnableableComponent
     public bool playerDisconnected;
 }
 
+/// <summary>
+/// Component used to store information about the ticks and time for the game
+/// </summary>
 struct TickRateInfo : IComponentData
 {
     public int tickRate;
@@ -31,38 +43,22 @@ struct TickRateInfo : IComponentData
     public ulong hashForTheTick;
 }
 
-public struct InputsFromServerOnTheGivenTick
-{
-    public int tick; // not needed, it's inside of data
-    public RpcPlayersDataUpdate data;
-    
-    public void Dispose() // does this really work?? data needed some persistent allocators for native arrays
-    {
-        tick = 0;
-        data.Inputs.Dispose();
-        data.NetworkIDs.Dispose();
-    }
-}
-
-// Define a component to store the fixed number of entries
+/// <summary>
+/// Component used to store the arriving player data for the server
+/// </summary>
 public struct StoredTicksAhead : IComponentData
 {
-    private const int MaxEntries = 20; // Maximum number of entries. Worth checking with the incoming tickAhead from the server. Throw it away! Exchange with NativeQueue or NativeList
-    public NativeArray<InputsFromServerOnTheGivenTick> entries; 
+    public NativeQueue<RpcPlayersDataUpdate> entries; // be sure that there is no memory leak
     
-    public StoredTicksAhead(bool shouldInitialize)
+    public StoredTicksAhead(bool b) // not possible to have parameterless constructor
     {
-        entries = new NativeArray<InputsFromServerOnTheGivenTick>(MaxEntries, Allocator.Persistent);
-        if (shouldInitialize)
-        {
-            for (int i = 0; i < MaxEntries; i++)
-            {
-                entries[i] = new InputsFromServerOnTheGivenTick { tick = 0, data = new RpcPlayersDataUpdate(null, null, 0) }; // tick = 0 means that the entry can be used
-            }
-        }
+        entries = new NativeQueue<RpcPlayersDataUpdate>(Allocator.Persistent);
     }
 }
 
+/// <summary>
+/// Component used to store connection info for every conection
+/// </summary>
 public struct NetworkConnectionReference : IComponentData
 {
     public NetworkDriver driver;
@@ -70,11 +66,17 @@ public struct NetworkConnectionReference : IComponentData
     public NetworkConnection connection;
 }
 
+/// <summary>
+/// Component used to store the networkID of the connection
+/// </summary>
 public struct GhostOwner : IComponentData
 {
     public int networkId;
 }
 
+/// <summary>
+/// Component used to store the target spawned entity for the connection of which the arriving input will be used
+/// </summary>
 public struct CommandTarget : IComponentData
 {
     public Entity targetEntity;
@@ -86,6 +88,9 @@ public struct CommandTarget : IComponentData
 public struct GhostOwnerIsLocal : IComponentData, IEnableableComponent
 {} // added to different entites so it may cause desync if comparing amount of components
 
+/// <summary>
+/// System used to spawn the player prefab for the connections that are not spawned yet
+/// </summary>
 [UpdateBefore(typeof(DeterministicSimulationSystemGroup))]
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     public partial class SpawnPlayerSystem : SystemBase

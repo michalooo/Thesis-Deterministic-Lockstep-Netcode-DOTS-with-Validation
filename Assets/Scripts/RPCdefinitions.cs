@@ -4,6 +4,9 @@ using Unity.Networking.Transport;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
+/// <summary>
+/// Interface for RPCs, all RPCs must implement this interface to ensure that we can get id from it, serialize it and deserialize it
+/// </summary>
 public interface INetcodeRPC // Interface for RPCs, all RPCs must implement this interface to ensure that we can get id from it, serialize it and deserialize it
 {
     RpcID GetID { get; }
@@ -12,6 +15,9 @@ public interface INetcodeRPC // Interface for RPCs, all RPCs must implement this
     void Deserialize(DataStreamReader reader);
 }
 
+/// <summary>
+/// Enum with all possible RPCs, this is used to identify the RPCs when serializing and deserializing them (one byte is enough space to cover them)
+/// </summary>
 public enum RpcID : byte // Enum with all possible RPCs, this is used to identify the RPCs when serializing and deserializing them (one byte is enough space to cover them)
 {
     StartDeterministicSimulation,
@@ -20,6 +26,9 @@ public enum RpcID : byte // Enum with all possible RPCs, this is used to identif
     PlayersDesynchronized
 }
 
+/// <summary>
+/// Struct that is being send by the server when clients are desynchronized. Used to stop game execution
+/// </summary>
 public struct RpcPlayerDesynchronizationInfo: INetcodeRPC // RPC that is being send by the server when clients are desynchronized. Used to stop game execution
 {
     public RpcID GetID => RpcID.PlayersDesynchronized;
@@ -50,8 +59,9 @@ public struct RpcPlayerDesynchronizationInfo: INetcodeRPC // RPC that is being s
 }
 
 
-// RPC that server sends to all clients at the start of the game, it contains info about all players network IDs so the corresponding
-// connections entities can be created. Also contains information about expected tickRate etc
+/// <summary>
+/// Struct that is being send by the server at the start of the game. It contains info about all players network IDs so the corresponding connections entities can be created. Additionally, it contains information about expected tickRate etc
+/// </summary>
 public struct RpcStartDeterministicSimulation: INetcodeRPC
 {
     public NativeList<int> NetworkIDs { get; set; } // all of connected players ID so we can assign them to prefabs and connections
@@ -106,9 +116,10 @@ public struct RpcStartDeterministicSimulation: INetcodeRPC
         Debug.Log("RPC from server about starting the game received");
     }
 }
-    
-// RPC that server sends to all clients after receiving inputs from all of them. It contains info about all players network IDs so they can be identified
-// as well as their corresponding inputs to apply and the tick for which those should be assigned
+
+/// <summary>
+/// Struct that is being send by the server to all clients after receiving inputs from all of them. It contains info about all players network IDs so they can be identified as well as their corresponding inputs to apply and the tick for which those should be assigned
+/// </summary>
 public struct RpcPlayersDataUpdate: INetcodeRPC
 {
     public NativeList<int> NetworkIDs { get; set; } // all of connected players ID so we can assign them to prefabs and connections
@@ -176,8 +187,10 @@ public struct RpcPlayersDataUpdate: INetcodeRPC
         Debug.Log("RPC from server with players data update received");
     }
 }
-    
-// RPC that clients send to the server at the end of each tick. It contains info about all player input
+
+/// <summary>
+/// Struct that is being send by the clients to the server at the end of each tick. It contains info about all player inputs
+/// </summary>
 public struct RpcBroadcastPlayerInputToServer: INetcodeRPC
 {
     public Vector2 PlayerInput { get; set; } // Horizontal + Vertical input

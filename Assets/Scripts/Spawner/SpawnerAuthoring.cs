@@ -1,11 +1,17 @@
 using Unity.Entities;
 using UnityEngine;
 
+/// <summary>
+/// Component used to store the player prefab entity
+/// </summary>
 public struct Spawner : IComponentData
 {
     public Entity Player;
 }
 
+/// <summary>
+/// Authoring function for the Spawner
+/// </summary>
 public class SpawnerAuthoring : MonoBehaviour
 {
     public GameObject Player;
