@@ -24,7 +24,7 @@ public partial class ServerBehaviour : SystemBase
     private MenuHandler _menuHandler;
     
     private NetworkDriver _mDriver;
-    private NetworkPipeline _simulatorPipeline;
+    private NetworkPipeline _reliableSimulatorPipeline;
     private NativeList<int> _mNetworkIDs;
     
     private Dictionary<int, List<PlayerInputData>> _everyTickInputBuffer;
@@ -71,7 +71,7 @@ public partial class ServerBehaviour : SystemBase
             packetDuplicationPercentage: packetDuplicationPercentage);
         
         _mDriver = NetworkDriver.Create(settings);
-        _simulatorPipeline = _mDriver.CreatePipeline(typeof(SimulatorPipelineStage));
+        _reliableSimulatorPipeline = _mDriver.CreatePipeline(typeof(ReliableSequencedPipelineStage), typeof(SimulatorPipelineStage));
         
         _connectedPlayers = new NativeArray<NetworkConnection>(16, Allocator.Persistent);
         _mNetworkIDs = new NativeList<int>(16, Allocator.Persistent);
@@ -247,7 +247,7 @@ public partial class ServerBehaviour : SystemBase
             if (_connectedPlayers[i].IsCreated)
             {
                 rpc.NetworkID = i;
-                rpc.Serialize(_mDriver, _connectedPlayers[i], _simulatorPipeline);
+                rpc.Serialize(_mDriver, _connectedPlayers[i], _reliableSimulatorPipeline);
             }
         }
     }
@@ -265,7 +265,7 @@ public partial class ServerBehaviour : SystemBase
         {
             if (connectedPlayer.IsCreated)
             {
-                rpc.Serialize(_mDriver, connectedPlayer, _simulatorPipeline);
+                rpc.Serialize(_mDriver, connectedPlayer, _reliableSimulatorPipeline);
             }
         }
     }
@@ -278,7 +278,7 @@ public partial class ServerBehaviour : SystemBase
         {
             if (t.IsCreated)
             {
-                rpc.Serialize(_mDriver, t, _simulatorPipeline);
+                rpc.Serialize(_mDriver, t, _reliableSimulatorPipeline);
             }
         }
     }

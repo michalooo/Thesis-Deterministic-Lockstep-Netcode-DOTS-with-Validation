@@ -45,7 +45,7 @@ public partial class PlayerInputGatherAndSendSystem : SystemBase
                 HashForCurrentTick = tickRateInfo.ValueRO.hashForTheTick 
             };
 
-            rpc.Serialize(connectionReference.ValueRO.driver, connectionReference.ValueRO.connection, connectionReference.ValueRO.simulatorPipeline);
+            rpc.Serialize(connectionReference.ValueRO.driver, connectionReference.ValueRO.connection, connectionReference.ValueRO.reliableSimulatorPipeline);
             EntityManager.SetComponentEnabled<PlayerInputDataToSend>(connectionEntity, false);
         }
     }

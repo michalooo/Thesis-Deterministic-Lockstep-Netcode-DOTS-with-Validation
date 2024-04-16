@@ -16,7 +16,7 @@ public partial class ClientBehaviour : SystemBase
     private NetworkDriver _mDriver;
     private NetworkConnection _mConnection;
     private NetworkSettings _clientSimulatorParameters;
-    private NetworkPipeline _simulatorPipeline;
+    private NetworkPipeline _reliableSimulatorPipeline;
     
     [Tooltip("The maximum amount of packets the pipeline can keep track of. This used when a packet is delayed, the packet is stored in the pipeline processing buffer and can be later brought back.")]
     int maxPacketCount = 1000;
@@ -51,7 +51,7 @@ public partial class ClientBehaviour : SystemBase
             packetDuplicationPercentage: packetDuplicationPercentage);
 
         _mDriver = NetworkDriver.Create(_clientSimulatorParameters);
-        _simulatorPipeline = _mDriver.CreatePipeline(typeof(SimulatorPipelineStage)); // reliable pipeline add
+        _reliableSimulatorPipeline = _mDriver.CreatePipeline(typeof(ReliableSequencedPipelineStage), typeof(SimulatorPipelineStage));
         
         var endpoint = NetworkEndpoint.Parse(_menuHandler.Address.text, ParsePortOrDefault(_menuHandler.Port.text));
         _mConnection = _mDriver.Connect(endpoint);
@@ -183,7 +183,7 @@ public partial class ClientBehaviour : SystemBase
                 EntityManager.AddComponentData(newEntity, new NetworkConnectionReference
                 {
                     driver = _mDriver,
-                    simulatorPipeline = _simulatorPipeline,
+                    reliableSimulatorPipeline = _reliableSimulatorPipeline,
                     connection = _mConnection
                 });
                 EntityManager.AddComponentData(newEntity, new GhostOwnerIsLocal());

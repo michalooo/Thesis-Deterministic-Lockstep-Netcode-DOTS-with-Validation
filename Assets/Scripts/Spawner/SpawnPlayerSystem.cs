@@ -66,7 +66,7 @@ public struct StoredTicksAhead : IComponentData
 public struct NetworkConnectionReference : IComponentData
 {
     public NetworkDriver driver;
-    public NetworkPipeline simulatorPipeline;
+    public NetworkPipeline reliableSimulatorPipeline;
     public NetworkConnection connection;
 }
 
