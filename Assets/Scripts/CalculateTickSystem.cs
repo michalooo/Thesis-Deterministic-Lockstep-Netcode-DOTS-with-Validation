@@ -51,9 +51,12 @@ public partial class CalculateTickSystem : SystemBase
         }
     }
     
+    
+    /// <param name="rpc"></param>
     // Update player data based on received RPC
     private void UpdateComponentsData(RpcPlayersDataUpdate rpc) // When do I want to refresh the screen? When input from the server arrives or together with the tick??
     {
+        // NativeQueue<>
         var networkIDs = rpc.NetworkIDs;
         var inputs = rpc.Inputs;
         

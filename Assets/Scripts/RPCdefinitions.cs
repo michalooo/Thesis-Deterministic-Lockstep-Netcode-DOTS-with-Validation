@@ -198,7 +198,7 @@ public struct RpcBroadcastPlayerInputToServer: INetcodeRPC
         writer.WriteInt(CurrentTick);
         if (Input.GetKey(KeyCode.R))
         {
-            writer.WriteULong(HashForCurrentTick + (ulong) Random.Range(0, 100));
+            writer.WriteULong(HashForCurrentTick + (ulong) Random.Range(0, 100)); // modify the position instead just the hash
         }
         else writer.WriteULong(HashForCurrentTick);
         

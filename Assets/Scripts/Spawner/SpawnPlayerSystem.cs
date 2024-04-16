@@ -33,10 +33,10 @@ struct TickRateInfo : IComponentData
 
 public struct InputsFromServerOnTheGivenTick
 {
-    public int tick;
+    public int tick; // not needed, it's inside of data
     public RpcPlayersDataUpdate data;
     
-    public void Dispose() // does this really work??
+    public void Dispose() // does this really work?? data needed some persistent allocators for native arrays
     {
         tick = 0;
         data.Inputs.Dispose();
@@ -47,7 +47,7 @@ public struct InputsFromServerOnTheGivenTick
 // Define a component to store the fixed number of entries
 public struct StoredTicksAhead : IComponentData
 {
-    private const int MaxEntries = 20; // Maximum number of entries. Worth checking with the incoming tickAhead from the server
+    private const int MaxEntries = 20; // Maximum number of entries. Worth checking with the incoming tickAhead from the server. Throw it away! Exchange with NativeQueue or NativeList
     public NativeArray<InputsFromServerOnTheGivenTick> entries; 
     
     public StoredTicksAhead(bool shouldInitialize)

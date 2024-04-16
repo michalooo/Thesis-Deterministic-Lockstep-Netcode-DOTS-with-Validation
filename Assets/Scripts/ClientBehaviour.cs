@@ -51,7 +51,7 @@ public partial class ClientBehaviour : SystemBase
             packetDuplicationPercentage: packetDuplicationPercentage);
 
         _mDriver = NetworkDriver.Create(_clientSimulatorParameters);
-        _simulatorPipeline = _mDriver.CreatePipeline(typeof(SimulatorPipelineStage));
+        _simulatorPipeline = _mDriver.CreatePipeline(typeof(SimulatorPipelineStage)); // reliable pipeline add
         
         var endpoint = NetworkEndpoint.Parse(_menuHandler.Address.text, ParsePortOrDefault(_menuHandler.Port.text));
         _mConnection = _mDriver.Connect(endpoint);
