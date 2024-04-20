@@ -1,0 +1,24 @@
+{
+  "name": "com.michal-chrobot.deterministic-lockstep",
+  "version": "1.0.0",
+  "displayName": "Deterministic Lockstep",
+  "description": "This is an example Deterministic Lockstep with Client Prediction and Rollback implementation for DOTS",
+  "unity": "2022.3",
+  "dependencies": {
+  },
+  "keywords": [
+    "Determinism",
+    "Lockstep",
+    "Client Prediction",
+    "Rollback",
+    "DOTS",
+    "RTS"
+  ],
+  "author": {
+    "name": "Michał Chrobot",
+    "email": "michal.w.chrobot@gmail.com",
+    "url": "https://www.linkedin.com/in/micha%C5%82-chrobot/"
+  },
+  "documentationUrl": "https://github.com/michalooo/Thesis",
+  "licensesUrl": "https://github.com/michalooo/Thesis"
+}

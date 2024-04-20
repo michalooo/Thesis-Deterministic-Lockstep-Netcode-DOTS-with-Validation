@@ -1,5 +1,11 @@
 {
   "dependencies": {
+    "com.michal-chrobot.deterministic-lockstep": {
+      "version": "file:deterministic-lockstep",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
     "com.unity.burst": {
       "version": "1.8.9",
       "depth": 1,
