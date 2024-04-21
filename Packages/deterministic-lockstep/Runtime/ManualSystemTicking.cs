@@ -1,16 +1,21 @@
 using Unity.Entities;
 
-/// <summary>
-/// System group that contains connection handle systems.
-/// </summary>
-public partial class ConnectionHandleSystemGroup : ComponentSystemGroup { }
+namespace DeterministicLockstep
+{
+    /// <summary>
+    /// System group that contains connection handle systems.
+    /// </summary>
+    public partial class ConnectionHandleSystemGroup : ComponentSystemGroup
+    {
+    }
 
-/// <summary>
-/// System group that contains deterministic simulation systems. Systems that are using it are PlayerUpdateSystem, DeterminismSystemCheck, and PlayerInputGatherAndSendSystem.
-/// </summary>
-[UpdateAfter(typeof(ConnectionHandleSystemGroup))]
-public partial class DeterministicSimulationSystemGroup : ComponentSystemGroup 
-{ }
+    /// <summary>
+    /// System group that contains deterministic simulation systems. Systems that are using it are PlayerUpdateSystem, DeterminismSystemCheck, and PlayerInputGatherAndSendSystem.
+    /// </summary>
+    [UpdateAfter(typeof(ConnectionHandleSystemGroup))]
+    public partial class DeterministicSimulationSystemGroup : ComponentSystemGroup
+    {
+    }
 
 /*public partial class DeterministicSystemGroup : ComponentSystemGroup
 {
@@ -43,22 +48,16 @@ public partial class DeterministicSimulationSystemGroup : ComponentSystemGroup
 }*/
 
 
-
-
-
-
-public partial struct ManualSystemTicking : ISystem
-{
-
-    public void OnCreate(ref SystemState state)
+    public partial struct ManualSystemTicking : ISystem
     {
-        var world = World.DefaultGameObjectInjectionWorld;
-        
-        world.GetOrCreateSystem<DeterministicSimulationSystemGroup>(); 
-        world.GetOrCreateSystem<ConnectionHandleSystemGroup>();
+        public void OnCreate(ref SystemState state)
+        {
+            var world = World.DefaultGameObjectInjectionWorld;
 
+            world.GetOrCreateSystem<DeterministicSimulationSystemGroup>();
+            world.GetOrCreateSystem<ConnectionHandleSystemGroup>();
+        }
     }
-}
 
 // public partial struct ManualSystemTicking : ISystem
 // {
@@ -83,3 +82,4 @@ public partial struct ManualSystemTicking : ISystem
 //         }
 //     }
 // }
+}
