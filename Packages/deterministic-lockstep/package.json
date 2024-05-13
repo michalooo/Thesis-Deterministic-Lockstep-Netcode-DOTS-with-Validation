@@ -19,6 +19,18 @@
     "email": "michal.w.chrobot@gmail.com",
     "url": "https://www.linkedin.com/in/micha%C5%82-chrobot/"
   },
+  "samples": [
+    {
+      "displayName": "Pong",
+      "description": "Contains modified sample implementation of Pong games which works up to 4 players and spawns 1000 balls",
+      "path": "Samples~/Pong"
+    },
+    {
+      "displayName": "3D capsules",
+      "description": "Contains sample implementation of capsules moving around, works up to 16 players",
+      "path": "Samples~/3D_capsules"
+    }
+  ],
   "documentationUrl": "https://github.com/michalooo/Thesis",
   "licensesUrl": "https://github.com/michalooo/Thesis"
 }

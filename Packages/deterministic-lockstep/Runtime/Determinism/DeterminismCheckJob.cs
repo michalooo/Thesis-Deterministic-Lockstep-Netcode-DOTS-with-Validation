@@ -30,7 +30,7 @@ namespace DeterministicLockstep
 
             var transforms =
                 chunk.GetNativeArray(
-                    ref transform); // LocalTransform can already be broken because of floats. Test on different devices
+                    ref transform); // LocalTransform can already be broken because of floats. Test on different devices to see if it's the case
             var data = transforms.Reinterpret<byte>(UnsafeUtility.SizeOf<LocalTransform>());
 
             foreach (var t in data)

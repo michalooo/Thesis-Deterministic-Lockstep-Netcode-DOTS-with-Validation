@@ -1,4 +1,5 @@
-﻿using Unity.Collections;
+﻿using System.Collections.Generic;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Networking.Transport;
 
@@ -13,7 +14,7 @@ namespace DeterministicLockstep
 
         public StoredTicksAhead(bool b) // not possible to have parameterless constructor
         {
-            entries = new NativeQueue<RpcPlayersDataUpdate>(Allocator.Persistent);
+            entries = new NativeQueue<RpcPlayersDataUpdate>(); //Allocator persistent
         }
     }
 

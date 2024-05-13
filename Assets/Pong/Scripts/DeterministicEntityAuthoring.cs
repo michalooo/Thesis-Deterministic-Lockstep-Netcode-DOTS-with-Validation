@@ -1,20 +1,16 @@
+﻿using DeterministicLockstep;
 using Unity.Entities;
 using UnityEngine;
 
-namespace DeterministicLockstep
+namespace PongGame
 {
-    /// <summary>
-    /// Tag component to mark an entity as part of the deterministic simulation checks.
-    /// </summary>
-    public struct DeterministicSimulation : IComponentData
-    {
-    }
-    
     /// <summary>
     /// Behaviour to add the DeterministicSimulation component to an entity.
     /// </summary>
     public class DeterministicEntityAuthoring : MonoBehaviour
     {
+        //public bool UseInDeterministicFastHashCalculation;
+        // public bool UseAutoCommandTarget;
 
         class Baker : Baker<DeterministicEntityAuthoring>
         {
@@ -22,6 +18,7 @@ namespace DeterministicLockstep
             {
                 var entity = GetEntity(TransformUsageFlags.Dynamic);
                 AddComponent<DeterministicSimulation>(entity);
+                //if(authoring.UseInDeterministicFastHashCalculation) AddComponent<UseInDeterministicFastHashCalculation>(entity);
             }
         }
     }
