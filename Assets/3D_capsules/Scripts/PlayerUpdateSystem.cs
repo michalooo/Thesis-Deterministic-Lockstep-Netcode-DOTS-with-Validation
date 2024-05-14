@@ -39,8 +39,8 @@ using UnityEngine;
                 }
                 else
                 {
-                    var horizontalInput = playerInputData[i].horizontalInput;
-                    var verticalInput = playerInputData[i].verticalInput;
+                    var horizontalInput = playerInputData[i].inputToUse.horizontalInput;
+                    var verticalInput = playerInputData[i].inputToUse.verticalInput;
 
                     var targetTransform = SystemAPI.GetComponent<LocalToWorld>(commandTargetData[i].targetEntity);
                     var targetPosition = targetTransform.Position;

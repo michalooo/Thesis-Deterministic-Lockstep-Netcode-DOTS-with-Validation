@@ -1,5 +1,6 @@
 ﻿using Unity.Core;
 using Unity.Entities;
+using UnityEngine;
 
 namespace DeterministicLockstep
 {
@@ -7,6 +8,7 @@ namespace DeterministicLockstep
     /// System responsible for calculating the next tick to send to the server and deciding if and how many ticks we should process.
     /// </summary>
     [UpdateBefore(typeof(DeterministicSimulationSystemGroup))]
+    [UpdateAfter(typeof(UserSystemGroup))]
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     public partial class CalculateTickSystem : SystemBase
     {
@@ -35,8 +37,7 @@ namespace DeterministicLockstep
                     {
                         tickRateInfo.ValueRW.currentClientTickToSend++;
                         EntityManager.SetComponentEnabled<PlayerInputDataToSend>(connectionEntity, true);
-                        determinismSystemGroup
-                            .Update(); // maybe worth checking if it's ok that this system will still try to run after this
+                        determinismSystemGroup.Update(); // maybe worth checking if it's ok that this system will still try to run after this
                     }
                     else if
                         (storedTicksAhead.ValueRO.entries.Count >
@@ -52,8 +53,8 @@ namespace DeterministicLockstep
                             tickRateInfo.ValueRW.currentSimulationTick++;
 
                             // first update the component data before we will remove the info from the array to make space for more
-                            // UpdateComponentsData(storedTicksAhead.ValueRW.entries
-                            //     .Dequeue()); // it will remove it so no reason for dispose method for arrays?
+                            UpdateComponentsData(storedTicksAhead.ValueRW.entries
+                                .Dequeue()); // it will remove it so no reason for dispose method for arrays?
 
                             EntityManager.SetComponentEnabled<PlayerInputDataToSend>(connectionEntity, true);
                             EntityManager.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity, true);
@@ -73,42 +74,41 @@ namespace DeterministicLockstep
         }
 
 
-        // /// <summary>
-        // /// Function responsible for updating the player components based on the given RPC. Needs to be implemented by the user
-        // /// </summary>
-        // /// <param name="rpc">RPC with data for update</param>
-        // private void
-        //     UpdateComponentsData(
-        //         RpcPlayersDataUpdate rpc) // When do I want to refresh the screen? When input from the server arrives or together with the tick??
-        // {
-        //     // NativeQueue<>
-        //     var networkIDs = rpc.NetworkIDs;
-        //     var inputs = rpc.Inputs;
-        //
-        //     foreach (var (playerInputData, connectionEntity) in SystemAPI
-        //                  .Query<RefRW<PlayerInputDataToUse>>()
-        //                  .WithOptions(EntityQueryOptions.IgnoreComponentEnabledState)
-        //                  .WithAll<PlayerInputDataToSend>().WithEntityAccess())
-        //     {
-        //         var idExists = false;
-        //         for (int i = 0; i < networkIDs.Length; i++)
-        //         {
-        //             if (playerInputData.ValueRO.playerNetworkId == networkIDs[i])
-        //             {
-        //                 idExists = true;
-        //                 playerInputData.ValueRW.horizontalInput = (int)inputs[i].x;
-        //                 playerInputData.ValueRW.verticalInput = (int)inputs[i].y;
-        //             }
-        //         }
-        //
-        //         if (!idExists)
-        //         {
-        //             playerInputData.ValueRW.playerDisconnected = true;
-        //         }
-        //
-        //         EntityManager.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity, true);
-        //         EntityManager.SetComponentEnabled<PlayerInputDataToSend>(connectionEntity, false);
-        //     }
-        // }
+        /// <summary>
+        /// Function responsible for updating the player components based on the given RPC. Needs to be implemented by the user
+        /// </summary>
+        /// <param name="rpc">RPC with data for update</param>
+        private void
+            UpdateComponentsData(
+                RpcPlayersDataUpdate rpc) // When do I want to refresh the screen? When input from the server arrives or together with the tick??
+        {
+            // NativeQueue<>
+            var networkIDs = rpc.NetworkIDs;
+            var inputs = rpc.PlayersCapsuleGameInputs;
+        
+            foreach (var (playerInputData, connectionEntity) in SystemAPI
+                         .Query<RefRW<PlayerInputDataToUse>>()
+                         .WithOptions(EntityQueryOptions.IgnoreComponentEnabledState)
+                         .WithAll<PlayerInputDataToSend>().WithEntityAccess())
+            {
+                var idExists = false;
+                for (int i = 0; i < networkIDs.Length; i++)
+                {
+                    if (playerInputData.ValueRO.playerNetworkId == networkIDs[i])
+                    {
+                        idExists = true;
+                        playerInputData.ValueRW.inputToUse = inputs[i];
+                    }
+                }
+        
+                if (!idExists)
+                {
+                    playerInputData.ValueRW.playerDisconnected = true;
+                }
+        
+                EntityManager.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity, true);
+                EntityManager.SetComponentEnabled<PlayerInputDataToSend>(connectionEntity, false);
+            }
+        }
     }
 }

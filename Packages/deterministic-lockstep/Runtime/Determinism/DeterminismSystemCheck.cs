@@ -10,6 +10,7 @@ namespace DeterministicLockstep
     /// System to check the determinism of the simulation. It will hash the necessary component of all entities with the DeterministicSimulation component.
     /// </summary>
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
+    [UpdateAfter(typeof(GameStateUpdateSystemGroup))]
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     public partial class DeterminismCheckSystem : SystemBase
     {

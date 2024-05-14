@@ -36,12 +36,12 @@ namespace DeterministicLockstep
         /// <summary>
         /// List of player inputs for each tick
         /// </summary>
-        private Dictionary<ulong, NativeList<CapsulesInputs>> _everyTickInputBuffer; // we are storing inputs for each tick but in reality we only need to store previousConfirmed, previousPredicted, currentPredicted and currentConfirmed (interpolation purposes)
+        private Dictionary<ulong, NativeList<RpcBroadcastPlayerInputToServer>> _everyTickInputBuffer; // we are storing inputs for each tick but in reality we only need to store previousConfirmed, previousPredicted, currentPredicted and currentConfirmed (interpolation purposes)
         
         /// <summary>
         /// List of hashes for each tick
         /// </summary>
-        private Dictionary<ulong, List<ulong>> _everyTickHashBuffer; // here if we will point to indeterminism system we also don't need to store all of them (needs to be confirmed)
+        private Dictionary<ulong, NativeList<ulong>> _everyTickHashBuffer; // here if we will point to indeterminism system we also don't need to store all of them (needs to be confirmed)
 
         /// <summary>
         /// Array of all possible connection slots in the game and players that are already connected
@@ -66,19 +66,17 @@ namespace DeterministicLockstep
 
         protected override void OnUpdate()
         {
-            if(SystemAPI.HasComponent<DeterministicServerListen>(_settingsEntity) && !_mDriver.IsCreated){
+            if(SystemAPI.IsComponentEnabled<DeterministicServerListen>(_settingsEntity) && !_mDriver.IsCreated){
                 StartListening();
             }
-            else if(SystemAPI.HasComponent<DeterministicServerRunSimulation>(_settingsEntity) && !_settings.isInGame)
+            else if(SystemAPI.IsComponentEnabled<DeterministicServerRunSimulation>(_settingsEntity) && !_settings.isInGame)
             {
-                Debug.Log("excuse me");
                 StartGame();
             }
             
             if(!_mDriver.IsCreated) return;
             _mDriver.ScheduleUpdate().Complete();
             
-            Debug.Log("xd " + _settings.isInGame);
             if (!_settings.isInGame)
             {
                 AcceptAndHandleConnections();
@@ -128,8 +126,8 @@ namespace DeterministicLockstep
             _connectedPlayers = new NativeArray<NetworkConnection>(_settings.allowedConnectionsPerGame, Allocator.Persistent);
             _mNetworkIDs = new NativeList<int>(_settings.allowedConnectionsPerGame, Allocator.Persistent);
 
-            _everyTickInputBuffer = new Dictionary<ulong, NativeList<CapsulesInputs>>();
-            _everyTickHashBuffer = new Dictionary<ulong, List<ulong>>();
+            _everyTickInputBuffer = new Dictionary<ulong, NativeList<RpcBroadcastPlayerInputToServer>>();
+            _everyTickHashBuffer = new Dictionary<ulong, NativeList<ulong>>();
             
             _mDriver = NetworkDriver.Create();
             _reliableSimulatorPipeline =
@@ -177,7 +175,7 @@ namespace DeterministicLockstep
             {
                 case RpcID.BroadcastPlayerInputToServer:
                     var rpc = new RpcBroadcastPlayerInputToServer();
-                    rpc.Deserialize(stream);
+                    rpc.Deserialize(ref stream);
                     SaveTheData(rpc, connection);
                     CheckIfAllDataReceivedAndSendToClients();
                     break;
@@ -193,7 +191,6 @@ namespace DeterministicLockstep
         private void CollectInitialPlayerData()
         {
             _mNetworkIDs.Clear();
-            // _mPlayerInputs.Clear();
 
             // Collect data from all players
             for (ushort i = 0; i < _connectedPlayers.Length; i++)
@@ -202,7 +199,6 @@ namespace DeterministicLockstep
                 if (_connectedPlayers[i].IsCreated)
                 {
                     _mNetworkIDs.Add(i); // set unique Network ID
-                    // _mPlayerInputs.Add(new Vector2(0, 0)); // Example input
                 }
             }
         }
@@ -278,37 +274,31 @@ namespace DeterministicLockstep
         /// <param name="connection">Connection from which it arrived</param>
         private void SaveTheData(RpcBroadcastPlayerInputToServer rpc, NetworkConnection connection)
         {
-            for (ushort i = 0; i < _connectedPlayers.Length; i++)
+            for (int i = 0; i < _connectedPlayers.Length; i++)
             {
                 if (!_connectedPlayers[i].Equals(connection)) continue;
             
-                // var inputData = new IDeterministicInputComponentData
-                // {
-                //     networkID = i,
-                //     inputComponentData = rpc.PlayerInput.inputComponentData
-                // };
-            
                 if (!_everyTickInputBuffer.ContainsKey((ulong) rpc.CurrentTick))
                 {
-                    _everyTickInputBuffer[(ulong) rpc.CurrentTick] = new NativeList<CapsulesInputs>();
+                    _everyTickInputBuffer[(ulong) rpc.CurrentTick] = new NativeList<RpcBroadcastPlayerInputToServer>(Allocator.Persistent);
                 }
             
                 if (!_everyTickHashBuffer.ContainsKey((ulong) rpc.CurrentTick))
                 {
-                    _everyTickHashBuffer[(ulong) rpc.CurrentTick] = new List<ulong>();
+                    _everyTickHashBuffer[(ulong) rpc.CurrentTick] = new NativeList<ulong>(Allocator.Persistent);
                 }
             
                 // This tick already exists in the buffer. Check if the player already has inputs saved for this tick. No need to check for hash in that case because those should be send together and hash can be the same (if everything is correct) so we will get for example 3 same hashes
                 foreach (var oldInputData in _everyTickInputBuffer[(ulong) rpc.CurrentTick])
                 {
-                    if (oldInputData.networkID == i)
+                    if (oldInputData.PlayerNetworkID == i)
                     {
                         Debug.LogError("Already received input from network ID " + i + " for tick " + rpc.CurrentTick);
                         return; // Stop executing the function here, since we don't want to add the new inputData
                     }
                 }
             
-                _everyTickInputBuffer[(ulong) rpc.CurrentTick].Add(rpc.CapsuleGameInputs);
+                _everyTickInputBuffer[(ulong) rpc.CurrentTick].Add(rpc);
                 _everyTickHashBuffer[(ulong) rpc.CurrentTick].Add(rpc.HashForCurrentTick);
                 _lastTickReceived = rpc.CurrentTick;
             }
@@ -337,7 +327,6 @@ namespace DeterministicLockstep
         /// </summary>
         private void AcceptAndHandleConnections()
         {
-            Debug.Log("elo");
             // Accept new connections
             NetworkConnection c;
             while ((c = _mDriver.Accept()) != default)
@@ -382,22 +371,22 @@ namespace DeterministicLockstep
         {
             var desynchronized = false;
             if (_everyTickInputBuffer[(ulong) _lastTickReceived].Length == GetActiveConnectionCount() &&
-                _everyTickHashBuffer[(ulong) _lastTickReceived].Count ==
+                _everyTickHashBuffer[(ulong) _lastTickReceived].Length ==
                 GetActiveConnectionCount()) // because of different order that we can received those inputs we are checking for last received input
             {
                 // We've received a full set of data for this tick, so process it
                 var networkIDs = new NativeList<int>(Allocator.Temp);
-                var inputs = new NativeList<CapsulesInputs>(); //Allocator.Temp
+                var inputs = new NativeList<CapsulesInputs>(Allocator.Temp);
             
                 foreach (var inputData in _everyTickInputBuffer[(ulong) _lastTickReceived])
                 {
-                    networkIDs.Add(inputData.networkID);
-                    inputs.Add(inputData);
+                    networkIDs.Add(inputData.PlayerNetworkID);
+                    inputs.Add(inputData.CapsuleGameInputs);
                 }
             
                 // check if every hash is the same
                 var firstHash = _everyTickHashBuffer[(ulong) _lastTickReceived][0];
-                for (int i = 1; i < _everyTickHashBuffer[(ulong) _lastTickReceived].Count; i++)
+                for (int i = 1; i < _everyTickHashBuffer[(ulong) _lastTickReceived].Length; i++)
                 {
                     if (firstHash == _everyTickHashBuffer[(ulong) _lastTickReceived][i]) continue;
             
@@ -406,13 +395,13 @@ namespace DeterministicLockstep
                                    _lastTickReceived + " Hashes: " + firstHash + " and " +
                                    _everyTickHashBuffer[(ulong) _lastTickReceived][i]);
                     desynchronized = true;
-                    i = _everyTickHashBuffer[(ulong) _lastTickReceived].Count;
+                    i = _everyTickHashBuffer[(ulong) _lastTickReceived].Length;
                 }
             
                 if (!desynchronized)
                 {
                     Debug.Log("All hashes are equal: " + firstHash + ". Number of hashes: " +
-                              _everyTickHashBuffer[(ulong) _lastTickReceived].Count + ". Tick: " + _lastTickReceived);
+                              _everyTickHashBuffer[(ulong) _lastTickReceived].Length + ". Tick: " + _lastTickReceived);
             
                     // Send the RPC to all connections
                     SendRPCWithPlayersInputUpdate(networkIDs, inputs);
@@ -423,7 +412,7 @@ namespace DeterministicLockstep
                 }
             
                 networkIDs.Dispose();
-                // inputs.Dispose();
+                inputs.Dispose();
             
                 // Remove this tick from the buffer, since we're done processing it
                 _everyTickInputBuffer.Remove((ulong) _lastTickReceived);

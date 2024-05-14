@@ -4,25 +4,34 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
+[UpdateInGroup(typeof(UserSystemGroup))]
 public partial class GameLogicClientSystem : SystemBase
 {
+    private Entity _settings;
+    protected override void OnCreate()
+    {
+        RequireForUpdate<DeterministicSettings>();
+    }
+
+    protected override void OnStartRunning()
+    {
+        _settings = SystemAPI.GetSingletonEntity<DeterministicSettings>();
+    }
+
     protected override void OnUpdate()
     {
-        if (SceneManager.GetActiveScene().name == "Game" && Input.GetKey(KeyCode.C) &&
+        if (SceneManager.GetActiveScene().name == "CapsulesGame" && Input.GetKey(KeyCode.C) &&
             World.Name == "ClientWorld2") // Simulation of disconnection
         {
-            Entity settings = SystemAPI.GetSingletonEntity<DeterministicSettings>();
-            SystemAPI.SetComponentEnabled<DeterministicClientDisconnect>(settings, true);
+            SystemAPI.SetComponentEnabled<DeterministicClientDisconnect>(_settings, true);
         
-            SceneManager.LoadScene("Loading");
+            SceneManager.LoadScene("CapsulesGame");
         }
-        
-        foreach (var (settings, settingsEntity) in SystemAPI.Query<RefRW<DeterministicSettings>>().WithAll<DeterministicClientSendData>().WithEntityAccess())
+
+        if (SceneManager.GetActiveScene().name != "CapsulesGame" &&
+            SystemAPI.IsComponentEnabled<DeterministicClientSendData>(_settings))
         {
-            if (SceneManager.GetActiveScene().name != "Game")
-            {
-                SceneManager.LoadScene("Game");
-            }
+            SceneManager.LoadScene("CapsulesGame");
         }
     }
 }

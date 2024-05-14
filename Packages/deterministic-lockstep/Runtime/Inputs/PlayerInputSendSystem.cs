@@ -17,12 +17,21 @@ namespace DeterministicLockstep
 
         protected override void OnUpdate()
         {
-            foreach (var (connectionReference, tickRateInfo, connectionEntity) in SystemAPI
-                         .Query<RefRO<NetworkConnectionReference>, RefRW<TickRateInfo>>()
-                         .WithAll<PlayerSpawned, GhostOwnerIsLocal>().WithEntityAccess())
+            foreach (var (connectionReference, tickRateInfo, owner, connectionEntity) in SystemAPI
+                         .Query<RefRO<NetworkConnectionReference>, RefRW<TickRateInfo>, RefRO<GhostOwner>>()
+                         .WithAll<PlayerSpawned, GhostOwnerIsLocal, PlayerInputDataToSend>().WithEntityAccess())
             {
+                Debug.Log("Sending player input to server");
+                if (!SystemAPI.TryGetSingleton<CapsulesInputs>(out var capsulesInputs))
+                {
+                    Debug.LogError("Inputs are not singleton");
+                    return;
+                }
+                
                 var rpc = new RpcBroadcastPlayerInputToServer
                 {
+                    CapsuleGameInputs = capsulesInputs,
+                    PlayerNetworkID = owner.ValueRO.networkId,
                     CurrentTick = tickRateInfo.ValueRO.currentClientTickToSend,
                     HashForCurrentTick = tickRateInfo.ValueRO.hashForTheTick
                 };

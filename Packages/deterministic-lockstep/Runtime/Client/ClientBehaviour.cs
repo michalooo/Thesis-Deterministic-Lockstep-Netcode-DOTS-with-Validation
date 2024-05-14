@@ -15,6 +15,7 @@ namespace DeterministicLockstep
     public partial class ClientBehaviour : SystemBase
     {
         private DeterministicSettings _settings;
+        private Entity _settingsEntity;
         private const ushort KNetworkPort = 7979;
 
         private NetworkDriver _mDriver;
@@ -30,6 +31,7 @@ namespace DeterministicLockstep
         protected override void OnStartRunning()
         {
             _settings = SystemAPI.GetSingleton<DeterministicSettings>();
+            _settingsEntity = SystemAPI.GetSingletonEntity<DeterministicSettings>();
 
             _clientSimulatorParameters = new NetworkSettings();
             _clientSimulatorParameters.WithSimulatorStageParameters(
@@ -52,12 +54,22 @@ namespace DeterministicLockstep
 
         protected override void OnUpdate()
         {
-            HandleConnectionToDeterministicServer();
-            HandleDisconnectionFromDeterministicServer();
-
-            _mDriver.ScheduleUpdate().Complete();
-
+            if (SystemAPI.IsComponentEnabled<DeterministicClientConnect>(_settingsEntity))
+            {
+                var endpoint = NetworkEndpoint.Parse("127.0.0.1", KNetworkPort); //change to chosen IP
+                _mConnection = _mDriver.Connect(endpoint);
+                SystemAPI.SetComponentEnabled<DeterministicClientConnect>(_settingsEntity, false);
+            }
+            
+            if (SystemAPI.IsComponentEnabled<DeterministicClientDisconnect>(_settingsEntity))
+            {
+                _mConnection.Disconnect(_mDriver);
+                _mConnection = default;
+                SystemAPI.SetComponentEnabled<DeterministicClientDisconnect>(_settingsEntity, false);
+            }
+            
             if (!_mConnection.IsCreated) return;
+            _mDriver.ScheduleUpdate().Complete();
 
             NetworkEvent.Type cmd;
             while ((cmd = _mConnection.PopEvent(_mDriver, out var stream)) != NetworkEvent.Type.Empty)
@@ -83,28 +95,6 @@ namespace DeterministicLockstep
             }
         }
 
-        private void HandleConnectionToDeterministicServer()
-        {
-            foreach (var (settings, settingsEntity) in SystemAPI.Query<RefRW<DeterministicSettings>>()
-                         .WithAll<DeterministicClientConnect>().WithEntityAccess())
-            {
-                var endpoint = NetworkEndpoint.Parse("127.0.0.1", KNetworkPort); //change to chosen IP
-                _mConnection = _mDriver.Connect(endpoint);
-                SystemAPI.SetComponentEnabled<DeterministicClientConnect>(settingsEntity, false);
-            }
-        }
-
-        private void HandleDisconnectionFromDeterministicServer()
-        {
-            foreach (var (settings, settingsEntity) in SystemAPI.Query<RefRW<DeterministicSettings>>()
-                         .WithAll<DeterministicClientDisconnect>().WithEntityAccess())
-            {
-                _mConnection.Disconnect(_mDriver);
-                _mConnection = default;
-                SystemAPI.SetComponentEnabled<DeterministicClientDisconnect>(settingsEntity, false);
-            }
-        }
-
         /// <summary>
         /// Function used to handle incoming RPCs from server.
         /// </summary>
@@ -123,17 +113,17 @@ namespace DeterministicLockstep
             {
                 case RpcID.BroadcastAllPlayersInputsToClients:
                     var rpcPlayersDataUpdate = new RpcPlayersDataUpdate();
-                    rpcPlayersDataUpdate.Deserialize(stream);
-                    UpdatePlayersData(rpcPlayersDataUpdate);
+                    rpcPlayersDataUpdate.Deserialize(ref stream);
+                    UpdatePlayersData(rpcPlayersDataUpdate); 
                     break;
                 case RpcID.StartDeterministicSimulation:
                     var rpcStartDeterministicSimulation = new RpcStartDeterministicSimulation();
-                    rpcStartDeterministicSimulation.Deserialize(stream);
+                    rpcStartDeterministicSimulation.Deserialize(ref stream);
                     StartGame(rpcStartDeterministicSimulation);
                     break;
                 case RpcID.PlayersDesynchronized: // Stop simulation
                     var rpcPlayerDesynchronizationInfo = new RpcPlayerDesynchronizationInfo();
-                    rpcPlayerDesynchronizationInfo.Deserialize(stream);
+                    rpcPlayerDesynchronizationInfo.Deserialize(ref stream);
                     var determinismSystemGroup = World.DefaultGameObjectInjectionWorld
                         .GetOrCreateSystemManaged<DeterministicSimulationSystemGroup>();
                     determinismSystemGroup.Enabled = false;
@@ -160,15 +150,10 @@ namespace DeterministicLockstep
                 EntityManager.AddComponentData(newEntity, new PlayerInputDataToUse
                 {
                     playerNetworkId = playerNetworkId,
-                    horizontalInput = 0,
-                    verticalInput = 0,
+                    inputToUse = new CapsulesInputs(),
                     playerDisconnected = false,
                 });
-                EntityManager.AddComponentData(newEntity, new PlayerInputDataToSend
-                {
-                    horizontalInput = 0,
-                    verticalInput = 0,
-                });
+                EntityManager.AddComponentData(newEntity, new PlayerInputDataToSend());
                 EntityManager.AddComponentData(newEntity, new TickRateInfo
                 {
                     tickRate = rpc.TickRate,
@@ -190,11 +175,13 @@ namespace DeterministicLockstep
                     connection = _mConnection
                 });
                 EntityManager.AddComponentData(newEntity, new GhostOwnerIsLocal());
-                // EntityManager.AddComponentData(newEntity, new StoredTicksAhead(false));
+                EntityManager.AddComponentData(newEntity, new StoredTicksAhead(false));
                 if (playerNetworkId != rpc.NetworkID)
                     EntityManager.SetComponentEnabled<GhostOwnerIsLocal>(newEntity, false);
                 EntityManager.SetComponentEnabled<PlayerInputDataToSend>(newEntity, false);
             }
+            
+            SystemAPI.SetComponentEnabled<DeterministicClientSendData>(_settingsEntity, true);
         }
 
         /// <summary>

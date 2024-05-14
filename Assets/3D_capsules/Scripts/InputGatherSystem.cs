@@ -3,16 +3,22 @@ using Unity.Entities;
 using UnityEngine;
 
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
+    [UpdateInGroup(typeof(UserSystemGroup))]
     public partial class InputGatherSystem : SystemBase
     {
+        protected override void OnCreate()
+        {
+            RequireForUpdate<CapsulesInputs>();
+        }
+
         protected override void OnUpdate()
         {
-            foreach (var (inputComponent, inputEntity) in SystemAPI.Query<RefRW<CapsulesInputs>>().WithEntityAccess())
+            if(SystemAPI.TryGetSingleton<CapsulesInputs>(out var inputComponent))
             {
-                int horizontalInput;
-                int verticalInput;
+                int horizontalInput = 0;
+                int verticalInput = 0;
 
-                if (World.Name == "ClientWorld2") // for local testing purposes
+                if (World.Name == "ClientWorld2" || World.Name == "ClientWorld") // for local testing purposes
                 {
                     horizontalInput = Input.GetKey(KeyCode.A) ? -1 : Input.GetKey(KeyCode.D) ? 1 : 0;
                     verticalInput = Input.GetKey(KeyCode.S) ? -1 : Input.GetKey(KeyCode.W) ? 1 : 0;
@@ -27,9 +33,14 @@ using UnityEngine;
                     Debug.LogError("Invalid world name!");
                     return;
                 }
-
-                inputComponent.ValueRW.horizontalInput = horizontalInput;
-                inputComponent.ValueRW.verticalInput = verticalInput;
+                
+                inputComponent.horizontalInput = horizontalInput;
+                inputComponent.verticalInput = verticalInput;
+                SystemAPI.SetSingleton(inputComponent);
+            }
+            else
+            {
+                Debug.LogError("No input singleton present!");
             }
         }
     }

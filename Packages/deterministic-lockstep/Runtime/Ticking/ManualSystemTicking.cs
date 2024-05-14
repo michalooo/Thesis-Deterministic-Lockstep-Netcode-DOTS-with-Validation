@@ -3,6 +3,14 @@ using Unity.Entities;
 namespace DeterministicLockstep
 {
     /// <summary>
+    /// System group that contains all of user defined systems.
+    /// </summary>
+    [UpdateAfter(typeof(ConnectionHandleSystemGroup))]
+    public partial class UserSystemGroup : ComponentSystemGroup
+    {
+    }
+    
+    /// <summary>
     /// System group that contains connection handle systems.
     /// </summary>
     public partial class ConnectionHandleSystemGroup : ComponentSystemGroup
@@ -12,7 +20,7 @@ namespace DeterministicLockstep
     /// <summary>
     /// System group that contains deterministic simulation systems. Systems that are using it are PlayerUpdateSystem, DeterminismSystemCheck, and PlayerInputGatherAndSendSystem.
     /// </summary>
-    [UpdateAfter(typeof(ConnectionHandleSystemGroup))]
+    [UpdateAfter(typeof(UserSystemGroup))]
     public partial class DeterministicSimulationSystemGroup : ComponentSystemGroup
     {
     }
@@ -21,7 +29,7 @@ namespace DeterministicLockstep
     /// <summary>
     /// System group that is used for any game logic stuff (can be ticked when rolling back or catching up).
     /// </summary>
-    [UpdateInGroup(typeof(DeterministicSimulationSystemGroup), OrderLast = true)]
+    [UpdateInGroup(typeof(DeterministicSimulationSystemGroup), OrderFirst = true)]
     public partial class GameStateUpdateSystemGroup : ComponentSystemGroup
     {
     }

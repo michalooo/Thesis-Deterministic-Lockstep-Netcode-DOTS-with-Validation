@@ -14,27 +14,23 @@ namespace DeterministicLockstep
 
         public StoredTicksAhead(bool b) // not possible to have parameterless constructor
         {
-            entries = new NativeQueue<RpcPlayersDataUpdate>(); //Allocator persistent
+            entries = new NativeQueue<RpcPlayersDataUpdate>(Allocator.Persistent);
         }
     }
 
     /// <summary>
-    /// Component used to store the player input data to send to the server
+    /// Enableable tag Component used to mark if user input should be send to the server
     /// </summary>
-    public struct PlayerInputDataToSend : IComponentData, IEnableableComponent
-    {
-        public int horizontalInput;
-        public int verticalInput;
-    }
+    public struct PlayerInputDataToSend : IComponentData, IEnableableComponent {}
 
     /// <summary>
-    /// Component used to store the player input data to use for simulation
+    /// Component used to store the player input data to use for user simulation
     /// </summary>
     public struct PlayerInputDataToUse : IComponentData, IEnableableComponent
     {
         public int playerNetworkId;
-        public int horizontalInput;
-        public int verticalInput;
+        public CapsulesInputs inputToUse;
+        
         public bool playerDisconnected;
     }
 
