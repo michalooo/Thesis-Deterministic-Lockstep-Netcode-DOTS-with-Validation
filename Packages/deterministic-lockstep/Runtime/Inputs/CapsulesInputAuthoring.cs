@@ -9,7 +9,7 @@ namespace DeterministicLockstep
     {
         public int horizontalInput;
         public int verticalInput;
-
+    
         public void SerializeInputs(ref DataStreamWriter writer)
         {
             writer.WriteInt(verticalInput);
