@@ -1,10 +1,10 @@
-using DeterministicLockstep;
+﻿using DeterministicLockstep;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Transforms;
 using UnityEngine;
 
-namespace CapsulesGame
+namespace PongGame
 {
     /// <summary>
     /// System responsible for updating all of players positions based on their input component (updated by the server) if they are spawned and if UpdatePlayerPosition component is enabled. After updating those positions this component will be disabled
@@ -18,7 +18,7 @@ namespace CapsulesGame
         protected override void OnCreate()
         {
             RequireForUpdate<PlayerInputDataToUse>(); // component from which data should be taken
-            RequireForUpdate<CapsulesInputs>();
+            RequireForUpdate<PongInputs>();
         }
 
         protected override void OnUpdate()
@@ -40,12 +40,11 @@ namespace CapsulesGame
                 }
                 else
                 {
-                    // var horizontalInput = playerInputData[i].inputToUse.horizontalInput;
                     var verticalInput = playerInputData[i].inputToUse.verticalInput;
 
                     var targetTransform = SystemAPI.GetComponent<LocalToWorld>(commandTargetData[i].targetEntity);
                     var targetPosition = targetTransform.Position;
-                    // targetPosition.x += horizontalInput;
+                    
                     targetPosition.z += verticalInput;
 
                     EntityManager.SetComponentData(commandTargetData[i].targetEntity,

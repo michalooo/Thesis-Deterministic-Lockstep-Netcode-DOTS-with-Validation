@@ -3,7 +3,7 @@ using Unity.Entities;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace CapsulesGame
+namespace PongGame
 {
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
     [UpdateInGroup(typeof(UserSystemGroup))]
@@ -24,7 +24,7 @@ namespace CapsulesGame
         protected override void OnUpdate()
         {
             // option for the server to start the game
-            if (SceneManager.GetActiveScene().name == "CapsulesLoading" && Input.GetKey(KeyCode.Space))
+            if (SceneManager.GetActiveScene().name == "PongLoading" && Input.GetKey(KeyCode.Space))
             {
                 SystemAPI.SetComponentEnabled<DeterministicServerListen>(_settings, false);
                 SystemAPI.SetComponentEnabled<DeterministicServerRunSimulation>(_settings, true);

@@ -142,14 +142,14 @@ namespace DeterministicLockstep
     /// </summary>
     public struct RpcBroadcastPlayerInputToServer : INetcodeRPC
     {
-        public CapsulesInputs CapsuleGameInputs;
+        public PongInputs CapsuleGameInputs;
         public int PlayerNetworkID { get; set; } // don't needed since server knows the connection ID
         public int CurrentTick { get; set; }
         public ulong HashForCurrentTick { get; set; }
         
-        public RpcBroadcastPlayerInputToServer(CapsulesInputs? input)
+        public RpcBroadcastPlayerInputToServer(PongInputs? input)
         {
-            CapsuleGameInputs = input ?? new CapsulesInputs();
+            CapsuleGameInputs = input ?? new PongInputs();
             PlayerNetworkID = 0;
             CurrentTick = 0;
             HashForCurrentTick = 0;
@@ -211,17 +211,17 @@ namespace DeterministicLockstep
         /// <summary>
         /// All of connected players inputs that should be applied
         /// </summary>
-        public NativeList<CapsulesInputs> PlayersCapsuleGameInputs { get; set; } 
+        public NativeList<PongInputs> PlayersCapsuleGameInputs { get; set; } 
 
         /// <summary>
         /// On which tick it should be applied (so for example first tick send can be received back as tick 9
         /// </summary>
         public int Tick { get; set; } 
         
-        public RpcPlayersDataUpdate(NativeList<int>? networkIDs, NativeList<CapsulesInputs>? inputs, int? tick)
+        public RpcPlayersDataUpdate(NativeList<int>? networkIDs, NativeList<PongInputs>? inputs, int? tick)
         {
             NetworkIDs = networkIDs ?? new NativeList<int>(0, Allocator.Persistent);
-            PlayersCapsuleGameInputs = inputs ?? new NativeList<CapsulesInputs>(0, Allocator.Persistent);
+            PlayersCapsuleGameInputs = inputs ?? new NativeList<PongInputs>(0, Allocator.Persistent);
             Tick = tick ?? 0;
         }
 
@@ -271,10 +271,10 @@ namespace DeterministicLockstep
             }
             
             int inputsCount = reader.ReadInt();
-            PlayersCapsuleGameInputs = new NativeList<CapsulesInputs>(inputsCount, Allocator.Persistent);
+            PlayersCapsuleGameInputs = new NativeList<PongInputs>(inputsCount, Allocator.Persistent);
             for (int i = 0; i < inputsCount; i++)
             {
-                var inputs = new CapsulesInputs();
+                var inputs = new PongInputs();
                 inputs.DeserializeInputs(ref reader);
                 PlayersCapsuleGameInputs.Add(inputs);
             }

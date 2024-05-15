@@ -29,7 +29,7 @@ namespace DeterministicLockstep
     public struct PlayerInputDataToUse : IComponentData, IEnableableComponent
     {
         public int playerNetworkId;
-        public CapsulesInputs inputToUse;
+        public PongInputs inputToUse;
         
         public bool playerDisconnected;
     }

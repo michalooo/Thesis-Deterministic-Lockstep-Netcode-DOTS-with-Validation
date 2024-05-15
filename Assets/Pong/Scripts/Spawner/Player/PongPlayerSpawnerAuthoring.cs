@@ -1,12 +1,12 @@
-using Unity.Entities;
+﻿using Unity.Entities;
 using UnityEngine;
 
-namespace CapsulesGame
+namespace PongGame
 {
     /// <summary>
     /// Component used to store the player prefab entity
     /// </summary>
-    public struct Spawner : IComponentData
+    public struct PongPlayerSpawner : IComponentData
     {
         public Entity Player;
     }
@@ -14,15 +14,15 @@ namespace CapsulesGame
     /// <summary>
     /// Authoring function for the Spawner
     /// </summary>
-    public class SpawnerAuthoring : MonoBehaviour
+    public class PongPlayerSpawnerAuthoring : MonoBehaviour
     {
         public GameObject Player;
 
-        class Baker : Baker<SpawnerAuthoring>
+        class Baker : Baker<PongPlayerSpawnerAuthoring>
         {
-            public override void Bake(SpawnerAuthoring authoring)
+            public override void Bake(PongPlayerSpawnerAuthoring authoring)
             {
-                var component = default(Spawner);
+                var component = default(PongPlayerSpawner);
                 component.Player = GetEntity(authoring.Player, TransformUsageFlags.Dynamic);
                 var entity = GetEntity(TransformUsageFlags.Dynamic);
                 AddComponent(entity, component);
@@ -31,5 +31,3 @@ namespace CapsulesGame
         
     }
 }
-
-

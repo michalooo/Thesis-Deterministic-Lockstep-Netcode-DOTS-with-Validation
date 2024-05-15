@@ -150,7 +150,7 @@ namespace DeterministicLockstep
                 EntityManager.AddComponentData(newEntity, new PlayerInputDataToUse
                 {
                     playerNetworkId = playerNetworkId,
-                    inputToUse = new CapsulesInputs(),
+                    inputToUse = new PongInputs(),
                     playerDisconnected = false,
                 });
                 EntityManager.AddComponentData(newEntity, new PlayerInputDataToSend());

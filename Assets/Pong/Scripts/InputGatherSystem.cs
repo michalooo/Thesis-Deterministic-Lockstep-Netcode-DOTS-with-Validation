@@ -1,33 +1,30 @@
-﻿using DeterministicLockstep;
-using Unity.Entities;
-using UnityEngine;
-
-namespace CapsulesGame
+﻿namespace PongGame
 {
+    using DeterministicLockstep;
+    using Unity.Entities;
+    using UnityEngine;
+
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(UserSystemGroup))]
     public partial class InputGatherSystem : SystemBase
     {
         protected override void OnCreate()
         {
-            RequireForUpdate<CapsulesInputs>();
+            RequireForUpdate<PongInputs>();
         }
 
         protected override void OnUpdate()
         {
-            if(SystemAPI.TryGetSingleton<CapsulesInputs>(out var inputComponent))
+            if(SystemAPI.TryGetSingleton<PongInputs>(out var inputComponent))
             {
-                int horizontalInput = 0;
                 int verticalInput = 0;
 
-                if (World.Name == "ClientWorld2" || World.Name == "ClientWorld") // for local testing purposes
+                if (World.Name == "ClientWorld") // for local testing purposes
                 {
-                    horizontalInput = Input.GetKey(KeyCode.A) ? -1 : Input.GetKey(KeyCode.D) ? 1 : 0;
                     verticalInput = Input.GetKey(KeyCode.S) ? -1 : Input.GetKey(KeyCode.W) ? 1 : 0;
                 }
-                else if (World.Name != "ClientWorld3")
+                else if (World.Name == "ClientWorld1")
                 {
-                    horizontalInput = Input.GetKey(KeyCode.LeftArrow) ? -1 : Input.GetKey(KeyCode.RightArrow) ? 1 : 0;
                     verticalInput = Input.GetKey(KeyCode.DownArrow) ? -1 : Input.GetKey(KeyCode.UpArrow) ? 1 : 0;
                 }
                 else
@@ -36,7 +33,6 @@ namespace CapsulesGame
                     return;
                 }
                 
-                inputComponent.horizontalInput = horizontalInput;
                 inputComponent.verticalInput = verticalInput;
                 SystemAPI.SetSingleton(inputComponent);
             }
@@ -47,4 +43,3 @@ namespace CapsulesGame
         }
     }
 }
-    

@@ -232,7 +232,7 @@ namespace DeterministicLockstep
         /// </summary>
         /// <param name="networkIDs">List of client IDs</param>
         /// <param name="playerInputs">List of client inputs</param>
-        private void SendRPCWithPlayersInputUpdate(NativeList<int> networkIDs, NativeList<CapsulesInputs> playerInputs)
+        private void SendRPCWithPlayersInputUpdate(NativeList<int> networkIDs, NativeList<PongInputs> playerInputs)
         {
             
             var rpc = new RpcPlayersDataUpdate
@@ -376,7 +376,7 @@ namespace DeterministicLockstep
             {
                 // We've received a full set of data for this tick, so process it
                 var networkIDs = new NativeList<int>(Allocator.Temp);
-                var inputs = new NativeList<CapsulesInputs>(Allocator.Temp);
+                var inputs = new NativeList<PongInputs>(Allocator.Temp);
             
                 foreach (var inputData in _everyTickInputBuffer[(ulong) _lastTickReceived])
                 {

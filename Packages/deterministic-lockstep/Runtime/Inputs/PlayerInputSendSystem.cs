@@ -22,7 +22,7 @@ namespace DeterministicLockstep
                          .WithAll<PlayerSpawned, GhostOwnerIsLocal, PlayerInputDataToSend>().WithEntityAccess())
             {
                 Debug.Log("Sending player input to server");
-                if (!SystemAPI.TryGetSingleton<CapsulesInputs>(out var capsulesInputs))
+                if (!SystemAPI.TryGetSingleton<PongInputs>(out var capsulesInputs))
                 {
                     Debug.LogError("Inputs are not singleton");
                     return;

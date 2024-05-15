@@ -3,7 +3,7 @@ using Unity.Entities;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace CapsulesGame
+namespace PongGame
 {
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(UserSystemGroup))]
@@ -23,18 +23,17 @@ namespace CapsulesGame
 
         protected override void OnUpdate()
         {
-            if (SceneManager.GetActiveScene().name == "CapsulesGame" && Input.GetKey(KeyCode.C) &&
-                World.Name == "ClientWorld2") // Simulation of disconnection
+            if (SceneManager.GetActiveScene().name == "PongGame" && Input.GetKey(KeyCode.C) &&
+                World.Name == "ClientWorld1") // Simulation of disconnection
             {
                 SystemAPI.SetComponentEnabled<DeterministicClientDisconnect>(_settings, true);
 
-                SceneManager.LoadScene("CapsulesGame");
+                SceneManager.LoadScene("PongLoading");
             }
 
-            if (SceneManager.GetActiveScene().name == "CapsulesLoading" &&
-                SystemAPI.IsComponentEnabled<DeterministicClientSendData>(_settings))
+            if (SceneManager.GetActiveScene().name == "PongLoading" && SystemAPI.IsComponentEnabled<DeterministicClientSendData>(_settings))
             {
-                SceneManager.LoadScene("CapsulesGame");
+                SceneManager.LoadScene("PongGame");
             }
         }
     }
