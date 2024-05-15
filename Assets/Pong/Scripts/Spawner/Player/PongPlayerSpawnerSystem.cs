@@ -35,9 +35,18 @@ namespace PongGame
                 var player = commandBuffer.Instantiate(prefab);
                 commandBuffer.AddComponent(connectionEntity, new CommandTarget() { targetEntity = player }); // is it necessery for the package? This is user implementation
 
-                // Fix the position problem (those should be different but are the same)
-                commandBuffer.SetComponent(player,
-                    LocalTransform.FromPosition(new float3(8, 0, 0)));
+                if (ghostOwner.ValueRO.networkId % 2 == 0)
+                {
+                    // Fix the position problem (those should be different but are the same)
+                    commandBuffer.SetComponent(player,
+                        LocalTransform.FromPosition(new float3(-8, 0, 0)));
+                }
+                else
+                {
+                    // Fix the position problem (those should be different but are the same)
+                    commandBuffer.SetComponent(player,
+                        LocalTransform.FromPosition(new float3(8, 0, 0)));
+                }
             }
 
             commandBuffer.Playback(EntityManager);
