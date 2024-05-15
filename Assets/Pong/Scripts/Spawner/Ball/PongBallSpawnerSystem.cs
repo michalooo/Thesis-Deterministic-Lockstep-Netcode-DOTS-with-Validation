@@ -15,6 +15,11 @@ namespace PongGame
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     public partial class PongBallSpawnerSystem : SystemBase
     {
+        private int totalBallsSpawned = 0;
+        private int totalBallsToSpawn = 500;
+        
+        private float timeBetweenSpawning = 0.05f;
+        private float timeSinceLastSpawn = 0f;
         protected override void OnCreate()
         {
             RequireForUpdate<PongBallSpawner>();
@@ -23,17 +28,30 @@ namespace PongGame
 
         protected override void OnUpdate()
         {
-            var prefab = SystemAPI.GetSingleton<PongBallSpawner>().Ball;
-            var commandBuffer = new EntityCommandBuffer(Allocator.Temp);
-            
-            // I want to spawn a ball every x seconds.
-            // I need a system for controlling ball speed etc
-            
-            for(int i=0; i<1; i++)
+            if (totalBallsSpawned < totalBallsToSpawn)
             {
-                Debug.Log($"Spawning ball");
-                // var ball = EntityManager.Instantiate(prefab);
-                // EntityManager.SetComponentData(ball,LocalTransform.FromPosition(new float3(0, 0, 0)));
+                var prefab = SystemAPI.GetSingleton<PongBallSpawner>().Ball;
+                var commandBuffer = new EntityCommandBuffer(Allocator.Temp);
+                
+                if (timeSinceLastSpawn >= timeBetweenSpawning)
+                {
+                    Debug.Log($"Spawning ball: " + totalBallsSpawned);
+                    var ball = commandBuffer.Instantiate(prefab);
+                    commandBuffer.SetComponent(ball, new LocalTransform
+                    {
+                        Position = new float3(0, 0, 0),
+                        Scale = 0.4f,
+                        Rotation = quaternion.identity
+                    });
+                    totalBallsSpawned++;
+                    timeSinceLastSpawn = 0f;
+                }
+                else
+                {
+                    timeSinceLastSpawn += SystemAPI.Time.DeltaTime;
+                }
+
+                commandBuffer.Playback(EntityManager);
             }
         }
     }
