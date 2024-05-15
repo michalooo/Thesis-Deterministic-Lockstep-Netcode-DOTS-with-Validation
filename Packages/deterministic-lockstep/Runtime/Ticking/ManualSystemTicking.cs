@@ -3,7 +3,7 @@ using Unity.Entities;
 namespace DeterministicLockstep
 {
     /// <summary>
-    /// System group that contains all of user defined systems.
+    /// System group that contains all of user defined systems which are not affecting state of the game.
     /// </summary>
     [UpdateAfter(typeof(ConnectionHandleSystemGroup))]
     public partial class UserSystemGroup : ComponentSystemGroup

@@ -1,8 +1,10 @@
 ﻿using Unity.Entities;
+using Unity.Mathematics;
 using UnityEngine;
 
 namespace PongGame
 {
+    
     /// <summary>
     /// Component used to store the player prefab entity
     /// </summary>

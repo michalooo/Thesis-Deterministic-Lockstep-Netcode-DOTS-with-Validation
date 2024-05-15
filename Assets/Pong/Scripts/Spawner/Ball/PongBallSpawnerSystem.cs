@@ -11,14 +11,17 @@ namespace PongGame
     /// <summary>
     /// System used to spawn the player prefab for the connections that are not spawned yet
     /// </summary>
-    [UpdateBefore(typeof(DeterministicSimulationSystemGroup))]
+    [UpdateInGroup(typeof(GameStateUpdateSystemGroup))]
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     public partial class PongBallSpawnerSystem : SystemBase
     {
         private int totalBallsSpawned = 0;
-        private int totalBallsToSpawn = 500;
+        private int totalBallsToSpawn = 600;
         
-        private float timeBetweenSpawning = 0.05f;
+        private float minSpeed = 0.5f;
+        private float maxSpeed = 5f;
+        
+        private float timeBetweenSpawning = 0.01f;
         private float timeSinceLastSpawn = 0f;
         protected override void OnCreate()
         {
@@ -35,7 +38,6 @@ namespace PongGame
                 
                 if (timeSinceLastSpawn >= timeBetweenSpawning)
                 {
-                    Debug.Log($"Spawning ball: " + totalBallsSpawned);
                     var ball = commandBuffer.Instantiate(prefab);
                     commandBuffer.SetComponent(ball, new LocalTransform
                     {
@@ -43,6 +45,23 @@ namespace PongGame
                         Scale = 0.4f,
                         Rotation = quaternion.identity
                     });
+                    
+                    // Generate a random angle in degrees
+                    var angleInDegrees = UnityEngine.Random.Range(0f, 360f);
+
+                    // Convert the angle to radians
+                    var angleInRadians = angleInDegrees * Mathf.Deg2Rad;
+
+                    // Generate a direction vector from the angle
+                    var direction = new float3(Mathf.Cos(angleInRadians), 0, Mathf.Sin(angleInRadians));
+                    direction = math.normalize(direction);
+
+                    // Generate a random speed
+                    var speed = UnityEngine.Random.Range(minSpeed, maxSpeed);
+
+                    // Set the velocity of the ball
+                    commandBuffer.SetComponent(ball, new Velocity { value = direction * speed });
+                    
                     totalBallsSpawned++;
                     timeSinceLastSpawn = 0f;
                 }
