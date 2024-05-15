@@ -12,7 +12,6 @@ namespace PongGame
     /// System used to spawn the player prefab for the connections that are not spawned yet
     /// </summary>
     [UpdateInGroup(typeof(GameStateUpdateSystemGroup))]
-    [UpdateAfter(typeof(PongPlayerSpawnerSystem))]
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     public partial class PongBallSpawnerSystem : SystemBase
     {

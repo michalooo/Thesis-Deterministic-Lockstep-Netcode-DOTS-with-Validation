@@ -7,7 +7,6 @@ namespace PongGame
 {
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(GameStateUpdateSystemGroup))]
-    [UpdateAfter(typeof(BallMovementSystem))]
     public partial class PongBallDestructionSystem : SystemBase
     {
         protected override void OnUpdate()

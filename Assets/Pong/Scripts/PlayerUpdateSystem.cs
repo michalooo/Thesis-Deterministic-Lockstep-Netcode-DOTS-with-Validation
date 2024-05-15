@@ -11,7 +11,6 @@ namespace PongGame
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(GameStateUpdateSystemGroup))]
-    [UpdateAfter(typeof(PongBallSpawnerSystem))]
     public partial class PlayerUpdateSystem : SystemBase
     {
         private EntityQuery playerQuery;
