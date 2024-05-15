@@ -9,6 +9,7 @@ namespace PongGame
 {
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(GameStateUpdateSystemGroup))]
+    [UpdateAfter(typeof(PlayerUpdateSystem))]
     [BurstCompile]
     public partial struct BallMovementSystem : ISystem
     {

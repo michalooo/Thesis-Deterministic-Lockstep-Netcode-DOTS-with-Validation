@@ -11,9 +11,12 @@ namespace PongGame
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(GameStateUpdateSystemGroup))]
+    [UpdateAfter(typeof(PongBallSpawnerSystem))]
     public partial class PlayerUpdateSystem : SystemBase
     {
         private EntityQuery playerQuery;
+        private const float minZ = -3.5f;
+        private const float maxZ = 3.5f;
 
         protected override void OnCreate()
         {
@@ -46,6 +49,17 @@ namespace PongGame
                     var targetPosition = targetTransform.Position;
                     
                     targetPosition.z += verticalInput;
+                    
+                    
+                    // Check if the new position is within the bounds
+                    if (targetPosition.z < minZ)
+                    {
+                        targetPosition.z = minZ;
+                    }
+                    else if (targetPosition.z > maxZ)
+                    {
+                        targetPosition.z = maxZ;
+                    }
 
                     EntityManager.SetComponentData(commandTargetData[i].targetEntity,
                         LocalTransform.FromPosition(targetPosition));
