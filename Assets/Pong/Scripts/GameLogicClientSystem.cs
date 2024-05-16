@@ -9,16 +9,16 @@ namespace PongGame
     [UpdateInGroup(typeof(UserSystemGroup))]
     public partial class GameLogicClientSystem : SystemBase
     {
-        private Entity _settings;
+        private Entity _client;
 
         protected override void OnCreate()
         {
-            RequireForUpdate<DeterministicSettings>();
+            RequireForUpdate<DeterministicClient>();
         }
 
         protected override void OnStartRunning()
         {
-            _settings = SystemAPI.GetSingletonEntity<DeterministicSettings>();
+            _client = SystemAPI.GetSingletonEntity<DeterministicClient>();
         }
 
         protected override void OnUpdate()
@@ -26,12 +26,12 @@ namespace PongGame
             if (SceneManager.GetActiveScene().name == "PongGame" && Input.GetKey(KeyCode.C) &&
                 World.Name == "ClientWorld1") // Simulation of disconnection
             {
-                SystemAPI.SetComponentEnabled<DeterministicClientDisconnect>(_settings, true);
+                SystemAPI.SetComponentEnabled<DeterministicClientDisconnect>(_client, true);
 
                 SceneManager.LoadScene("PongLoading");
             }
 
-            if (SceneManager.GetActiveScene().name == "PongLoading" && SystemAPI.IsComponentEnabled<DeterministicClientSendData>(_settings))
+            if (SceneManager.GetActiveScene().name == "PongLoading" && SystemAPI.IsComponentEnabled<DeterministicClientSendData>(_client))
             {
                 SceneManager.LoadScene("PongGame");
             }

@@ -49,16 +49,11 @@ namespace CapsulesGame
                             anotherClientEntityManager.CreateEntity(typeof(DeterministicSettings));
                         anotherClientEntityManager.SetComponentData(anotherClientDeterministicSettings,
                             entityManager.GetComponentData<DeterministicSettings>(deterministicSettings2));
-
-                        anotherClientEntityManager.AddComponent<DeterministicClientConnect>(anotherClientDeterministicSettings);
-                        anotherClientEntityManager.SetComponentEnabled<DeterministicClientConnect>(anotherClientDeterministicSettings,
-                            true);
-                        anotherClientEntityManager.AddComponent<DeterministicClientDisconnect>(anotherClientDeterministicSettings);
-                        anotherClientEntityManager.SetComponentEnabled<DeterministicClientDisconnect>(
-                            anotherClientDeterministicSettings, false);
-                        anotherClientEntityManager.AddComponent<DeterministicClientSendData>(anotherClientDeterministicSettings);
-                        anotherClientEntityManager.SetComponentEnabled<DeterministicClientSendData>(
-                            anotherClientDeterministicSettings, false);
+                
+                        Entity anotherClientAuthoringEntity = anotherClientEntityManager.CreateEntity(typeof(DeterministicClient), typeof(DeterministicClientConnect), typeof(DeterministicClientDisconnect), typeof(DeterministicClientSendData));
+                        anotherClientEntityManager.SetComponentEnabled<DeterministicClientConnect>(anotherClientAuthoringEntity, true);
+                        anotherClientEntityManager.SetComponentEnabled<DeterministicClientDisconnect>(anotherClientAuthoringEntity, false);
+                        anotherClientEntityManager.SetComponentEnabled<DeterministicClientSendData>(anotherClientAuthoringEntity, false);
                     }
                     else
                     {
@@ -79,27 +74,21 @@ namespace CapsulesGame
                 Entity serverDeterministicSettings = serverEntityManager.CreateEntity(typeof(DeterministicSettings));
                 serverEntityManager.SetComponentData(serverDeterministicSettings,
                     entityManager.GetComponentData<DeterministicSettings>(deterministicSettings));
-
-                serverEntityManager.AddComponent<DeterministicServerListen>(serverDeterministicSettings);
-                serverEntityManager.SetComponentEnabled<DeterministicServerListen>(serverDeterministicSettings, true);
-                serverEntityManager.AddComponent<DeterministicServerRunSimulation>(serverDeterministicSettings);
-                serverEntityManager.SetComponentEnabled<DeterministicServerRunSimulation>(serverDeterministicSettings,
-                    false);
+                
+                Entity serverAuthoringEntity = serverEntityManager.CreateEntity(typeof(DeterministicServer), typeof(DeterministicServerListen), typeof(DeterministicServerRunSimulation));
+                serverEntityManager.SetComponentEnabled<DeterministicServerListen>(serverAuthoringEntity, true);
+                serverEntityManager.SetComponentEnabled<DeterministicServerRunSimulation>(serverAuthoringEntity, false);
 
 
                 EntityManager clientEntityManager = client.EntityManager;
                 Entity clientDeterministicSettings = clientEntityManager.CreateEntity(typeof(DeterministicSettings));
                 clientEntityManager.SetComponentData(clientDeterministicSettings,
                     entityManager.GetComponentData<DeterministicSettings>(deterministicSettings));
-
-                clientEntityManager.AddComponent<DeterministicClientConnect>(clientDeterministicSettings);
-                clientEntityManager.SetComponentEnabled<DeterministicClientConnect>(clientDeterministicSettings, true);
-                clientEntityManager.AddComponent<DeterministicClientDisconnect>(clientDeterministicSettings);
-                clientEntityManager.SetComponentEnabled<DeterministicClientDisconnect>(clientDeterministicSettings,
-                    false);
-                clientEntityManager.AddComponent<DeterministicClientSendData>(clientDeterministicSettings);
-                clientEntityManager.SetComponentEnabled<DeterministicClientSendData>(clientDeterministicSettings,
-                    false);
+                
+                Entity clientAuthoringEntity = clientEntityManager.CreateEntity(typeof(DeterministicClient), typeof(DeterministicClientConnect), typeof(DeterministicClientDisconnect), typeof(DeterministicClientSendData));
+                clientEntityManager.SetComponentEnabled<DeterministicClientConnect>(clientAuthoringEntity, true);
+                clientEntityManager.SetComponentEnabled<DeterministicClientDisconnect>(clientAuthoringEntity, false);
+                clientEntityManager.SetComponentEnabled<DeterministicClientSendData>(clientAuthoringEntity, false);
             }
             else
             {
@@ -130,15 +119,11 @@ namespace CapsulesGame
                 Entity clientDeterministicSettings = clientEntityManager.CreateEntity(typeof(DeterministicSettings));
                 clientEntityManager.SetComponentData(clientDeterministicSettings,
                     entityManager.GetComponentData<DeterministicSettings>(deterministicSettings));
-
-                clientEntityManager.AddComponent<DeterministicClientConnect>(clientDeterministicSettings);
-                clientEntityManager.SetComponentEnabled<DeterministicClientConnect>(clientDeterministicSettings, true);
-                clientEntityManager.AddComponent<DeterministicClientDisconnect>(clientDeterministicSettings);
-                clientEntityManager.SetComponentEnabled<DeterministicClientDisconnect>(clientDeterministicSettings,
-                    false);
-                clientEntityManager.AddComponent<DeterministicClientSendData>(clientDeterministicSettings);
-                clientEntityManager.SetComponentEnabled<DeterministicClientSendData>(clientDeterministicSettings,
-                    false);
+                
+                Entity clientAuthoringEntity = clientEntityManager.CreateEntity(typeof(DeterministicClient), typeof(DeterministicClientConnect), typeof(DeterministicClientDisconnect), typeof(DeterministicClientSendData));
+                clientEntityManager.SetComponentEnabled<DeterministicClientConnect>(clientAuthoringEntity, true);
+                clientEntityManager.SetComponentEnabled<DeterministicClientDisconnect>(clientAuthoringEntity, false);
+                clientEntityManager.SetComponentEnabled<DeterministicClientSendData>(clientAuthoringEntity, false);
             }
             else
             {

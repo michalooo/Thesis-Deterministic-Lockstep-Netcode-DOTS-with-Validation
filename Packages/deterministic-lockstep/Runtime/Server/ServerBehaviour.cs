@@ -16,7 +16,7 @@ namespace DeterministicLockstep
     public partial class ServerBehaviour : SystemBase
     {
         private DeterministicSettings _settings;
-        private Entity _settingsEntity;
+        private Entity _server;
         
         /// <summary>
         /// Network driver used to handle connections
@@ -61,15 +61,15 @@ namespace DeterministicLockstep
         protected override void OnStartRunning()
         {
             _settings = SystemAPI.GetSingleton<DeterministicSettings>();
-            _settingsEntity = SystemAPI.GetSingletonEntity<DeterministicSettings>();
+            _server = SystemAPI.GetSingletonEntity<DeterministicServer>();
         }
 
         protected override void OnUpdate()
         {
-            if(SystemAPI.IsComponentEnabled<DeterministicServerListen>(_settingsEntity) && !_mDriver.IsCreated){
+            if(SystemAPI.IsComponentEnabled<DeterministicServerListen>(_server) && !_mDriver.IsCreated){
                 StartListening();
             }
-            else if(SystemAPI.IsComponentEnabled<DeterministicServerRunSimulation>(_settingsEntity) && !_settings.isInGame)
+            else if(SystemAPI.IsComponentEnabled<DeterministicServerRunSimulation>(_server) && !_settings.isInGame)
             {
                 StartGame();
             }

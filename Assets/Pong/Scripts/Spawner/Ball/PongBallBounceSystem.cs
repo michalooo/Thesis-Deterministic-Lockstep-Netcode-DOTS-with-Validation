@@ -11,6 +11,7 @@ namespace PongGame
 {
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(GameStateUpdateSystemGroup))]
+    // [UpdateAfter(typeof(BallMovementSystem))]
     [BurstCompile]
     public partial struct BallBounceSystem : ISystem
     {
@@ -73,26 +74,28 @@ namespace PongGame
             LocalTransform transform = localTransform[index];
             Velocity velocity = ballVelocities[index];
             Entity entity = Entities[index];
-
-            var newVelocityValue = velocity.value;
-            var newPositionValue = transform.Position;
-            if (transform.Position.z < minZPos + 0.01f)
+            
+            // var newVelocityValue = new float3(velocity.value);
+            var newPositionValue = new float3(transform.Position);
+            newPositionValue.z = minZPos - 3f;
+            if (transform.Position.z < minZPos)
             {
                 // Reflect the velocity about the normal vector of the wall
-                newVelocityValue = math.reflect(velocity.value, new float3(0, 0, 1));
-                newPositionValue.z = minZPos + 0.1f; // Add a small offset to the new position
+                // newVelocityValue = math.reflect(velocity.value, new float3(0, 0, 1));
+                newPositionValue.z = minZPos - 3f; // Add a small offset to the new position
             }
-            else if (transform.Position.z > maxZPos - 0.01f)
+            else if (transform.Position.z > maxZPos)
             {
                 // Reflect the velocity about the normal vector of the wall
-                newVelocityValue = math.reflect(velocity.value, new float3(0, 0, -1));
-                newPositionValue.z = maxZPos - 0.1f; // Add a small offset to the new position
+                // newVelocityValue = math.reflect(velocity.value, new float3(0, 0, -1));
+                newPositionValue.z = maxZPos + 3f; // Add a small offset to the new position
             }
 
-            var newVelocity = new Velocity
-            {
-                value = newVelocityValue
-            };
+            // var newVelocity = new Velocity
+            // {
+            //     value = newVelocityValue
+            // };
+            Debug.Log("elo" + newPositionValue);
             var newTransform = new LocalTransform
             {
                 Position = newPositionValue,
@@ -101,7 +104,7 @@ namespace PongGame
             };
 
             ECB.SetComponent(index , entity, newTransform);
-            ECB.SetComponent(index , entity, newVelocity);
+            // ECB.SetComponent(index , entity, newVelocity);
         }
     }
 }

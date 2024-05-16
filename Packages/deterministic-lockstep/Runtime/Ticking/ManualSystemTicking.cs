@@ -1,3 +1,4 @@
+using Unity.Core;
 using Unity.Entities;
 
 namespace DeterministicLockstep
@@ -23,6 +24,32 @@ namespace DeterministicLockstep
     [UpdateAfter(typeof(UserSystemGroup))]
     public partial class DeterministicSimulationSystemGroup : ComponentSystemGroup
     {
+        // protected override void OnCreate()
+        // {
+        //     RateManager = new DeterministicFixedStepRateManager();
+        // }
+        //
+        // public struct DeterministicFixedStepRateManager : IRateManager
+        // {
+        //     public bool ShouldGroupUpdate(ComponentSystemGroup group)
+        //     {
+        //         ref var networkTime = ref SystemAPI.GetSingletonRW<NetworkTime>().ValueRW;
+        //         if (networkTime.SimulationTime < networkTime.RealTime)
+        //         {
+        //             networkTime.SimulationTime += fixedStepDeltaTime;
+        //             networkTime.NumTimesTickedThisFrame++;
+        //             group.World.PushTime(new TimeData());
+        //             return true;
+        //         }
+        //
+        //         for (int i = 0; i < networkTime.NumTimesTickedThisFrame; i++)
+        //             group.World.PopTime();
+        //         networkTime.NumTimesTickedThisFrame = 0;
+        //         return false;
+        //     }
+        //
+        //     public float Timestep { get; set; }
+        // }
     }
     
     
@@ -40,9 +67,10 @@ namespace DeterministicLockstep
         {
             var world = World.DefaultGameObjectInjectionWorld;
 
-            world.GetOrCreateSystem<DeterministicSimulationSystemGroup>();
-            world.GetOrCreateSystem<ConnectionHandleSystemGroup>();
-            world.GetOrCreateSystem<GameStateUpdateSystemGroup>();
+            var deterministicSimulationSystemGroup = world.GetOrCreateSystem<DeterministicSimulationSystemGroup>();
+            var connectionHandleSystemGroup = world.GetOrCreateSystem<ConnectionHandleSystemGroup>();
+            var gameStateUpdateSystemGroup = world.GetOrCreateSystem<GameStateUpdateSystemGroup>();
+            var userSystemGroup = world.GetOrCreateSystem<UserSystemGroup>();
         }
     }
     
@@ -82,28 +110,4 @@ namespace DeterministicLockstep
     }
 }*/
 
-
-// public partial struct ManualSystemTicking : ISystem
-// {
-//     private InputGatherSystemGroup inputSystemGroup;
-//     private MovementSystemGroup movementSystemGroup;
-//     private DeterminismSystemGroup determinismSystemGroup;
-//
-//     public void OnCreate(ref SystemState state)
-//     {
-//         inputSystemGroup = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<InputGatherSystemGroup>();
-//         movementSystemGroup = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<MovementSystemGroup>();
-//         determinismSystemGroup = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<DeterminismSystemGroup>();
-//     }
-//
-//     public void OnUpdate(ref SystemState state)
-//     {
-//         for(int i=0; i<100; i++) // simulate a 100 frames forward
-//         {
-//             inputSystemGroup.Update(); 
-//             movementSystemGroup.Update();
-//             determinismSystemGroup.Update();
-//         }
-//     }
-// }
 }

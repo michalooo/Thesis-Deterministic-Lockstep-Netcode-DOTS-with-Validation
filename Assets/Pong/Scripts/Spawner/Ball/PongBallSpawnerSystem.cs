@@ -34,12 +34,11 @@ namespace PongGame
             if (totalBallsSpawned < totalBallsToSpawn)
             {
                 var prefab = SystemAPI.GetSingleton<PongBallSpawner>().Ball;
-                var commandBuffer = new EntityCommandBuffer(Allocator.Temp);
                 
                 if (timeSinceLastSpawn >= timeBetweenSpawning)
                 {
-                    var ball = commandBuffer.Instantiate(prefab);
-                    commandBuffer.SetComponent(ball, new LocalTransform
+                    var ball = EntityManager.Instantiate(prefab);
+                    EntityManager.SetComponentData(ball, new LocalTransform
                     {
                         Position = new float3(0, 0, 0),
                         Scale = 0.4f,
@@ -60,7 +59,7 @@ namespace PongGame
                     var speed = UnityEngine.Random.Range(minSpeed, maxSpeed);
 
                     // Set the velocity of the ball
-                    commandBuffer.SetComponent(ball, new Velocity { value = direction * speed });
+                    EntityManager.SetComponentData(ball, new Velocity { value = direction * speed });
                     
                     totalBallsSpawned++;
                     timeSinceLastSpawn = 0f;
@@ -69,9 +68,6 @@ namespace PongGame
                 {
                     timeSinceLastSpawn += SystemAPI.Time.DeltaTime;
                 }
-
-                commandBuffer.Playback(EntityManager);
-                commandBuffer.Dispose();
             }
         }
     }

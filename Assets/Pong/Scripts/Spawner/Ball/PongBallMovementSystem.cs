@@ -45,6 +45,10 @@ namespace PongGame
             
             JobHandle ballMovementHandle = ballMovementJob.Schedule(ballTransform.Length,1);
             ballMovementHandle.Complete();
+            
+            ballTransform.Dispose();
+            ballVelocities.Dispose();
+            ballEntities.Dispose();
         }
     }
     

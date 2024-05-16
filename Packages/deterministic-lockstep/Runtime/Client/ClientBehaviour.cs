@@ -15,7 +15,7 @@ namespace DeterministicLockstep
     public partial class ClientBehaviour : SystemBase
     {
         private DeterministicSettings _settings;
-        private Entity _settingsEntity;
+        private Entity _client;
         private const ushort KNetworkPort = 7979;
 
         private NetworkDriver _mDriver;
@@ -31,7 +31,7 @@ namespace DeterministicLockstep
         protected override void OnStartRunning()
         {
             _settings = SystemAPI.GetSingleton<DeterministicSettings>();
-            _settingsEntity = SystemAPI.GetSingletonEntity<DeterministicSettings>();
+            _client = SystemAPI.GetSingletonEntity<DeterministicClient>();
 
             _clientSimulatorParameters = new NetworkSettings();
             _clientSimulatorParameters.WithSimulatorStageParameters(
@@ -54,18 +54,18 @@ namespace DeterministicLockstep
 
         protected override void OnUpdate()
         {
-            if (SystemAPI.IsComponentEnabled<DeterministicClientConnect>(_settingsEntity))
+            if (SystemAPI.IsComponentEnabled<DeterministicClientConnect>(_client))
             {
                 var endpoint = NetworkEndpoint.Parse("127.0.0.1", KNetworkPort); //change to chosen IP
                 _mConnection = _mDriver.Connect(endpoint);
-                SystemAPI.SetComponentEnabled<DeterministicClientConnect>(_settingsEntity, false);
+                SystemAPI.SetComponentEnabled<DeterministicClientConnect>(_client, false);
             }
             
-            if (SystemAPI.IsComponentEnabled<DeterministicClientDisconnect>(_settingsEntity))
+            if (SystemAPI.IsComponentEnabled<DeterministicClientDisconnect>(_client))
             {
                 _mConnection.Disconnect(_mDriver);
                 _mConnection = default;
-                SystemAPI.SetComponentEnabled<DeterministicClientDisconnect>(_settingsEntity, false);
+                SystemAPI.SetComponentEnabled<DeterministicClientDisconnect>(_client, false);
             }
             
             if (!_mConnection.IsCreated) return;
@@ -181,7 +181,7 @@ namespace DeterministicLockstep
                 EntityManager.SetComponentEnabled<PlayerInputDataToSend>(newEntity, false);
             }
             
-            SystemAPI.SetComponentEnabled<DeterministicClientSendData>(_settingsEntity, true);
+            SystemAPI.SetComponentEnabled<DeterministicClientSendData>(_client, true);
         }
 
         /// <summary>

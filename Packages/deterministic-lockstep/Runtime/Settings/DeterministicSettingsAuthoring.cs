@@ -3,12 +3,6 @@ using UnityEngine;
 
 namespace DeterministicLockstep
 {
-    public struct DeterministicServerListen : IComponentData, IEnableableComponent { }
-    public struct DeterministicServerRunSimulation : IComponentData, IEnableableComponent { }
-    public struct DeterministicClientConnect : IComponentData, IEnableableComponent { }
-    public struct DeterministicClientDisconnect : IComponentData, IEnableableComponent { }
-    public struct DeterministicClientSendData : IComponentData, IEnableableComponent { }
-    
     public struct DeterministicSettings : IComponentData
     {
         public int ticksAhead;
