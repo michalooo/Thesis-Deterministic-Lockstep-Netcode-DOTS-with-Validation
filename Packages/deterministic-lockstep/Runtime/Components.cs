@@ -8,15 +8,15 @@ namespace DeterministicLockstep
     /// <summary>
     /// Component used to store the arriving player data for the server
     /// </summary>
-    public struct StoredTicksAhead : IComponentData
-    {
-        public NativeQueue<RpcPlayersDataUpdate> entries; // be sure that there is no memory leak
-
-        public StoredTicksAhead(bool b) // not possible to have parameterless constructor
-        {
-            entries = new NativeQueue<RpcPlayersDataUpdate>(Allocator.Persistent);
-        }
-    }
+    // public struct StoredTicksAhead : IComponentData
+    // {
+    //     public NativeQueue<RpcPlayersDataUpdate> entries; // be sure that there is no memory leak
+    //
+    //     public StoredTicksAhead(bool b) // not possible to have parameterless constructor
+    //     {
+    //         entries = new NativeQueue<RpcPlayersDataUpdate>(Allocator.Persistent);
+    //     }
+    // }
 
     /// <summary>
     /// Enableable tag Component used to mark if user input should be send to the server
@@ -37,16 +37,16 @@ namespace DeterministicLockstep
     /// <summary>
     /// Component used to store information about the ticks and time for the game
     /// </summary>
-    struct TickRateInfo : IComponentData
-    {
-        public int tickRate;
-        public int tickAheadValue;
-
-        public float delayTime;
-        public int currentSimulationTick; // Received simulation tick from the server
-        public int currentClientTickToSend; // We are sending input for the tick in the future
-        public ulong hashForTheTick;
-    }
+    // struct TickRateInfo : IComponentData
+    // {
+    //     public int tickRate;
+    //     public int tickAheadValue;
+    //
+    //     public float delayTime;
+    //     public int currentSimulationTick; // Received simulation tick from the server
+    //     public int currentClientTickToSend; // We are sending input for the tick in the future
+    //     public ulong hashForTheTick;
+    // }
 
     /// <summary>
     /// Component used to store connection info for every conection

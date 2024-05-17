@@ -45,25 +45,26 @@ namespace DeterministicLockstep
                     {
                         // Do we need to check if the tick we want to process next is in the queue or it's reliable and in order?
                         // #TODO implement some restriction regarding how many ticks should we process in one frame
-                        while (storedTicksAhead.ValueRO.entries.Count >
-                               tickRateInfo.ValueRO.tickAheadValue) // We are trying to catch up with the server
-                        {
-                            // If we found on we can increment both ticks (current presentation tick and tick we will send to server)
-                            tickRateInfo.ValueRW.currentClientTickToSend++;
-                            tickRateInfo.ValueRW.currentSimulationTick++;
-
-                            // first update the component data before we will remove the info from the array to make space for more
-                            UpdateComponentsData(storedTicksAhead.ValueRW.entries
-                                .Dequeue()); // it will remove it so no reason for dispose method for arrays?
-
-                            EntityManager.SetComponentEnabled<PlayerInputDataToSend>(connectionEntity, true);
-                            EntityManager.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity, true);
-
-                            World.PushTime(new TimeData(elapsedTime: 0f,
-                                deltaTime: 1f / tickRateInfo.ValueRO.tickRate));
-                            determinismSystemGroup.Update();
-                            World.PopTime();
-                        }
+                        // while (storedTicksAhead.ValueRO.entries.Count >
+                        //        tickRateInfo.ValueRO.tickAheadValue) // We are trying to catch up with the server
+                        // {
+                        //     // If we found on we can increment both ticks (current presentation tick and tick we will send to server)
+                        //     tickRateInfo.ValueRW.currentClientTickToSend++;
+                        //     tickRateInfo.ValueRW.currentSimulationTick++;
+                        //
+                        //     // first update the component data before we will remove the info from the array to make space for more
+                        //     UpdateComponentsData(storedTicksAhead.ValueRW.entries
+                        //         .Dequeue()); // it will remove it so no reason for dispose method for arrays?
+                        //
+                        //     EntityManager.SetComponentEnabled<PlayerInputDataToSend>(connectionEntity, true);
+                        //     EntityManager.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity, true);
+                        //
+                        //     //TODO move this logic to IRate
+                        //     // World.PushTime(new TimeData(elapsedTime: 0f,
+                        //     //     deltaTime: 1f / tickRateInfo.ValueRO.tickRate));
+                        //     determinismSystemGroup.Update();
+                        //     // World.PopTime();
+                        // }
                     }
 
                     // If the tick to present wasn't found we are stopping to wait for inputs which just mean that PlayerInputDataToSend and PlayerInputDataToUse won't be enabled and used by other systems
