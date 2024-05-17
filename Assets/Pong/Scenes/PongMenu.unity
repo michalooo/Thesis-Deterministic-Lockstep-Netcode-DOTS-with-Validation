@@ -2039,6 +2039,7 @@ MonoBehaviour:
   allowedConnectionsPerGame: 2
   ticksAhead: 4
   serverPort: 7979
+  hashCalculationOption: 2
   packetDelayMs: 0
   packetJitterMs: 0
   packetDropInterval: 0

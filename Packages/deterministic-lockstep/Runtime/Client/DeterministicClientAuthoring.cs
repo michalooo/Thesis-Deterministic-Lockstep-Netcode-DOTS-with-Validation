@@ -9,7 +9,7 @@ namespace DeterministicLockstep
     }
 
     public struct DeterministicClientConnect : IComponentData, IEnableableComponent { }
-    public struct DeterministicClientDisconnect : IComponentData, IEnableableComponent { }
+    public struct DeterministicClientDisconnect : IComponentData, IEnableableComponent { } // less components, singleton
     public struct DeterministicClientSendData : IComponentData, IEnableableComponent { }
     
     public class DeterministicClientAuthoring : MonoBehaviour

@@ -3,12 +3,20 @@ using UnityEngine;
 
 namespace DeterministicLockstep
 {
+    public enum DeterminismHashCalculationOption
+    {
+        PerSystem,
+        PerFrame,
+        None
+    }
+    
     public struct DeterministicSettings : IComponentData
     {
         public int ticksAhead;
         public ushort allowedConnectionsPerGame;
         public ushort simulationTickRate;
         public int serverPort;
+        public DeterminismHashCalculationOption hashCalculationOption;
 
         public bool isInGame;
         public bool isSimulationCatchingUpOrRollingBack;
@@ -27,6 +35,7 @@ namespace DeterministicLockstep
         public ushort allowedConnectionsPerGame = 16;
         public int ticksAhead = 4; // Mathf.CeilToInt(0.15f * tickRate); (delay of 0.15s)
         public int serverPort = 7979;
+        public DeterminismHashCalculationOption hashCalculationOption = DeterminismHashCalculationOption.None;
 
         private bool isInGame = false;
         private bool isSimulationCatchingUpOrRollingBack = false;
@@ -66,6 +75,7 @@ namespace DeterministicLockstep
                 component.packetDropPercentage = authoring.packetDropPercentage;
                 component.packetDuplicationPercentage = authoring.packetDuplicationPercentage;
                 component.serverPort = authoring.serverPort;
+                component.hashCalculationOption = authoring.hashCalculationOption;
                 var entity = GetEntity(TransformUsageFlags.Dynamic);
                 
                 AddComponent(entity, component);

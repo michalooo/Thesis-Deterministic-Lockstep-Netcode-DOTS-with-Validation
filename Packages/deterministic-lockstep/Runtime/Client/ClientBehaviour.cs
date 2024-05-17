@@ -54,7 +54,7 @@ namespace DeterministicLockstep
 
         protected override void OnUpdate()
         {
-            if (SystemAPI.IsComponentEnabled<DeterministicClientConnect>(_client))
+            if (SystemAPI.IsComponentEnabled<DeterministicClientConnect>(_client)) // method on a singleton (NetworkStreamDriver)
             {
                 var endpoint = NetworkEndpoint.Parse("127.0.0.1", KNetworkPort); //change to chosen IP
                 _mConnection = _mDriver.Connect(endpoint);
