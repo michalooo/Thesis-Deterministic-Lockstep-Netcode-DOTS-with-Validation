@@ -30,7 +30,7 @@ namespace DeterministicLockstep
             public override void Bake(PongInputAuthoring authoring)
             {
                 var entity = GetEntity(TransformUsageFlags.Dynamic);
-                AddComponent<PongInputs>(entity);
+                // AddComponent<PongInputs>(entity);
             }
         }
     }

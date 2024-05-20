@@ -1,4 +1,5 @@
 using System;
+using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
 using Unity.Networking.Transport;
@@ -54,20 +55,21 @@ namespace DeterministicLockstep
 
         protected override void OnUpdate()
         {
-            if (SystemAPI.IsComponentEnabled<DeterministicClientConnect>(_client)) // method on a singleton (NetworkStreamDriver)
+            if (SystemAPI.IsComponentEnabled<DeterministicClientConnect>(
+                    _client)) // method on a singleton (NetworkStreamDriver)
             {
                 var endpoint = NetworkEndpoint.Parse("127.0.0.1", KNetworkPort); //change to chosen IP
                 _mConnection = _mDriver.Connect(endpoint);
                 SystemAPI.SetComponentEnabled<DeterministicClientConnect>(_client, false);
             }
-            
+
             if (SystemAPI.IsComponentEnabled<DeterministicClientDisconnect>(_client))
             {
                 _mConnection.Disconnect(_mDriver);
                 _mConnection = default;
                 SystemAPI.SetComponentEnabled<DeterministicClientDisconnect>(_client, false);
             }
-            
+
             if (!_mConnection.IsCreated) return;
             _mDriver.ScheduleUpdate().Complete();
 
@@ -114,7 +116,7 @@ namespace DeterministicLockstep
                 case RpcID.BroadcastAllPlayersInputsToClients:
                     var rpcPlayersDataUpdate = new RpcPlayersDataUpdate();
                     rpcPlayersDataUpdate.Deserialize(ref stream);
-                    UpdatePlayersData(rpcPlayersDataUpdate); 
+                    UpdatePlayersData(rpcPlayersDataUpdate);
                     break;
                 case RpcID.StartDeterministicSimulation:
                     var rpcStartDeterministicSimulation = new RpcStartDeterministicSimulation();
@@ -153,17 +155,8 @@ namespace DeterministicLockstep
                     inputToUse = new PongInputs(),
                     playerDisconnected = false,
                 });
-                EntityManager.AddComponentData(newEntity, new PlayerInputDataToSend());
-                EntityManager.AddComponentData(newEntity, new TickRateInfo
-                {
-                    tickRate = rpc.TickRate,
-                    tickAheadValue = rpc.TickAhead,
-
-                    delayTime = 1f / rpc.TickRate,
-                    currentSimulationTick = 0,
-                    currentClientTickToSend = 0,
-                    hashForTheTick = 0,
-                });
+                EntityManager.AddComponent<PlayerInputDataToSend>(newEntity);
+                EntityManager.SetComponentEnabled<PlayerInputDataToSend>(newEntity, false);
                 EntityManager.AddComponentData(newEntity, new GhostOwner
                 {
                     networkId = playerNetworkId
@@ -175,12 +168,21 @@ namespace DeterministicLockstep
                     connection = _mConnection
                 });
                 EntityManager.AddComponentData(newEntity, new GhostOwnerIsLocal());
-                EntityManager.AddComponentData(newEntity, new StoredTicksAhead(false));
                 if (playerNetworkId != rpc.NetworkID)
                     EntityManager.SetComponentEnabled<GhostOwnerIsLocal>(newEntity, false);
-                EntityManager.SetComponentEnabled<PlayerInputDataToSend>(newEntity, false);
             }
-            
+
+            var deterministicTime = SystemAPI.GetSingletonRW<DeterministicTime>();
+            deterministicTime.ValueRW.GameTickRate = rpc.TickRate;
+            deterministicTime.ValueRW.AmountOfTicksSendingAhead = rpc.TickAhead;
+            deterministicTime.ValueRW.timeLeftToSendNextTick = 1f / rpc.TickRate;
+            deterministicTime.ValueRW.currentSimulationTick = 0;
+            deterministicTime.ValueRW.currentClientTickToSend = 0;
+            deterministicTime.ValueRW.hashForTheCurrentTick = 0;
+            deterministicTime.ValueRW.numTimesTickedThisFrame = 0;
+            deterministicTime.ValueRW.realTime = 0;
+            deterministicTime.ValueRW.deterministicLockstepElapsedTime = 0;
+
             SystemAPI.SetComponentEnabled<DeterministicClientSendData>(_client, true);
         }
 
@@ -190,12 +192,8 @@ namespace DeterministicLockstep
         /// <param name="rpc">RPC from the server with input data from each player for the given tick</param>
         void UpdatePlayersData(RpcPlayersDataUpdate rpc)
         {
-            foreach (var storedTicksAhead in SystemAPI.Query<RefRW<StoredTicksAhead>>().WithAll<GhostOwnerIsLocal>())
-            {
-                storedTicksAhead.ValueRW.entries.Enqueue(rpc);
-                // Are packages reliable with reliable pipeline so those will always arrive in order?
-                // Always current tick is less or equal to the server tick
-            }
+            var deterministicTime = SystemAPI.GetSingletonRW<DeterministicTime>();
+            deterministicTime.ValueRW.storedIncomingTicksFromServer.Enqueue(rpc);
         }
     }
 }

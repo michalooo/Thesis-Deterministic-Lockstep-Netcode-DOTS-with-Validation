@@ -15,7 +15,7 @@
 
         protected override void OnUpdate()
         {
-            if(SystemAPI.TryGetSingleton<PongInputs>(out var inputComponent))
+            if(SystemAPI.TryGetSingletonRW<PongInputs>(out var inputComponent))
             {
                 int verticalInput = 0;
 
@@ -33,8 +33,8 @@
                     return;
                 }
                 
-                inputComponent.verticalInput = verticalInput;
-                SystemAPI.SetSingleton(inputComponent);
+                inputComponent.ValueRW.verticalInput = verticalInput;
+                SystemAPI.SetSingleton(inputComponent.ValueRO);
             }
             else
             {

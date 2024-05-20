@@ -95,7 +95,7 @@ namespace PongGame
             // {
             //     value = newVelocityValue
             // };
-            Debug.Log("elo" + newPositionValue);
+            // Debug.Log("elo" + newPositionValue);
             var newTransform = new LocalTransform
             {
                 Position = newPositionValue,

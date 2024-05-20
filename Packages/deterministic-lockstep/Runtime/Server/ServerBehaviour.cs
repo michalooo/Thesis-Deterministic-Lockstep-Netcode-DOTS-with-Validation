@@ -234,7 +234,6 @@ namespace DeterministicLockstep
         /// <param name="playerInputs">List of client inputs</param>
         private void SendRPCWithPlayersInputUpdate(NativeList<int> networkIDs, NativeList<PongInputs> playerInputs)
         {
-            
             var rpc = new RpcPlayersDataUpdate
             {
                 NetworkIDs = networkIDs,
@@ -272,7 +271,8 @@ namespace DeterministicLockstep
         /// </summary>
         /// <param name="rpc">RPC that arrived</param>
         /// <param name="connection">Connection from which it arrived</param>
-        private void SaveTheData(RpcBroadcastPlayerInputToServer rpc, NetworkConnection connection)
+        private void 
+            SaveTheData(RpcBroadcastPlayerInputToServer rpc, NetworkConnection connection)
         {
             for (int i = 0; i < _connectedPlayers.Length; i++)
             {

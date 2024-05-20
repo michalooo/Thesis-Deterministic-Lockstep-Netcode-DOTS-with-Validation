@@ -44,8 +44,8 @@ namespace PongGame
                 {
                     var verticalInput = playerInputData[i].inputToUse.verticalInput;
 
-                    var targetTransform = SystemAPI.GetComponent<LocalToWorld>(commandTargetData[i].targetEntity);
-                    var targetPosition = targetTransform.Position;
+                    var targetTransform = SystemAPI.GetComponentRW<LocalToWorld>(commandTargetData[i].targetEntity);
+                    var targetPosition = targetTransform.ValueRO.Position;
                     
                     targetPosition.z += verticalInput;
                     
@@ -59,7 +59,7 @@ namespace PongGame
                     {
                         targetPosition.z = maxZ;
                     }
-
+                    
                     EntityManager.SetComponentData(commandTargetData[i].targetEntity,
                         LocalTransform.FromPosition(targetPosition));
 

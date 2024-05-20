@@ -17,10 +17,11 @@ namespace DeterministicLockstep
 
         protected override void OnUpdate()
         {
-            foreach (var (connectionReference, tickRateInfo, owner, connectionEntity) in SystemAPI
-                         .Query<RefRO<NetworkConnectionReference>, RefRW<TickRateInfo>, RefRO<GhostOwner>>()
-                         .WithAll<PlayerSpawned, GhostOwnerIsLocal, PlayerInputDataToSend>().WithEntityAccess())
+            foreach (var (connectionReference, owner, connectionEntity) in SystemAPI
+                         .Query<RefRO<NetworkConnectionReference>, RefRO<GhostOwner>>()
+                         .WithAll<GhostOwnerIsLocal, PlayerInputDataToSend>().WithEntityAccess())
             {
+                var deterministicTime = SystemAPI.GetSingleton<DeterministicTime>();
                 Debug.Log("Sending player input to server");
                 if (!SystemAPI.TryGetSingleton<PongInputs>(out var capsulesInputs))
                 {
@@ -32,8 +33,8 @@ namespace DeterministicLockstep
                 {
                     CapsuleGameInputs = capsulesInputs,
                     PlayerNetworkID = owner.ValueRO.networkId,
-                    CurrentTick = tickRateInfo.ValueRO.currentClientTickToSend,
-                    HashForCurrentTick = tickRateInfo.ValueRO.hashForTheTick
+                    CurrentTick = deterministicTime.currentClientTickToSend,
+                    HashForCurrentTick = deterministicTime.hashForTheCurrentTick
                 };
 
                 rpc.Serialize(connectionReference.ValueRO.driver, connectionReference.ValueRO.connection,

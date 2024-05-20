@@ -55,9 +55,9 @@ namespace DeterministicLockstep
             _everyTickHashBuffer[currentTick] = hash;
 
             // Save Hash in the tickRateInfo component
-            foreach (var tickRateInfo in SystemAPI.Query<RefRW<TickRateInfo>>().WithAll<GhostOwnerIsLocal>())
+            foreach (var tickRateInfo in SystemAPI.Query<RefRW<DeterministicTime>>().WithAll<GhostOwnerIsLocal>())
             {
-                tickRateInfo.ValueRW.hashForTheTick = hash;
+                tickRateInfo.ValueRW.hashForTheCurrentTick = hash;
             }
         }
 
