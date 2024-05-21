@@ -21,14 +21,14 @@ namespace DeterministicLockstep
 
         protected override void OnCreate()
         {
-            _resultsArray = new NativeList<ulong>(128, Allocator.Persistent);
+            _resultsArray = new NativeList<ulong>(128, Allocator.Persistent); // probably need to refine this number
             _everyTickHashBuffer = new Dictionary<int, ulong>();
         }
 
         protected override void OnUpdate()
         {
             _mQuery = EntityManager.CreateEntityQuery(
-                typeof(DeterministicSimulation)
+                typeof(EnsureDeterministicBehaviour)
             );
 
             var resultsArrayCapacity = _mQuery.CalculateChunkCount();
@@ -40,7 +40,7 @@ namespace DeterministicLockstep
             var job = new DeterminismCheckJob()
             {
                 transform = GetComponentTypeHandle<LocalTransform>(true),
-                ResultsNativeArray = _resultsArray.AsArray()
+                resultsNativeArray = _resultsArray.AsArray()
             };
             var handle = job.ScheduleParallel(_mQuery, this.Dependency);
             handle.Complete();

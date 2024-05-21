@@ -8,26 +8,6 @@ using UnityEngine.SceneManagement;
 
 namespace DeterministicLockstep
 {
-    public enum DeterministicClientWorkingMode
-    {
-        Connect,
-        Disconnect,
-        SendData,
-        None
-    }
-    
-    public struct DeterministicClientComponent : IComponentData
-    {
-        public DeterministicClientWorkingMode deterministicClientWorkingMode;
-    }
-    
-    
-    
-    
-    
-    
-    
-    
     /// <summary>
     /// System that handles the client side of the game. It is responsible for handling connections.
     /// </summary>
@@ -35,7 +15,6 @@ namespace DeterministicLockstep
     [UpdateInGroup(typeof(ConnectionHandleSystemGroup))]
     public partial class ClientBehaviour : SystemBase
     {
-        private DeterministicSettings _settings;
         private const ushort KNetworkPort = 7979;
 
         private NetworkDriver _mDriver;
@@ -54,16 +33,16 @@ namespace DeterministicLockstep
 
         protected override void OnStartRunning()
         {
-            _settings = SystemAPI.GetSingleton<DeterministicSettings>();
+            var settings = SystemAPI.GetSingleton<DeterministicSettings>();
 
             _clientSimulatorParameters = new NetworkSettings();
             _clientSimulatorParameters.WithSimulatorStageParameters(
                 maxPacketCount: 1000,
-                packetDelayMs: _settings.packetDelayMs,
-                packetJitterMs: _settings.packetJitterMs,
-                packetDropInterval: _settings.packetDropInterval,
-                packetDropPercentage: _settings.packetDropPercentage,
-                packetDuplicationPercentage: _settings.packetDuplicationPercentage);
+                packetDelayMs: settings.packetDelayMs,
+                packetJitterMs: settings.packetJitterMs,
+                packetDropInterval: settings.packetDropInterval,
+                packetDropPercentage: settings.packetDropPercentage,
+                packetDuplicationPercentage: settings.packetDuplicationPercentage);
 
             _mDriver = NetworkDriver.Create(_clientSimulatorParameters);
             _reliableSimulatorPipeline =
@@ -124,7 +103,7 @@ namespace DeterministicLockstep
         /// Function used to handle incoming RPCs from server.
         /// </summary>
         /// <param name="stream">Stream from which the data arrived</param>
-        private void HandleRpc(Unity.Collections.DataStreamReader stream)
+        private void HandleRpc(DataStreamReader stream)
         {
             var copyOfStream = stream;
             var id = (RpcID)copyOfStream.ReadByte(); // for the future check if its within a valid range (id as bytes)
@@ -136,25 +115,25 @@ namespace DeterministicLockstep
 
             switch (id)
             {
-                case RpcID.BroadcastAllPlayersInputsToClients:
-                    var rpcPlayersDataUpdate = new RpcPlayersDataUpdate();
+                case RpcID.BroadcastTickDataToClients:
+                    var rpcPlayersDataUpdate = new RpcBroadcastTickDataToClients();
                     rpcPlayersDataUpdate.Deserialize(ref stream);
                     UpdatePlayersData(rpcPlayersDataUpdate);
                     break;
-                case RpcID.StartDeterministicSimulation:
+                case RpcID.StartDeterministicGameSimulation:
                     var rpcStartDeterministicSimulation = new RpcStartDeterministicSimulation();
                     rpcStartDeterministicSimulation.Deserialize(ref stream);
                     StartGame(rpcStartDeterministicSimulation);
                     break;
-                case RpcID.PlayersDesynchronized: // Stop simulation
-                    var rpcPlayerDesynchronizationInfo = new RpcPlayerDesynchronizationInfo();
+                case RpcID.PlayersDesynchronizedMessage: // Stop simulation
+                    var rpcPlayerDesynchronizationInfo = new RpcPlayerDesynchronizationMessage();
                     rpcPlayerDesynchronizationInfo.Deserialize(ref stream);
                     var determinismSystemGroup = World.DefaultGameObjectInjectionWorld
                         .GetOrCreateSystemManaged<DeterministicSimulationSystemGroup>();
                     determinismSystemGroup.Enabled = false;
                     break;
-                case RpcID.BroadcastPlayerInputToServer:
-                    Debug.LogError("This message should never be received by the client");
+                case RpcID.BroadcastPlayerTickDataToServer:
+                    Debug.LogError("BroadcastPlayerTickDataToServer should never be received by the server");
                     break;
                 default:
                     Debug.LogError("Received RPC ID not proceeded by the client: " + id);
@@ -168,36 +147,34 @@ namespace DeterministicLockstep
         /// <param name="rpc">RPC from the server that contains parameters for game and request to start the game</param>
         private void StartGame(RpcStartDeterministicSimulation rpc)
         {
-            foreach (var playerNetworkId in rpc.NetworkIDs)
+            foreach (var playerNetworkId in rpc.PlayersNetworkIDs)
             {
                 var newEntity = EntityManager.CreateEntity();
 
                 EntityManager.AddComponentData(newEntity, new PlayerInputDataToUse
                 {
                     playerNetworkId = playerNetworkId,
-                    inputToUse = new PongInputs(),
-                    playerDisconnected = false,
+                    playerInputToApply = new PongInputs(),
+                    isPlayerDisconnected = false,
                 });
-                EntityManager.AddComponent<PlayerInputDataToSend>(newEntity);
-                EntityManager.SetComponentEnabled<PlayerInputDataToSend>(newEntity, false);
                 EntityManager.AddComponentData(newEntity, new GhostOwner
                 {
-                    networkId = playerNetworkId
+                    connectionNetworkId = playerNetworkId
                 });
                 EntityManager.AddComponentData(newEntity, new NetworkConnectionReference
                 {
-                    driver = _mDriver,
-                    reliableSimulatorPipeline = _reliableSimulatorPipeline,
-                    connection = _mConnection
+                    driverReference = _mDriver,
+                    reliableSimulationPipelineReference = _reliableSimulatorPipeline,
+                    connectionReference = _mConnection
                 });
                 EntityManager.AddComponentData(newEntity, new GhostOwnerIsLocal());
-                if (playerNetworkId != rpc.NetworkID)
+                if (playerNetworkId != rpc.ThisConnectionNetworkID)
                     EntityManager.SetComponentEnabled<GhostOwnerIsLocal>(newEntity, false);
             }
 
             var deterministicTime = SystemAPI.GetSingletonRW<DeterministicTime>();
             deterministicTime.ValueRW.GameTickRate = rpc.TickRate;
-            deterministicTime.ValueRW.forcedInputLatencyDelay = rpc.TickAhead;
+            deterministicTime.ValueRW.forcedInputLatencyDelay = rpc.TicksOfForcedInputLatency;
             deterministicTime.ValueRW.timeLeftToSendNextTick = 1f / rpc.TickRate;
             deterministicTime.ValueRW.currentSimulationTick = 0;
             deterministicTime.ValueRW.currentClientTickToSend = 0;
@@ -215,7 +192,7 @@ namespace DeterministicLockstep
         /// Function to update the players data from incoming RPC. It will update the buffer that contains all inputs from the server.
         /// </summary>
         /// <param name="rpc">RPC from the server with input data from each player for the given tick</param>
-        void UpdatePlayersData(RpcPlayersDataUpdate rpc)
+        private void UpdatePlayersData(RpcBroadcastTickDataToClients rpc)
         {
             var deterministicTime = SystemAPI.GetSingletonRW<DeterministicTime>();
             deterministicTime.ValueRW.storedIncomingTicksFromServer.Enqueue(rpc);

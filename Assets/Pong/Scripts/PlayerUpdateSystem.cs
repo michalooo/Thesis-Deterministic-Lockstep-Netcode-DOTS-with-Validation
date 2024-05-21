@@ -34,17 +34,17 @@ namespace PongGame
 
             for (int i = 0; i < playerInputData.Length; i++)
             {
-                if (playerInputData[i].playerDisconnected)
+                if (playerInputData[i].isPlayerDisconnected)
                 {
                     Debug.Log("Destroying entity with ID: " + playerInputData[i].playerNetworkId);
-                    EntityManager.DestroyEntity(commandTargetData[i].targetEntity);
+                    EntityManager.DestroyEntity(commandTargetData[i].connectionCommandsTargetEntity);
                     EntityManager.DestroyEntity(connectionEntity[i]);
                 }
                 else
                 {
-                    var verticalInput = playerInputData[i].inputToUse.verticalInput;
+                    var verticalInput = playerInputData[i].playerInputToApply.verticalInput;
 
-                    var targetTransform = SystemAPI.GetComponentRW<LocalToWorld>(commandTargetData[i].targetEntity);
+                    var targetTransform = SystemAPI.GetComponentRW<LocalToWorld>(commandTargetData[i].connectionCommandsTargetEntity);
                     var targetPosition = targetTransform.ValueRO.Position;
                     
                     targetPosition.z += verticalInput;
@@ -60,7 +60,7 @@ namespace PongGame
                         targetPosition.z = maxZ;
                     }
                     
-                    EntityManager.SetComponentData(commandTargetData[i].targetEntity,
+                    EntityManager.SetComponentData(commandTargetData[i].connectionCommandsTargetEntity,
                         LocalTransform.FromPosition(targetPosition));
 
                     EntityManager.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity[i],

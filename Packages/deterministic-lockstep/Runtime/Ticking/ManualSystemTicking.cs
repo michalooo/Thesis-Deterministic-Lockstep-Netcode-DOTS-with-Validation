@@ -1,4 +1,3 @@
-using System;
 using Unity.Collections;
 using Unity.Core;
 using Unity.Entities;
@@ -34,7 +33,7 @@ namespace DeterministicLockstep
             RateManager = new DeterministicFixedStepRateManager(this);
             EntityManager.CreateSingleton(new DeterministicTime()
             {
-                storedIncomingTicksFromServer = new NativeQueue<RpcPlayersDataUpdate>(Allocator.Persistent),
+                storedIncomingTicksFromServer = new NativeQueue<RpcBroadcastTickDataToClients>(Allocator.Persistent),
             });
             EntityManager.CreateSingleton<PongInputs>();
         }
@@ -88,7 +87,6 @@ namespace DeterministicLockstep
                             .forcedInputLatencyDelay) // If current Tick to send is less or equal to tickAhead then upgrade it and do nothing about the presentation update (it should mean we are processing those first ticks)
                     {
                         deterministicTime.ValueRW.currentClientTickToSend++;
-                        group.EntityManager.SetComponentEnabled<PlayerInputDataToSend>(localConnectionEntity[0], true); // DO I need this component?
 
                         // If the tick to present wasn't found we are stopping to wait for inputs which just mean that PlayerInputDataToSend and PlayerInputDataToUse won't be enabled and used by other systems
                         deterministicTime.ValueRW.timeLeftToSendNextTick =
@@ -124,9 +122,7 @@ namespace DeterministicLockstep
                                 // first update the component data before we will remove the info from the array to make space for more
                                 UpdateComponentsData(deterministicTime.ValueRW.storedIncomingTicksFromServer.Dequeue(),
                                     group); // it will remove it so no reason for dispose method for arrays?
-
-                                group.EntityManager.SetComponentEnabled<PlayerInputDataToSend>(localConnectionEntity[0],
-                                    true);
+                                
                                 group.EntityManager.SetComponentEnabled<PlayerInputDataToUse>(localConnectionEntity[0],
                                     true);
 
@@ -176,38 +172,37 @@ namespace DeterministicLockstep
             /// </summary>
             /// <param name="rpc">RPC with data for update</param>
             private void
-                UpdateComponentsData(RpcPlayersDataUpdate rpc,
+                UpdateComponentsData(RpcBroadcastTickDataToClients rpc,
                     ComponentSystemGroup group) // When do I want to refresh the screen? When input from the server arrives or together with the tick??
             {
                 // NativeQueue<>
                 var networkIDs = rpc.NetworkIDs;
-                var inputs = rpc.PlayersCapsuleGameInputs;
+                var inputs = rpc.PlayersPongGameInputs;
 
                 var connectionEntities = _inputDataQuery.ToEntityArray(Allocator.Temp);
 
-                for (int i = 0; i < connectionEntities.Length; i++)
+                foreach (var connectionEntity in connectionEntities)
                 {
                     var idExists = false;
                     var playerInputData =
-                        group.EntityManager.GetComponentData<PlayerInputDataToUse>(connectionEntities[i]);
+                        group.EntityManager.GetComponentData<PlayerInputDataToUse>(connectionEntity);
 
                     for (int j = 0; j < networkIDs.Length; j++)
                     {
                         if (playerInputData.playerNetworkId == networkIDs[j])
                         {
                             idExists = true;
-                            playerInputData.inputToUse = inputs[j];
+                            playerInputData.playerInputToApply = inputs[j];
                         }
                     }
 
                     if (!idExists)
                     {
-                        playerInputData.playerDisconnected = true;
+                        playerInputData.isPlayerDisconnected = true;
                     }
 
-                    group.EntityManager.SetComponentData(connectionEntities[i], playerInputData);
-                    group.EntityManager.SetComponentEnabled<PlayerInputDataToUse>(connectionEntities[i], true);
-                    group.EntityManager.SetComponentEnabled<PlayerInputDataToSend>(connectionEntities[i], false);
+                    group.EntityManager.SetComponentData(connectionEntity, playerInputData);
+                    group.EntityManager.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity, true);
                 }
             }
 
@@ -285,58 +280,5 @@ namespace DeterministicLockstep
             world.GetOrCreateSystem<GameStateUpdateSystemGroup>();
             world.GetOrCreateSystem<UserSystemGroup>();
         }
-    }
-
-    public struct DeterministicTime : IComponentData
-    {
-        /// <summary>
-        /// Variable storing the elapsed time which is used to control system groups
-        /// </summary>
-        public double deterministicLockstepElapsedTime; //seconds same as ElapsedTime
-
-        /// <summary>
-        /// Variable storing the time that has passed since the last frame
-        /// </summary>
-        public float realTime;
-
-        /// <summary>
-        /// Variable storing information of how many ticks we already processed for the current frame
-        /// </summary>
-        public int numTimesTickedThisFrame;
-
-        /// <summary>
-        /// Set constant value of what's the tick rate of the game
-        /// </summary>
-        public int GameTickRate;
-
-        /// <summary>
-        /// Value describing how many ticks ahead is client sending his inputs. This value is taking care of forced input latency (in ticks)
-        /// </summary>
-        public int forcedInputLatencyDelay;
-
-        /// <summary>
-        /// Variable that is used to calculate time before processing next tick
-        /// </summary>
-        public float timeLeftToSendNextTick;
-
-        /// <summary>
-        /// variable that takes count of which tick is being visually processed on the client
-        /// </summary>
-        public int currentSimulationTick;
-
-        /// <summary>
-        /// Variable that takes count of the current tick that we are sending to the server (future tick).
-        /// </summary>
-        public int currentClientTickToSend;
-
-        /// <summary>
-        /// Calculated hash for the current tick
-        /// </summary>
-        public ulong hashForTheCurrentTick; // maybe can be deleted
-
-        /// <summary>
-        /// Queue of RPCs that are received from the server with all clients inputs for a given tick.
-        /// </summary>
-        public NativeQueue<RpcPlayersDataUpdate> storedIncomingTicksFromServer; // be sure that there is no memory leak
     }
 }

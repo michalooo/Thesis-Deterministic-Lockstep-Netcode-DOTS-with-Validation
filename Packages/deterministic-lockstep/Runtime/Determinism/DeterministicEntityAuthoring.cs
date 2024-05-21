@@ -6,7 +6,7 @@ namespace DeterministicLockstep
     /// <summary>
     /// Tag component to mark an entity as part of the deterministic simulation checks.
     /// </summary>
-    public struct DeterministicSimulation : IComponentData
+    public struct EnsureDeterministicBehaviour : IComponentData
     {
     }
     
@@ -21,7 +21,7 @@ namespace DeterministicLockstep
             public override void Bake(DeterministicEntityAuthoring authoring)
             {
                 var entity = GetEntity(TransformUsageFlags.Dynamic);
-                AddComponent<DeterministicSimulation>(entity);
+                AddComponent<EnsureDeterministicBehaviour>(entity);
             }
         }
     }

@@ -28,16 +28,16 @@ namespace CapsulesGame
             foreach (var (ghostOwner, connectionEntity) in SystemAPI.Query<RefRW<GhostOwner>>()
                          .WithNone<PlayerSpawned>().WithEntityAccess())
             {
-                Debug.Log($"Spawning player for connection {ghostOwner.ValueRO.networkId}");
+                Debug.Log($"Spawning player for connection {ghostOwner.ValueRO.connectionNetworkId}");
 
                 commandBuffer.AddComponent<PlayerSpawned>(connectionEntity);
                 var player = commandBuffer.Instantiate(prefab);
-                commandBuffer.AddComponent(connectionEntity, new CommandTarget() { targetEntity = player }); // is it necessery for the package? This is user implementation
+                commandBuffer.AddComponent(connectionEntity, new CommandTarget() { connectionCommandsTargetEntity = player }); // is it necessery for the package? This is user implementation
 
                 // Fix the position problem (those should be different but are the same)
                 commandBuffer.SetComponent(player,
-                    LocalTransform.FromPosition(new Vector3(5 + ghostOwner.ValueRO.networkId, 1,
-                        5 + ghostOwner.ValueRO.networkId)));
+                    LocalTransform.FromPosition(new Vector3(5 + ghostOwner.ValueRO.connectionNetworkId, 1,
+                        5 + ghostOwner.ValueRO.connectionNetworkId)));
             }
 
             commandBuffer.Playback(EntityManager);

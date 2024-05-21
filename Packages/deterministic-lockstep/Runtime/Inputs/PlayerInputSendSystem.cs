@@ -4,22 +4,18 @@ using UnityEngine;
 namespace DeterministicLockstep
 {
     /// <summary>
-    /// System that gathers the player's input and sends it to the server
+    /// System that sends gathered player's input to the server. Inputs need to be gathered by the user.
     /// </summary>
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup), OrderLast = true)]
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     public partial class PlayerInputSendSystem : SystemBase
     {
-        protected override void OnCreate()
-        {
-            RequireForUpdate<PlayerInputDataToSend>();
-        }
 
         protected override void OnUpdate()
         {
-            foreach (var (connectionReference, owner, connectionEntity) in SystemAPI
+            foreach (var (connectionReference, owner) in SystemAPI
                          .Query<RefRO<NetworkConnectionReference>, RefRO<GhostOwner>>()
-                         .WithAll<GhostOwnerIsLocal, PlayerInputDataToSend>().WithEntityAccess())
+                         .WithAll<GhostOwnerIsLocal>())
             {
                 var deterministicTime = SystemAPI.GetSingleton<DeterministicTime>();
                 Debug.Log("Sending player input to server");
@@ -29,17 +25,16 @@ namespace DeterministicLockstep
                     return;
                 }
                 
-                var rpc = new RpcBroadcastPlayerInputToServer
+                var rpc = new RpcBroadcastPlayerTickDataToServer
                 {
-                    CapsuleGameInputs = capsulesInputs,
-                    PlayerNetworkID = owner.ValueRO.networkId,
-                    CurrentTick = deterministicTime.currentClientTickToSend,
-                    HashForCurrentTick = deterministicTime.hashForTheCurrentTick
+                    PongGameInputs = capsulesInputs,
+                    PlayerNetworkID = owner.ValueRO.connectionNetworkId,
+                    FutureTick = deterministicTime.currentClientTickToSend,
+                    HashForFutureTick = deterministicTime.hashForTheCurrentTick
                 };
 
-                rpc.Serialize(connectionReference.ValueRO.driver, connectionReference.ValueRO.connection,
-                    connectionReference.ValueRO.reliableSimulatorPipeline);
-                EntityManager.SetComponentEnabled<PlayerInputDataToSend>(connectionEntity, false);
+                rpc.Serialize(connectionReference.ValueRO.driverReference, connectionReference.ValueRO.connectionReference,
+                    connectionReference.ValueRO.reliableSimulationPipelineReference);
             }
         }
     }

@@ -32,23 +32,23 @@ namespace CapsulesGame
 
             for (int i = 0; i < playerInputData.Length; i++)
             {
-                if (playerInputData[i].playerDisconnected)
+                if (playerInputData[i].isPlayerDisconnected)
                 {
                     Debug.Log("Destroying entity with ID: " + playerInputData[i].playerNetworkId);
-                    EntityManager.DestroyEntity(commandTargetData[i].targetEntity);
+                    EntityManager.DestroyEntity(commandTargetData[i].connectionCommandsTargetEntity);
                     EntityManager.DestroyEntity(connectionEntity[i]);
                 }
                 else
                 {
                     // var horizontalInput = playerInputData[i].inputToUse.horizontalInput;
-                    var verticalInput = playerInputData[i].inputToUse.verticalInput;
+                    var verticalInput = playerInputData[i].playerInputToApply.verticalInput;
 
-                    var targetTransform = SystemAPI.GetComponent<LocalToWorld>(commandTargetData[i].targetEntity);
+                    var targetTransform = SystemAPI.GetComponent<LocalToWorld>(commandTargetData[i].connectionCommandsTargetEntity);
                     var targetPosition = targetTransform.Position;
                     // targetPosition.x += horizontalInput;
                     targetPosition.z += verticalInput;
 
-                    EntityManager.SetComponentData(commandTargetData[i].targetEntity,
+                    EntityManager.SetComponentData(commandTargetData[i].connectionCommandsTargetEntity,
                         LocalTransform.FromPosition(targetPosition));
 
                     EntityManager.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity[i],
