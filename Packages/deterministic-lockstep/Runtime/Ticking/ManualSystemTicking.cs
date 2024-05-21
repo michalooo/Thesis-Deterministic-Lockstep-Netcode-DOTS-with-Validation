@@ -99,7 +99,7 @@ namespace DeterministicLockstep
                         group.World.PushTime(
                             new TimeData(deterministicTime.ValueRO.deterministicLockstepElapsedTime,
                                 localDeltaTime));
-                        Debug.Log("tick: " + deterministicTime.ValueRO.currentSimulationTick + " tick to send: " + deterministicTime.ValueRO.currentClientTickToSend + " how many ticked: " + deterministicTime.ValueRO.numTimesTickedThisFrame + " how many ticks to send ahead: " + deterministicTime.ValueRO.forcedInputLatencyDelay + " How many stored ticks we have: " + deterministicTime.ValueRO.storedIncomingTicksFromServer.Count);
+                        // Debug.Log("tick: " + deterministicTime.ValueRO.currentSimulationTick + " tick to send: " + deterministicTime.ValueRO.currentClientTickToSend + " how many ticked: " + deterministicTime.ValueRO.numTimesTickedThisFrame + " how many ticks to send ahead: " + deterministicTime.ValueRO.forcedInputLatencyDelay + " How many stored ticks we have: " + deterministicTime.ValueRO.storedIncomingTicksFromServer.Count);
                         return true;
                     }
                     
@@ -133,7 +133,7 @@ namespace DeterministicLockstep
                                     new TimeData(deterministicTime.ValueRO.deterministicLockstepElapsedTime,
                                         localDeltaTime));
                                 
-                                Debug.Log("tick: " + deterministicTime.ValueRO.currentSimulationTick + " tick to send: " + deterministicTime.ValueRO.currentClientTickToSend + " how many ticked: " + deterministicTime.ValueRO.numTimesTickedThisFrame + " how many ticks to send ahead: " + deterministicTime.ValueRO.forcedInputLatencyDelay + " How many stored ticks we have: " + deterministicTime.ValueRO.storedIncomingTicksFromServer.Count);
+                                // Debug.Log("tick: " + deterministicTime.ValueRO.currentSimulationTick + " tick to send: " + deterministicTime.ValueRO.currentClientTickToSend + " how many ticked: " + deterministicTime.ValueRO.numTimesTickedThisFrame + " how many ticks to send ahead: " + deterministicTime.ValueRO.forcedInputLatencyDelay + " How many stored ticks we have: " + deterministicTime.ValueRO.storedIncomingTicksFromServer.Count);
 
                                 return true;
                             }
@@ -151,7 +151,7 @@ namespace DeterministicLockstep
                         1f / deterministicTime.ValueRO.GameTickRate; // reset the time until next tick
                     deterministicTime.ValueRW.numTimesTickedThisFrame = 0;
                     
-                    Debug.Log("tick: " + deterministicTime.ValueRO.currentSimulationTick + " tick to send: " + deterministicTime.ValueRO.currentClientTickToSend + " how many ticked: " + deterministicTime.ValueRO.numTimesTickedThisFrame + " how many ticks to send ahead: " + deterministicTime.ValueRO.forcedInputLatencyDelay + " How many stored ticks we have: " + deterministicTime.ValueRO.storedIncomingTicksFromServer.Count);
+                    // Debug.Log("tick: " + deterministicTime.ValueRO.currentSimulationTick + " tick to send: " + deterministicTime.ValueRO.currentClientTickToSend + " how many ticked: " + deterministicTime.ValueRO.numTimesTickedThisFrame + " how many ticks to send ahead: " + deterministicTime.ValueRO.forcedInputLatencyDelay + " How many stored ticks we have: " + deterministicTime.ValueRO.storedIncomingTicksFromServer.Count);
 
                     return false;
                 }

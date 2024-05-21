@@ -386,8 +386,10 @@ namespace DeterministicLockstep
             
                 // check if every hash is the same. TODO will need some changes regarding determinism per system
                 var firstHash = _everyTickHashBuffer[(ulong) _lastTickReceivedFromServer][0];
+                Debug.Log("hash: " + firstHash);
                 for (var i = 1; i < _everyTickHashBuffer[(ulong) _lastTickReceivedFromServer].Length; i++)
                 {
+                    Debug.Log("hash: " + _everyTickHashBuffer[(ulong) _lastTickReceivedFromServer][i]);
                     if (firstHash == _everyTickHashBuffer[(ulong) _lastTickReceivedFromServer][i]) continue;
             
                     // Hashes are not equal - handle this scenario

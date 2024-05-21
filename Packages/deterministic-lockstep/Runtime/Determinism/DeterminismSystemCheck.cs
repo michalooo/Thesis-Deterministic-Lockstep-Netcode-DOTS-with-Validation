@@ -1,8 +1,10 @@
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
+using UnityEngine;
 
 namespace DeterministicLockstep
 {
@@ -54,11 +56,10 @@ namespace DeterministicLockstep
             var currentTick = _everyTickHashBuffer.Count + 1;
             _everyTickHashBuffer[currentTick] = hash;
 
-            // Save Hash in the tickRateInfo component
-            foreach (var tickRateInfo in SystemAPI.Query<RefRW<DeterministicTime>>().WithAll<GhostOwnerIsLocal>())
-            {
-                tickRateInfo.ValueRW.hashForTheCurrentTick = hash;
-            }
+            // Save Hash in the DeterministicTime component
+            var timeComponent = SystemAPI.GetSingleton<DeterministicTime>();
+            timeComponent.hashForTheCurrentTick = hash;
+            SystemAPI.SetSingleton(timeComponent);
         }
 
         protected override void OnDestroy()
