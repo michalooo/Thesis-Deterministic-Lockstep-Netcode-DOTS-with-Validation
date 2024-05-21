@@ -9,16 +9,10 @@ namespace PongGame
     [UpdateInGroup(typeof(UserSystemGroup))]
     public partial class GameLogicServerSystem : SystemBase
     {
-        private Entity _server;
 
         protected override void OnCreate()
         {
-            RequireForUpdate<DeterministicServer>();
-        }
-
-        protected override void OnStartRunning()
-        {
-            _server = SystemAPI.GetSingletonEntity<DeterministicServer>();
+            RequireForUpdate<DeterministicServerComponent>();
         }
 
         protected override void OnUpdate()
@@ -26,8 +20,15 @@ namespace PongGame
             // option for the server to start the game
             if (SceneManager.GetActiveScene().name == "PongLoading" && Input.GetKey(KeyCode.Space))
             {
-                SystemAPI.SetComponentEnabled<DeterministicServerListen>(_server, false);
-                SystemAPI.SetComponentEnabled<DeterministicServerRunSimulation>(_server, true);
+                var server = SystemAPI.GetSingleton<DeterministicServerComponent>();
+                server.deterministicServerWorkingMode = DeterministicServerWorkingMode.RunDeterministicSimulation;
+                SystemAPI.SetSingleton(server);
+            }
+            else if (SceneManager.GetActiveScene().name == "PongLoading" && SystemAPI.GetSingleton<DeterministicServerComponent>().deterministicServerWorkingMode == DeterministicServerWorkingMode.None)
+            {
+                var server = SystemAPI.GetSingleton<DeterministicServerComponent>();
+                server.deterministicServerWorkingMode = DeterministicServerWorkingMode.ListenForConnections;
+                SystemAPI.SetSingleton(server);
             }
         }
     }

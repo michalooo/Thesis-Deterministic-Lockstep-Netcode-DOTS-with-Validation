@@ -9,16 +9,16 @@ namespace CapsulesGame
     [UpdateInGroup(typeof(UserSystemGroup))]
     public partial class GameLogicServerSystem : SystemBase
     {
-        private Entity _server;
+        private DeterministicServerComponent _server;
 
         protected override void OnCreate()
         {
-            RequireForUpdate<DeterministicServer>();
+            RequireForUpdate<DeterministicServerComponent>();
         }
 
         protected override void OnStartRunning()
         {
-            _server = SystemAPI.GetSingletonEntity<DeterministicServer>();
+            _server = SystemAPI.GetSingleton<DeterministicServerComponent>();
         }
 
         protected override void OnUpdate()
@@ -26,8 +26,11 @@ namespace CapsulesGame
             // option for the server to start the game
             if (SceneManager.GetActiveScene().name == "CapsulesLoading" && Input.GetKey(KeyCode.Space))
             {
-                SystemAPI.SetComponentEnabled<DeterministicServerListen>(_server, false);
-                SystemAPI.SetComponentEnabled<DeterministicServerRunSimulation>(_server, true);
+                _server.deterministicServerWorkingMode = DeterministicServerWorkingMode.RunDeterministicSimulation;
+            }
+            else if (SceneManager.GetActiveScene().name == "CapsulesLoading" && _server.deterministicServerWorkingMode == DeterministicServerWorkingMode.None)
+            {
+                _server.deterministicServerWorkingMode = DeterministicServerWorkingMode.ListenForConnections;
             }
         }
     }

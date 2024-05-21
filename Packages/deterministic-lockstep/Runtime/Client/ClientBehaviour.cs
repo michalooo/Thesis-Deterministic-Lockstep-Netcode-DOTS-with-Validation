@@ -8,6 +8,26 @@ using UnityEngine.SceneManagement;
 
 namespace DeterministicLockstep
 {
+    public enum DeterministicClientWorkingMode
+    {
+        Connect,
+        Disconnect,
+        SendData,
+        None
+    }
+    
+    public struct DeterministicClientComponent : IComponentData
+    {
+        public DeterministicClientWorkingMode deterministicClientWorkingMode;
+    }
+    
+    
+    
+    
+    
+    
+    
+    
     /// <summary>
     /// System that handles the client side of the game. It is responsible for handling connections.
     /// </summary>
@@ -16,7 +36,6 @@ namespace DeterministicLockstep
     public partial class ClientBehaviour : SystemBase
     {
         private DeterministicSettings _settings;
-        private Entity _client;
         private const ushort KNetworkPort = 7979;
 
         private NetworkDriver _mDriver;
@@ -27,12 +46,15 @@ namespace DeterministicLockstep
         protected override void OnCreate()
         {
             RequireForUpdate<DeterministicSettings>();
+            EntityManager.CreateSingleton(new DeterministicClientComponent()
+            {
+                deterministicClientWorkingMode = DeterministicClientWorkingMode.None
+            });
         }
 
         protected override void OnStartRunning()
         {
             _settings = SystemAPI.GetSingleton<DeterministicSettings>();
-            _client = SystemAPI.GetSingletonEntity<DeterministicClient>();
 
             _clientSimulatorParameters = new NetworkSettings();
             _clientSimulatorParameters.WithSimulatorStageParameters(
@@ -55,19 +77,20 @@ namespace DeterministicLockstep
 
         protected override void OnUpdate()
         {
-            if (SystemAPI.IsComponentEnabled<DeterministicClientConnect>(
-                    _client)) // method on a singleton (NetworkStreamDriver)
+            if(SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode == DeterministicClientWorkingMode.None) return;
+            
+            if (SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode == DeterministicClientWorkingMode.Connect && !_mConnection.IsCreated)
             {
+                Debug.Log("connecting");
                 var endpoint = NetworkEndpoint.Parse("127.0.0.1", KNetworkPort); //change to chosen IP
                 _mConnection = _mDriver.Connect(endpoint);
-                SystemAPI.SetComponentEnabled<DeterministicClientConnect>(_client, false);
             }
 
-            if (SystemAPI.IsComponentEnabled<DeterministicClientDisconnect>(_client))
+            if (SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode == DeterministicClientWorkingMode.Disconnect &&
+                !_mConnection.IsCreated)
             {
                 _mConnection.Disconnect(_mDriver);
                 _mConnection = default;
-                SystemAPI.SetComponentEnabled<DeterministicClientDisconnect>(_client, false);
             }
 
             if (!_mConnection.IsCreated) return;
@@ -174,7 +197,7 @@ namespace DeterministicLockstep
 
             var deterministicTime = SystemAPI.GetSingletonRW<DeterministicTime>();
             deterministicTime.ValueRW.GameTickRate = rpc.TickRate;
-            deterministicTime.ValueRW.AmountOfTicksSendingAhead = rpc.TickAhead;
+            deterministicTime.ValueRW.forcedInputLatencyDelay = rpc.TickAhead;
             deterministicTime.ValueRW.timeLeftToSendNextTick = 1f / rpc.TickRate;
             deterministicTime.ValueRW.currentSimulationTick = 0;
             deterministicTime.ValueRW.currentClientTickToSend = 0;
@@ -183,7 +206,9 @@ namespace DeterministicLockstep
             deterministicTime.ValueRW.realTime = 0;
             deterministicTime.ValueRW.deterministicLockstepElapsedTime = 0;
 
-            SystemAPI.SetComponentEnabled<DeterministicClientSendData>(_client, true);
+            var client = SystemAPI.GetSingleton<DeterministicClientComponent>();
+            client.deterministicClientWorkingMode = DeterministicClientWorkingMode.SendData;
+            SystemAPI.SetSingleton(client);
         }
 
         /// <summary>

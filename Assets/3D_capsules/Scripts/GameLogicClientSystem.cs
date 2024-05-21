@@ -9,16 +9,16 @@ namespace CapsulesGame
     [UpdateInGroup(typeof(UserSystemGroup))]
     public partial class GameLogicClientSystem : SystemBase
     {
-        private Entity _client;
+        private DeterministicClientComponent _client;
 
         protected override void OnCreate()
         {
-            RequireForUpdate<DeterministicClient>();
+            RequireForUpdate<DeterministicClientComponent>();
         }
 
         protected override void OnStartRunning()
         {
-            _client = SystemAPI.GetSingletonEntity<DeterministicClient>();
+            _client = SystemAPI.GetSingleton<DeterministicClientComponent>();
         }
 
         protected override void OnUpdate()
@@ -26,13 +26,13 @@ namespace CapsulesGame
             if (SceneManager.GetActiveScene().name == "CapsulesGame" && Input.GetKey(KeyCode.C) &&
                 World.Name == "ClientWorld2") // Simulation of disconnection
             {
-                SystemAPI.SetComponentEnabled<DeterministicClientDisconnect>(_client, true);
+                _client.deterministicClientWorkingMode = DeterministicClientWorkingMode.Disconnect;
 
                 SceneManager.LoadScene("CapsulesGame");
             }
 
             if (SceneManager.GetActiveScene().name == "CapsulesLoading" &&
-                SystemAPI.IsComponentEnabled<DeterministicClientSendData>(_client))
+                _client.deterministicClientWorkingMode == DeterministicClientWorkingMode.Disconnect)
             {
                 SceneManager.LoadScene("CapsulesGame");
             }

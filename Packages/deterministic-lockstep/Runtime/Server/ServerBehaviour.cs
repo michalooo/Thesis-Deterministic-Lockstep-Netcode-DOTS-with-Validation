@@ -8,6 +8,21 @@ using UnityEngine;
 
 namespace DeterministicLockstep
 {
+    public enum DeterministicServerWorkingMode
+    {
+        ListenForConnections,
+        RunDeterministicSimulation,
+        None
+    }
+    
+    public struct DeterministicServerComponent : IComponentData
+    {
+        public DeterministicServerWorkingMode deterministicServerWorkingMode;
+    }
+    
+    
+    
+    
     /// <summary>
     /// System responsible for handling the server side of the network, with connections etc
     /// </summary>
@@ -16,7 +31,6 @@ namespace DeterministicLockstep
     public partial class ServerBehaviour : SystemBase
     {
         private DeterministicSettings _settings;
-        private Entity _server;
         
         /// <summary>
         /// Network driver used to handle connections
@@ -56,23 +70,25 @@ namespace DeterministicLockstep
         protected override void OnCreate()
         {
             RequireForUpdate<DeterministicSettings>();
+            EntityManager.CreateSingleton(new DeterministicServerComponent()
+            {
+                deterministicServerWorkingMode = DeterministicServerWorkingMode.None
+            });
         }
 
         protected override void OnStartRunning()
         {
             _settings = SystemAPI.GetSingleton<DeterministicSettings>();
-            _server = SystemAPI.GetSingletonEntity<DeterministicServer>();
         }
 
         protected override void OnUpdate()
         {
-            if(SystemAPI.IsComponentEnabled<DeterministicServerListen>(_server) && !_mDriver.IsCreated){
+            if (SystemAPI.GetSingleton<DeterministicServerComponent>().deterministicServerWorkingMode == DeterministicServerWorkingMode.ListenForConnections &&
+                !_mDriver.IsCreated)
+            {
                 StartListening();
             }
-            else if(SystemAPI.IsComponentEnabled<DeterministicServerRunSimulation>(_server) && !_settings.isInGame)
-            {
-                StartGame();
-            }
+            if(SystemAPI.GetSingleton<DeterministicServerComponent>().deterministicServerWorkingMode == DeterministicServerWorkingMode.RunDeterministicSimulation && !_settings.isInGame) StartGame();
             
             if(!_mDriver.IsCreated) return;
             _mDriver.ScheduleUpdate().Complete();
@@ -149,6 +165,7 @@ namespace DeterministicLockstep
         /// </summary>
         private void StartGame()
         {
+            Debug.Log("Game started");
             if (_settings.isInGame) return;
             _settings.isInGame = true;
             

@@ -85,7 +85,7 @@ namespace DeterministicLockstep
                 {
                     if (deterministicTime.ValueRO.currentClientTickToSend <=
                         deterministicTime.ValueRO
-                            .AmountOfTicksSendingAhead) // If current Tick to send is less or equal to tickAhead then upgrade it and do nothing about the presentation update (it should mean we are processing those first ticks)
+                            .forcedInputLatencyDelay) // If current Tick to send is less or equal to tickAhead then upgrade it and do nothing about the presentation update (it should mean we are processing those first ticks)
                     {
                         deterministicTime.ValueRW.currentClientTickToSend++;
                         group.EntityManager.SetComponentEnabled<PlayerInputDataToSend>(localConnectionEntity[0], true); // DO I need this component?
@@ -101,7 +101,7 @@ namespace DeterministicLockstep
                         group.World.PushTime(
                             new TimeData(deterministicTime.ValueRO.deterministicLockstepElapsedTime,
                                 localDeltaTime));
-                        Debug.Log("tick: " + deterministicTime.ValueRO.currentSimulationTick + " tick to send: " + deterministicTime.ValueRO.currentClientTickToSend + " how many ticked: " + deterministicTime.ValueRO.numTimesTickedThisFrame + " how many ticks to send ahead: " + deterministicTime.ValueRO.AmountOfTicksSendingAhead + " How many stored ticks we have: " + deterministicTime.ValueRO.storedIncomingTicksFromServer.Count);
+                        Debug.Log("tick: " + deterministicTime.ValueRO.currentSimulationTick + " tick to send: " + deterministicTime.ValueRO.currentClientTickToSend + " how many ticked: " + deterministicTime.ValueRO.numTimesTickedThisFrame + " how many ticks to send ahead: " + deterministicTime.ValueRO.forcedInputLatencyDelay + " How many stored ticks we have: " + deterministicTime.ValueRO.storedIncomingTicksFromServer.Count);
                         return true;
                     }
                     
@@ -109,7 +109,7 @@ namespace DeterministicLockstep
                         10) // restriction to prevent too expensive loop
                     {
                         var hasInputsForThisTick = deterministicTime.ValueRO.storedIncomingTicksFromServer.Count >=
-                                                   deterministicTime.ValueRO.AmountOfTicksSendingAhead - 1;
+                                                   deterministicTime.ValueRO.forcedInputLatencyDelay - 1;
                         
                         if (hasInputsForThisTick)
                         {
@@ -137,7 +137,7 @@ namespace DeterministicLockstep
                                     new TimeData(deterministicTime.ValueRO.deterministicLockstepElapsedTime,
                                         localDeltaTime));
                                 
-                                Debug.Log("tick: " + deterministicTime.ValueRO.currentSimulationTick + " tick to send: " + deterministicTime.ValueRO.currentClientTickToSend + " how many ticked: " + deterministicTime.ValueRO.numTimesTickedThisFrame + " how many ticks to send ahead: " + deterministicTime.ValueRO.AmountOfTicksSendingAhead + " How many stored ticks we have: " + deterministicTime.ValueRO.storedIncomingTicksFromServer.Count);
+                                Debug.Log("tick: " + deterministicTime.ValueRO.currentSimulationTick + " tick to send: " + deterministicTime.ValueRO.currentClientTickToSend + " how many ticked: " + deterministicTime.ValueRO.numTimesTickedThisFrame + " how many ticks to send ahead: " + deterministicTime.ValueRO.forcedInputLatencyDelay + " How many stored ticks we have: " + deterministicTime.ValueRO.storedIncomingTicksFromServer.Count);
 
                                 return true;
                             }
@@ -155,7 +155,7 @@ namespace DeterministicLockstep
                         1f / deterministicTime.ValueRO.GameTickRate; // reset the time until next tick
                     deterministicTime.ValueRW.numTimesTickedThisFrame = 0;
                     
-                    Debug.Log("tick: " + deterministicTime.ValueRO.currentSimulationTick + " tick to send: " + deterministicTime.ValueRO.currentClientTickToSend + " how many ticked: " + deterministicTime.ValueRO.numTimesTickedThisFrame + " how many ticks to send ahead: " + deterministicTime.ValueRO.AmountOfTicksSendingAhead + " How many stored ticks we have: " + deterministicTime.ValueRO.storedIncomingTicksFromServer.Count);
+                    Debug.Log("tick: " + deterministicTime.ValueRO.currentSimulationTick + " tick to send: " + deterministicTime.ValueRO.currentClientTickToSend + " how many ticked: " + deterministicTime.ValueRO.numTimesTickedThisFrame + " how many ticks to send ahead: " + deterministicTime.ValueRO.forcedInputLatencyDelay + " How many stored ticks we have: " + deterministicTime.ValueRO.storedIncomingTicksFromServer.Count);
 
                     return false;
                 }
@@ -310,9 +310,9 @@ namespace DeterministicLockstep
         public int GameTickRate;
 
         /// <summary>
-        /// Set constant value of how many ticks ahead client is sending its data
+        /// Value describing how many ticks ahead is client sending his inputs. This value is taking care of forced input latency (in ticks)
         /// </summary>
-        public int AmountOfTicksSendingAhead;
+        public int forcedInputLatencyDelay;
 
         /// <summary>
         /// Variable that is used to calculate time before processing next tick

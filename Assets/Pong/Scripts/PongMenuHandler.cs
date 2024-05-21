@@ -47,11 +47,6 @@ namespace PongGame
                         anotherClientEntityManager.CreateEntity(typeof(DeterministicSettings));
                     anotherClientEntityManager.SetComponentData(anotherClientDeterministicSettings,
                         entityManager.GetComponentData<DeterministicSettings>(deterministicSettings2));
-                
-                    Entity anotherClientAuthoringEntity = anotherClientEntityManager.CreateEntity(typeof(DeterministicClient), typeof(DeterministicClientConnect), typeof(DeterministicClientDisconnect), typeof(DeterministicClientSendData));
-                    anotherClientEntityManager.SetComponentEnabled<DeterministicClientConnect>(anotherClientAuthoringEntity, true);
-                    anotherClientEntityManager.SetComponentEnabled<DeterministicClientDisconnect>(anotherClientAuthoringEntity, false);
-                    anotherClientEntityManager.SetComponentEnabled<DeterministicClientSendData>(anotherClientAuthoringEntity, false);
                 }
                 else
                 {
@@ -71,21 +66,12 @@ namespace PongGame
                 Entity serverDeterministicSettings = serverEntityManager.CreateEntity(typeof(DeterministicSettings));
                 serverEntityManager.SetComponentData(serverDeterministicSettings,
                     entityManager.GetComponentData<DeterministicSettings>(deterministicSettings));
-                
-                Entity serverAuthoringEntity = serverEntityManager.CreateEntity(typeof(DeterministicServer), typeof(DeterministicServerListen), typeof(DeterministicServerRunSimulation));
-                serverEntityManager.SetComponentEnabled<DeterministicServerListen>(serverAuthoringEntity, true);
-                serverEntityManager.SetComponentEnabled<DeterministicServerRunSimulation>(serverAuthoringEntity, false);
 
 
                 EntityManager clientEntityManager = client.EntityManager;
                 Entity clientDeterministicSettings = clientEntityManager.CreateEntity(typeof(DeterministicSettings));
                 clientEntityManager.SetComponentData(clientDeterministicSettings,
                     entityManager.GetComponentData<DeterministicSettings>(deterministicSettings));
-                
-                Entity clientAuthoringEntity = clientEntityManager.CreateEntity(typeof(DeterministicClient), typeof(DeterministicClientConnect), typeof(DeterministicClientDisconnect), typeof(DeterministicClientSendData));
-                clientEntityManager.SetComponentEnabled<DeterministicClientConnect>(clientAuthoringEntity, true);
-                clientEntityManager.SetComponentEnabled<DeterministicClientDisconnect>(clientAuthoringEntity, false);
-                clientEntityManager.SetComponentEnabled<DeterministicClientSendData>(clientAuthoringEntity, false);
             }
             else
             {
@@ -116,11 +102,6 @@ namespace PongGame
                 Entity clientDeterministicSettings = clientEntityManager.CreateEntity(typeof(DeterministicSettings));
                 clientEntityManager.SetComponentData(clientDeterministicSettings,
                     entityManager.GetComponentData<DeterministicSettings>(deterministicSettings));
-                
-                Entity clientAuthoringEntity = clientEntityManager.CreateEntity(typeof(DeterministicClient), typeof(DeterministicClientConnect), typeof(DeterministicClientDisconnect), typeof(DeterministicClientSendData));
-                clientEntityManager.SetComponentEnabled<DeterministicClientConnect>(clientAuthoringEntity, true);
-                clientEntityManager.SetComponentEnabled<DeterministicClientDisconnect>(clientAuthoringEntity, false);
-                clientEntityManager.SetComponentEnabled<DeterministicClientSendData>(clientAuthoringEntity, false);
             }
             else
             {
