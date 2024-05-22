@@ -6,7 +6,7 @@ namespace DeterministicLockstep
     public enum DeterminismHashCalculationOption
     {
         PerSystem,
-        PerFrame,
+        PerTick,
         None
     }
     

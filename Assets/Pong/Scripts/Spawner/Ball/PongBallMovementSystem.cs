@@ -1,9 +1,13 @@
-﻿using DeterministicLockstep;
+﻿using System.Numerics;
+using DeterministicLockstep;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
+using Unity.Mathematics;
 using Unity.Transforms;
+using UnityEngine;
+using Vector3 = System.Numerics.Vector3;
 
 namespace PongGame
 {
@@ -62,17 +66,25 @@ namespace PongGame
         public NativeArray<Velocity> ballVelocities;
         
         public float deltaTime;
+        private float interpolationSpeed; // New field for interpolation speed
     
         public void Execute(int index)
         {
             LocalTransform transform = localTransform[index];
             Velocity velocity = ballVelocities[index];
             Entity entity = Entities[index];
+            interpolationSpeed = 0.2f;
             
-            var newPosition = transform.Position + velocity.value * deltaTime;
+            var newPosition = transform.Position + velocity.value;
+            // Interpolate from the current position to the new position
+            var interpolatedPositionX = Mathf.Lerp(transform.Position.x, newPosition.x, interpolationSpeed * deltaTime);
+            var interpolatedPositionY = Mathf.Lerp(transform.Position.y, newPosition.y, interpolationSpeed * deltaTime);
+            var interpolatedPositionZ = Mathf.Lerp(transform.Position.z, newPosition.z, interpolationSpeed * deltaTime);
+            var interpolatedPosition = new float3(interpolatedPositionX, interpolatedPositionY, interpolatedPositionZ);
+            
             var newTransform = new LocalTransform
             {
-                Position = newPosition,
+                Position = interpolatedPosition,
                 Rotation = transform.Rotation,
                 Scale = transform.Scale
             };

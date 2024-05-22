@@ -152,11 +152,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6fccd649a94e43248ecfc8a738e26089, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  simulationTickRate: 30
+  simulationTickRate: 59
   allowedConnectionsPerGame: 4
-  ticksAhead: 9
+  ticksAhead: 5
   serverPort: 7979
-  hashCalculationOption: 0
+  hashCalculationOption: 1
   packetDelayMs: 0
   packetJitterMs: 0
   packetDropInterval: 0

@@ -16,6 +16,7 @@ namespace PongGame
         private EntityQuery playerQuery;
         private const float minZ = -3.5f;
         private const float maxZ = 3.5f;
+        private const float interpolationSpeed = 0.2f;
 
         protected override void OnCreate()
         {
@@ -47,18 +48,21 @@ namespace PongGame
                     var targetTransform = SystemAPI.GetComponentRW<LocalToWorld>(commandTargetData[i].connectionCommandsTargetEntity);
                     var targetPosition = targetTransform.ValueRO.Position;
                     
-                    targetPosition.z += verticalInput;
+                    var newPositionZ = targetPosition.z + verticalInput;
                     
                     
                     // Check if the new position is within the bounds
-                    if (targetPosition.z < minZ)
+                    if (newPositionZ < minZ)
                     {
-                        targetPosition.z = minZ;
+                        newPositionZ = minZ;
                     }
-                    else if (targetPosition.z > maxZ)
+                    else if (newPositionZ > maxZ)
                     {
-                        targetPosition.z = maxZ;
+                        newPositionZ = maxZ;
                     }
+                    
+                    // Interpolate from the current position to the new position
+                    targetPosition.z = Mathf.Lerp(targetPosition.z, newPositionZ, interpolationSpeed);
                     
                     EntityManager.SetComponentData(commandTargetData[i].connectionCommandsTargetEntity,
                         LocalTransform.FromPosition(targetPosition));

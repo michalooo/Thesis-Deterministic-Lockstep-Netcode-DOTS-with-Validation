@@ -39,7 +39,6 @@ namespace PongGame
             if (IsLocalMultiplayerSimulation.isOn)
             {
                 var secondClient = CreateClientWorld($"ClientWorld1");
-                var thirdClient = CreateClientWorld($"ClientWorld2");
                 if (deterministicSettingsQuery.TryGetSingletonEntity<DeterministicSettings>(
                         out Entity deterministicSettings2))
                 {
@@ -47,12 +46,6 @@ namespace PongGame
                     Entity anotherClientDeterministicSettings =
                         anotherClientEntityManager.CreateEntity(typeof(DeterministicSettings));
                     anotherClientEntityManager.SetComponentData(anotherClientDeterministicSettings,
-                        entityManager.GetComponentData<DeterministicSettings>(deterministicSettings2));
-                    
-                    EntityManager thirdClientEntityManager = thirdClient.EntityManager;
-                    Entity thirdClientDeterministicSettings =
-                        thirdClientEntityManager.CreateEntity(typeof(DeterministicSettings));
-                    thirdClientEntityManager.SetComponentData(thirdClientDeterministicSettings,
                         entityManager.GetComponentData<DeterministicSettings>(deterministicSettings2));
                 }
                 else

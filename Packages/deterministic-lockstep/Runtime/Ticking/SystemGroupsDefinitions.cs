@@ -29,6 +29,9 @@ namespace DeterministicLockstep
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     public partial class DeterministicSimulationSystemGroup : ComponentSystemGroup
     {
+        private const float LocalDeltaTime = 1.0f / 60.0f;
+        private const int MaxTicksPerFrame = 10;
+
         protected override void OnCreate()
         {
             base.OnCreate();
@@ -104,18 +107,16 @@ namespace DeterministicLockstep
                             1f / deterministicTime.ValueRO.GameTickRate; // reset the time until next tick
 
 
-                        const float localDeltaTime = 1.0f / 60.0f;
                         deterministicTime.ValueRW.deterministicLockstepElapsedTime += deltaTime;
                         deterministicTime.ValueRW.numTimesTickedThisFrame++;
                         group.World.PushTime(
                             new TimeData(deterministicTime.ValueRO.deterministicLockstepElapsedTime,
-                                localDeltaTime));
-                        // Debug.Log("tick: " + deterministicTime.ValueRO.currentSimulationTick + " tick to send: " + deterministicTime.ValueRO.currentClientTickToSend + " how many ticked: " + deterministicTime.ValueRO.numTimesTickedThisFrame + " how many ticks to send ahead: " + deterministicTime.ValueRO.forcedInputLatencyDelay + " How many stored ticks we have: " + deterministicTime.ValueRO.storedIncomingTicksFromServer.Count);
+                                LocalDeltaTime));
                         return true;
                     }
 
                     if (deterministicTime.ValueRO.numTimesTickedThisFrame <
-                        10) // restriction to prevent too expensive loop
+                        MaxTicksPerFrame) // restriction to prevent too expensive loop
                     {
                         var hasInputsForThisTick = deterministicTime.ValueRO.storedIncomingTicksFromServer.Count >=
                                                    deterministicTime.ValueRO.forcedInputLatencyDelay - 1;
@@ -137,14 +138,11 @@ namespace DeterministicLockstep
                                 group.EntityManager.SetComponentEnabled<PlayerInputDataToUse>(localConnectionEntity[0],
                                     true);
 
-                                const float localDeltaTime = 1.0f / 60.0f;
                                 deterministicTime.ValueRW.deterministicLockstepElapsedTime += deltaTime;
                                 deterministicTime.ValueRW.numTimesTickedThisFrame++;
                                 group.World.PushTime(
                                     new TimeData(deterministicTime.ValueRO.deterministicLockstepElapsedTime,
-                                        localDeltaTime));
-
-                                // Debug.Log("tick: " + deterministicTime.ValueRO.currentSimulationTick + " tick to send: " + deterministicTime.ValueRO.currentClientTickToSend + " how many ticked: " + deterministicTime.ValueRO.numTimesTickedThisFrame + " how many ticks to send ahead: " + deterministicTime.ValueRO.forcedInputLatencyDelay + " How many stored ticks we have: " + deterministicTime.ValueRO.storedIncomingTicksFromServer.Count);
+                                        LocalDeltaTime));
 
                                 return true;
                             }
@@ -161,9 +159,6 @@ namespace DeterministicLockstep
                     deterministicTime.ValueRW.timeLeftToSendNextTick =
                         1f / deterministicTime.ValueRO.GameTickRate; // reset the time until next tick
                     deterministicTime.ValueRW.numTimesTickedThisFrame = 0;
-
-                    // Debug.Log("tick: " + deterministicTime.ValueRO.currentSimulationTick + " tick to send: " + deterministicTime.ValueRO.currentClientTickToSend + " how many ticked: " + deterministicTime.ValueRO.numTimesTickedThisFrame + " how many ticks to send ahead: " + deterministicTime.ValueRO.forcedInputLatencyDelay + " How many stored ticks we have: " + deterministicTime.ValueRO.storedIncomingTicksFromServer.Count);
-
                     return false;
                 }
 
@@ -224,7 +219,7 @@ namespace DeterministicLockstep
             var systems = group.GetAllSystems();
             var determinismCheckSystem = group.World.GetExistingSystem<DeterminismCheckSystem>();
 
-            for (int i=0; i<systems.Length; i++)
+            for (int i = 0; i < systems.Length; i++)
             {
                 var system = systems[i];
                 try
@@ -250,7 +245,7 @@ namespace DeterministicLockstep
         }
     }
 
-    public partial struct ManualSystemTicking : ISystem
+    public partial struct SystemGroupsDefinitions : ISystem
     {
         public void OnCreate(ref SystemState state)
         {
