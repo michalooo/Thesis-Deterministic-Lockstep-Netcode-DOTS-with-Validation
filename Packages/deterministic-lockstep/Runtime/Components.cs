@@ -125,7 +125,7 @@ namespace DeterministicLockstep
         /// <summary>
         /// Calculated hash for the current tick
         /// </summary>
-        public ulong hashForTheCurrentTick; // maybe can be deleted
+        public NativeList<ulong> hashesForTheCurrentTick;
 
         /// <summary>
         /// Queue of RPCs that are received from the server with all clients inputs for a given tick.
@@ -146,6 +146,7 @@ namespace DeterministicLockstep
     /// </summary>
     public struct DeterministicClientComponent : IComponentData
     {
+        public uint randomSeed;
         public DeterministicClientWorkingMode deterministicClientWorkingMode;
     }
     

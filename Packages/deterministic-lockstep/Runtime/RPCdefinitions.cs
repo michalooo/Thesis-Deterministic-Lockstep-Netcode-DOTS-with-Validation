@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Networking.Transport;
 using UnityEngine;
@@ -25,7 +26,8 @@ namespace DeterministicLockstep
         StartDeterministicGameSimulation,
         BroadcastTickDataToClients,
         BroadcastPlayerTickDataToServer,
-        PlayersDesynchronizedMessage
+        PlayersDesynchronizedMessage,
+        // PlayerConfiguration,
     }
 
     /// <summary>
@@ -86,6 +88,8 @@ namespace DeterministicLockstep
         /// ID for this specific connection so we can set GhostOwnerIsLocal
         /// </summary>
         public int ThisConnectionNetworkID { get; set; }
+        
+        public uint SeedForPlayerRandomActions { get; set; }
 
         public RpcID GetID => RpcID.StartDeterministicGameSimulation;
 
@@ -106,6 +110,7 @@ namespace DeterministicLockstep
             writer.WriteInt(TickRate);
             writer.WriteInt(TicksOfForcedInputLatency);
             writer.WriteInt(ThisConnectionNetworkID);
+            writer.WriteUInt(SeedForPlayerRandomActions);
 
             if (writer.HasFailedWrites)
             {
@@ -132,6 +137,7 @@ namespace DeterministicLockstep
             TickRate = reader.ReadInt();
             TicksOfForcedInputLatency = reader.ReadInt();
             ThisConnectionNetworkID = reader.ReadInt();
+            SeedForPlayerRandomActions = reader.ReadUInt();
 
             Debug.Log("RPC from server about starting the game received");
         }
@@ -145,8 +151,7 @@ namespace DeterministicLockstep
         public PongInputs PongGameInputs;
         public int PlayerNetworkID { get; set; } // don't needed since server knows the connection ID?
         public int FutureTick { get; set; }
-        public ulong HashForFutureTick { get; set; }
-
+        public NativeList<ulong> HashesForFutureTick { get; set; } // empty, size(1) or size(systems) depending on the determinism check option
         public RpcID GetID => RpcID.BroadcastPlayerTickDataToServer;
 
         public void Serialize(NetworkDriver mDriver, NetworkConnection connection,
@@ -161,17 +166,18 @@ namespace DeterministicLockstep
             writer.WriteInt(PlayerNetworkID);
             writer.WriteInt(FutureTick);
             
-            if (Input.GetKey(KeyCode.R)) // testing purposes
+            var hashesSize = HashesForFutureTick.Length;
+            writer.WriteInt(hashesSize);
+            foreach (var hash in HashesForFutureTick)
             {
-                writer.WriteULong(HashForFutureTick +
-                                  (ulong) Random.Range(0, 100)); // modify the position instead just the hash?
+                writer.WriteULong(hash);
             }
-            else writer.WriteULong(HashForFutureTick);
-
+            Debug.LogWarning("size: " + hashesSize);
+            
             if (writer.HasFailedWrites)
             {
                 mDriver.AbortSend(writer);
-                throw new InvalidOperationException("Driver has failed writes.: " + writer.Capacity);
+                throw new InvalidOperationException("Driver has failed writes. Capacity: " + writer.Capacity + " Length: " + writer.Length + " Hashes: " + hashesSize);
             }
             
             mDriver.EndSend(writer);
@@ -184,7 +190,13 @@ namespace DeterministicLockstep
             PongGameInputs.DeserializeInputs(ref reader);
             PlayerNetworkID = reader.ReadInt();
             FutureTick = reader.ReadInt();
-            HashForFutureTick = reader.ReadULong();
+            
+            var hashesSize = reader.ReadInt();
+            HashesForFutureTick = new NativeList<ulong>(hashesSize, Allocator.Persistent);
+            for (var i = 0; i < hashesSize; i++)
+            {
+                HashesForFutureTick.Add(reader.ReadULong());
+            }
             
             Debug.Log("RPC received in the server with player data update");
         }
@@ -269,4 +281,53 @@ namespace DeterministicLockstep
             Debug.Log("RPC from server with players data update received");
         }
     }
+    
+    // /// <summary>
+    // /// Struct that is being send by the clients only at the beginning (after connecting to a server) with their specific informations
+    // /// </summary>
+    // public struct RpcPlayerConfiguration : INetcodeRPC
+    // {
+    //     public NativeList<FixedString64Bytes> DeterministicSystemNamesDebug { get; set; } // used to mark specific systems when indeterministic
+    //     public RpcID GetID => RpcID.PlayerConfiguration;
+    //
+    //     public void Serialize(NetworkDriver mDriver, NetworkConnection connection,
+    //         NetworkPipeline? pipeline = null)
+    //     {
+    //         DataStreamWriter writer;
+    //         if (!pipeline.HasValue) mDriver.BeginSend(connection, out writer);
+    //         else mDriver.BeginSend(pipeline.Value, connection, out writer);
+    //
+    //         writer.WriteByte((byte)GetID);
+    //         
+    //         var systemAmount = DeterministicSystemNamesDebug.Length;
+    //         writer.WriteInt(systemAmount);
+    //         foreach (var systemName in DeterministicSystemNamesDebug)
+    //         {
+    //             writer.WriteFixedString64(systemName);
+    //         }
+    //         
+    //         if (writer.HasFailedWrites)
+    //         {
+    //             mDriver.AbortSend(writer);
+    //             throw new InvalidOperationException("Driver has failed writes. Capacity: " + writer.Capacity + " Length: " + writer.Length + " Names: " + systemAmount);
+    //         }
+    //         
+    //         mDriver.EndSend(writer);
+    //         Debug.Log("RPC send from client with client config values");
+    //     }
+    //
+    //     public void Deserialize(ref DataStreamReader reader)
+    //     {
+    //         reader.ReadByte(); // ID
+    //         
+    //         var systemsAmount = reader.ReadInt();
+    //         DeterministicSystemNamesDebug = new NativeList<FixedString64Bytes>(systemsAmount, Allocator.Persistent);
+    //         for (var i = 0; i < systemsAmount; i++)
+    //         {
+    //             DeterministicSystemNamesDebug.Add(reader.ReadFixedString64());
+    //         }
+    //         
+    //         Debug.Log("RPC received in the server with player data update");
+    //     }
+    // }
 }

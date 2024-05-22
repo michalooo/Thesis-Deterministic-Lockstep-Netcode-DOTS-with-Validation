@@ -19,7 +19,7 @@ namespace DeterministicLockstep
         public DeterminismHashCalculationOption hashCalculationOption;
 
         public bool isInGame;
-        public bool isSimulationCatchingUpOrRollingBack;
+        public bool isSimulationCatchingUpOrRollingBack; // need to be set
 
         public int packetDelayMs;
         public int packetJitterMs;

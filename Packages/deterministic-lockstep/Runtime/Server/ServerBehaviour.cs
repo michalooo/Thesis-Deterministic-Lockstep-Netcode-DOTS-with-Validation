@@ -6,6 +6,7 @@ using Unity.Entities;
 using Unity.Networking.Transport;
 using Unity.Networking.Transport.Utilities;
 using UnityEngine;
+using Random = System.Random;
 
 namespace DeterministicLockstep
 {
@@ -39,7 +40,7 @@ namespace DeterministicLockstep
         /// <summary>
         /// List of hashes for each tick
         /// </summary>
-        private Dictionary<ulong, NativeList<ulong>> _everyTickHashBuffer; // here if we will point to indeterminism system we also don't need to store all of them (needs to be confirmed)
+        private Dictionary<ulong, NativeList<NativeList<ulong>>> _everyTickHashBuffer; // here if we will point to indeterminism system we also don't need to store all of them (needs to be confirmed)
 
         /// <summary>
         /// Array of all possible connection slots in the game and players that are already connected
@@ -49,7 +50,7 @@ namespace DeterministicLockstep
         /// <summary>
         /// Specifies the last tick received
         /// </summary>
-        private int _lastTickReceivedFromServer;
+        private int _lastTickReceivedFromClient;
 
         protected override void OnCreate()
         {
@@ -129,7 +130,7 @@ namespace DeterministicLockstep
             _mNetworkIDs = new NativeList<int>(SystemAPI.GetSingleton<DeterministicSettings>().allowedConnectionsPerGame, Allocator.Persistent);
 
             _everyTickInputBuffer = new Dictionary<ulong, NativeList<RpcBroadcastPlayerTickDataToServer>>();
-            _everyTickHashBuffer = new Dictionary<ulong, NativeList<ulong>>();
+            _everyTickHashBuffer = new Dictionary<ulong, NativeList<NativeList<ulong>>>();
             
             _mDriver = NetworkDriver.Create();
             _reliableSimulationPipeline =
@@ -194,6 +195,9 @@ namespace DeterministicLockstep
                 case RpcID.PlayersDesynchronizedMessage:
                     Debug.LogError("PlayersDesynchronizedMessage should never be received by the server");
                     break;
+                // case RpcID.PlayerConfiguration:
+                //     D
+                //     break;
                 default:
                     Debug.LogError("Received RPC ID not proceeded by the server: " + id);
                     break;
@@ -224,12 +228,13 @@ namespace DeterministicLockstep
         private void SendRPCtoStartGame()
         {
             // register OnGameStart method where they can be used to spawn entities, separation between user code and package code
-
+            Random rng = new Random();
             RpcStartDeterministicSimulation rpc = new RpcStartDeterministicSimulation
             {
                 PlayersNetworkIDs = _mNetworkIDs,
                 TickRate = SystemAPI.GetSingleton<DeterministicSettings>().simulationTickRate,
-                TicksOfForcedInputLatency = SystemAPI.GetSingleton<DeterministicSettings>().ticksAhead
+                TicksOfForcedInputLatency = SystemAPI.GetSingleton<DeterministicSettings>().ticksAhead,
+                SeedForPlayerRandomActions = (uint)rng.Next(1, int.MaxValue)
             };
 
             for (ushort i = 0; i < _connectedPlayers.Length; i++)
@@ -253,7 +258,7 @@ namespace DeterministicLockstep
             {
                 NetworkIDs = networkIDs,
                 PlayersPongGameInputs = playerInputs,
-                SimulationTick = _lastTickReceivedFromServer
+                SimulationTick = _lastTickReceivedFromClient
             };
 
             foreach (var connectedPlayer in _connectedPlayers.Where(connectedPlayer => connectedPlayer.IsCreated))
@@ -283,6 +288,8 @@ namespace DeterministicLockstep
         private void 
             SaveTheData(RpcBroadcastPlayerTickDataToServer rpc, NetworkConnection connection)
         {
+            Debug.Log("Data received: " + " Player network id --> " + rpc.PlayerNetworkID + " tick to apply --> " + rpc.FutureTick + 
+                      " hash to apply size --> " + rpc.HashesForFutureTick.Length + " inputs to apply --> " + rpc.PongGameInputs.verticalInput);
             for (var i = 0; i < _connectedPlayers.Length; i++)
             {
                 if (!_connectedPlayers[i].Equals(connection)) continue;
@@ -294,7 +301,7 @@ namespace DeterministicLockstep
             
                 if (!_everyTickHashBuffer.ContainsKey((ulong) rpc.FutureTick))
                 {
-                    _everyTickHashBuffer[(ulong) rpc.FutureTick] = new NativeList<ulong>(Allocator.Persistent);
+                    _everyTickHashBuffer[(ulong) rpc.FutureTick] = new NativeList<NativeList<ulong>>(Allocator.Persistent);
                 }
             
                 // This tick already exists in the buffer. Check if the player already has inputs saved for this tick. No need to check for hash in that case because those should be send together and hash can be the same (if everything is correct) so we will get for example 3 same hashes
@@ -306,10 +313,16 @@ namespace DeterministicLockstep
                         return; // Stop executing the function here, since we don't want to add the new inputData
                     }
                 }
+                
+                NativeList<ulong> playerHashes = new NativeList<ulong>(Allocator.Persistent);
+                foreach (var hash in rpc.HashesForFutureTick)
+                {
+                    playerHashes.Add(hash);
+                }
             
                 _everyTickInputBuffer[(ulong) rpc.FutureTick].Add(rpc);
-                _everyTickHashBuffer[(ulong) rpc.FutureTick].Add(rpc.HashForFutureTick);
-                _lastTickReceivedFromServer = rpc.FutureTick;
+                _everyTickHashBuffer[(ulong) rpc.FutureTick].Add(playerHashes);
+                _lastTickReceivedFromClient = rpc.FutureTick;
             }
         }
 
@@ -370,40 +383,59 @@ namespace DeterministicLockstep
         private void CheckIfAllDataReceivedAndSendToClients()
         {
             var desynchronized = false;
-            if (_everyTickInputBuffer[(ulong) _lastTickReceivedFromServer].Length == GetActiveConnectionCount() &&
-                _everyTickHashBuffer[(ulong) _lastTickReceivedFromServer].Length ==
+            
+            if (_everyTickInputBuffer[(ulong) _lastTickReceivedFromClient].Length == GetActiveConnectionCount() &&
+                _everyTickHashBuffer[(ulong) _lastTickReceivedFromClient].Length ==
                 GetActiveConnectionCount()) // because of different order that we can received those inputs we are checking for last received input
             {
                 // We've received a full set of data for this tick, so process it
                 var networkIDs = new NativeList<int>(Allocator.Temp);
                 var inputs = new NativeList<PongInputs>(Allocator.Temp);
             
-                foreach (var inputData in _everyTickInputBuffer[(ulong) _lastTickReceivedFromServer])
+                foreach (var inputData in _everyTickInputBuffer[(ulong) _lastTickReceivedFromClient])
                 {
                     networkIDs.Add(inputData.PlayerNetworkID);
                     inputs.Add(inputData.PongGameInputs);
                 }
             
-                // check if every hash is the same. TODO will need some changes regarding determinism per system
-                var firstHash = _everyTickHashBuffer[(ulong) _lastTickReceivedFromServer][0];
-                Debug.Log("hash: " + firstHash);
-                for (var i = 1; i < _everyTickHashBuffer[(ulong) _lastTickReceivedFromServer].Length; i++)
+                //TODO add name of the system
+                // Get the number of hashes (assuming all players have the same number of hashes)
+                var numHashesPerPlayer = _everyTickHashBuffer[(ulong)_lastTickReceivedFromClient][0].Length;
+
+                // Iterate over each hash index
+                for (var systemHash = 0; systemHash < numHashesPerPlayer; systemHash++)
                 {
-                    Debug.Log("hash: " + _everyTickHashBuffer[(ulong) _lastTickReceivedFromServer][i]);
-                    if (firstHash == _everyTickHashBuffer[(ulong) _lastTickReceivedFromServer][i]) continue;
-            
-                    // Hashes are not equal - handle this scenario
-                    Debug.LogError("DESYNCHRONIZATION HAPPENED! HASHES ARE NOT EQUAL! " + "Ticks: " +
-                                   _lastTickReceivedFromServer + " Hashes: " + firstHash + " and " +
-                                   _everyTickHashBuffer[(ulong) _lastTickReceivedFromServer][i]);
-                    desynchronized = true;
-                    i = _everyTickHashBuffer[(ulong) _lastTickReceivedFromServer].Length;
+                    // Get the first player's hash at this index
+                    var firstPlayerHash = _everyTickHashBuffer[(ulong)_lastTickReceivedFromClient][0][systemHash];
+
+                    // Iterate over each player's hashes at this index
+                    for (var player = 1; player < _everyTickHashBuffer[(ulong)_lastTickReceivedFromClient].Length; player++)
+                    {
+                        var currentPlayerHash = _everyTickHashBuffer[(ulong)_lastTickReceivedFromClient][player][systemHash];
+
+                        // If the hashes are not equal, log an error and set desynchronized to true
+                        if (firstPlayerHash != currentPlayerHash)
+                        {
+                            Debug.LogError("DESYNCHRONIZATION HAPPENED! HASHES ARE NOT EQUAL! " + "Ticks: " +
+                                           _lastTickReceivedFromClient + " Hashes: " + firstPlayerHash + " and " +
+                                           currentPlayerHash + " System number: " + systemHash);
+                            desynchronized = true;
+                            break;
+                        }
+                    }
+
+                    // If a desynchronization was found, break out of the loop
+                    if (desynchronized)
+                    {
+                        break;
+                    }
                 }
+                
             
                 if (!desynchronized)
                 {
-                    Debug.Log("All hashes are equal: " + firstHash + ". Number of hashes: " +
-                              _everyTickHashBuffer[(ulong) _lastTickReceivedFromServer].Length + ". Tick: " + _lastTickReceivedFromServer);
+                    Debug.Log("All hashes are equal: " + _everyTickHashBuffer[(ulong)_lastTickReceivedFromClient][0] + ". Number of players: " +
+                              _everyTickHashBuffer[(ulong) _lastTickReceivedFromClient].Length + ". Tick: " + _lastTickReceivedFromClient + " Number of hashes per player: " + _everyTickHashBuffer[(ulong)_lastTickReceivedFromClient][0].Length);
             
                     // Send the RPC to all connections
                     SendRPCWithPlayersInputUpdate(networkIDs, inputs);
@@ -417,11 +449,11 @@ namespace DeterministicLockstep
                 inputs.Dispose();
             
                 // Remove this tick from the buffer, since we're done processing it
-                _everyTickInputBuffer.Remove((ulong) _lastTickReceivedFromServer);
-                _everyTickHashBuffer.Remove((ulong) _lastTickReceivedFromServer);
-                _lastTickReceivedFromServer++;
+                _everyTickInputBuffer.Remove((ulong) _lastTickReceivedFromClient);
+                _everyTickHashBuffer.Remove((ulong) _lastTickReceivedFromClient);
+                _lastTickReceivedFromClient++;
             }
-            else if (_everyTickInputBuffer[(ulong) _lastTickReceivedFromServer].Length > GetActiveConnectionCount())
+            else if (_everyTickInputBuffer[(ulong) _lastTickReceivedFromClient].Length > GetActiveConnectionCount())
             {
                 Debug.LogError("Too many player inputs saved in one tick");
             }

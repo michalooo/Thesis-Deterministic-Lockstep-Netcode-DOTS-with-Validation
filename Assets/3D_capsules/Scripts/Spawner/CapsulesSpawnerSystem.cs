@@ -10,7 +10,7 @@ namespace CapsulesGame
     /// <summary>
     /// System used to spawn the player prefab for the connections that are not spawned yet
     /// </summary>
-    [UpdateInGroup(typeof(GameStateUpdateSystemGroup))]
+    [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     public partial class CapsulesSpawnerSystem : SystemBase
     {

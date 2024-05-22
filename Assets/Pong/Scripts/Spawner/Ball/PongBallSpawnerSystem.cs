@@ -1,32 +1,42 @@
-﻿using Unity.Collections;
-using Unity.Entities;
-using Unity.Networking.Transport;
+﻿using Unity.Entities;
 using Unity.Transforms;
 using UnityEngine;
 using DeterministicLockstep;
 using Unity.Mathematics;
+using Random = System.Random;
 
 namespace PongGame
 {
     /// <summary>
     /// System used to spawn the player prefab for the connections that are not spawned yet
     /// </summary>
-    [UpdateInGroup(typeof(GameStateUpdateSystemGroup))]
+    [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     public partial class PongBallSpawnerSystem : SystemBase
     {
         private int totalBallsSpawned = 0;
         private int totalBallsToSpawn = 600;
         
-        private float minSpeed = 0.5f;
-        private float maxSpeed = 5f;
+        private int minSpeed = 1;
+        private int maxSpeed = 6;
         
-        private float timeBetweenSpawning = 0.01f;
+        private float timeBetweenSpawning = 0.005f;
         private float timeSinceLastSpawn = 0f;
+
+        private uint randomSeedFromServer;
+        private Random random;
+        
         protected override void OnCreate()
         {
             RequireForUpdate<PongBallSpawner>();
             RequireForUpdate<PongInputs>();
+            RequireForUpdate<DeterministicTime>();
+        }
+
+        protected override void OnStartRunning()
+        {
+            randomSeedFromServer = SystemAPI.GetSingleton<DeterministicClientComponent>().randomSeed;
+            random = new Random((int)randomSeedFromServer); // in theory it will allow users to predict the random numbers
         }
 
         protected override void OnUpdate()
@@ -46,7 +56,7 @@ namespace PongGame
                     });
                     
                     // Generate a random angle in degrees
-                    var angleInDegrees = UnityEngine.Random.Range(0f, 360f);
+                    var angleInDegrees = random.Next(0, 360);
 
                     // Convert the angle to radians
                     var angleInRadians = angleInDegrees * Mathf.Deg2Rad;
@@ -56,7 +66,7 @@ namespace PongGame
                     direction = math.normalize(direction);
 
                     // Generate a random speed
-                    var speed = UnityEngine.Random.Range(minSpeed, maxSpeed);
+                    var speed = random.Next(minSpeed, maxSpeed);
 
                     // Set the velocity of the ball
                     EntityManager.SetComponentData(ball, new Velocity { value = direction * speed });

@@ -8,7 +8,7 @@ using Unity.Transforms;
 namespace PongGame
 {
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
-    [UpdateInGroup(typeof(GameStateUpdateSystemGroup))]
+    [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
     [BurstCompile]
     public partial struct BallMovementSystem : ISystem
     {

@@ -1,3 +1,4 @@
+using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
 
@@ -30,11 +31,15 @@ namespace DeterministicLockstep
                     PongGameInputs = capsulesInputs,
                     PlayerNetworkID = owner.ValueRO.connectionNetworkId,
                     FutureTick = deterministicTime.currentClientTickToSend,
-                    HashForFutureTick = deterministicTime.hashForTheCurrentTick
+                    HashesForFutureTick = deterministicTime.hashesForTheCurrentTick
                 };
 
                 rpc.Serialize(connectionReference.ValueRO.driverReference, connectionReference.ValueRO.connectionReference,
                     connectionReference.ValueRO.reliableSimulationPipelineReference);
+                
+                deterministicTime.hashesForTheCurrentTick.Dispose();
+                deterministicTime.hashesForTheCurrentTick = new NativeList<ulong>(Allocator.Persistent);
+                SystemAPI.SetSingleton(deterministicTime);
             }
         }
     }

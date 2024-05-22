@@ -1,4 +1,6 @@
+using System;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Core;
 using Unity.Entities;
 using UnityEngine;
@@ -46,15 +48,21 @@ namespace DeterministicLockstep
             }
         }
 
-        // protected override void OnUpdate()
-        // {
-        //     // if (RateManager.ShouldGroupUpdate(this))
-        //     // {
-        //     //     // CheckGroupCreated();
-        //     //     // UpdateAllGroupSystems(); TODO implement those to allow for inserting deterministic check after each system
-        //     //     base.OnUpdate();
-        //     // }
-        // }
+        protected override void OnUpdate()
+        {
+            if (SystemAPI.GetSingleton<DeterministicSettings>().hashCalculationOption !=
+                DeterminismHashCalculationOption.PerSystem)
+            {
+                base.OnUpdate();
+            }
+            else
+            {
+                while (RateManager.ShouldGroupUpdate(this))
+                {
+                    UpdateAllGroupSystems(this);
+                }
+            }
+        }
 
         public struct DeterministicFixedStepRateManager : IRateManager
         {
@@ -77,8 +85,11 @@ namespace DeterministicLockstep
                 var deterministicTime = _deterministicTimeQuery.GetSingletonRW<DeterministicTime>();
                 var localConnectionEntity = _connectionQuery.ToEntityArray(Allocator.Temp);
 
-                if (localConnectionEntity.Length == 0) return false; // before rpc with start game was received
-                
+                if (localConnectionEntity.Length == 0)
+                {
+                    return false; // before rpc with start game was received
+                }
+
                 deterministicTime.ValueRW.timeLeftToSendNextTick -= deltaTime;
                 if (deterministicTime.ValueRO.timeLeftToSendNextTick <= 0) // We are ready to try to send the next tick
                 {
@@ -92,7 +103,7 @@ namespace DeterministicLockstep
                         deterministicTime.ValueRW.timeLeftToSendNextTick =
                             1f / deterministicTime.ValueRO.GameTickRate; // reset the time until next tick
 
-                        
+
                         const float localDeltaTime = 1.0f / 60.0f;
                         deterministicTime.ValueRW.deterministicLockstepElapsedTime += deltaTime;
                         deterministicTime.ValueRW.numTimesTickedThisFrame++;
@@ -102,13 +113,13 @@ namespace DeterministicLockstep
                         // Debug.Log("tick: " + deterministicTime.ValueRO.currentSimulationTick + " tick to send: " + deterministicTime.ValueRO.currentClientTickToSend + " how many ticked: " + deterministicTime.ValueRO.numTimesTickedThisFrame + " how many ticks to send ahead: " + deterministicTime.ValueRO.forcedInputLatencyDelay + " How many stored ticks we have: " + deterministicTime.ValueRO.storedIncomingTicksFromServer.Count);
                         return true;
                     }
-                    
+
                     if (deterministicTime.ValueRO.numTimesTickedThisFrame <
                         10) // restriction to prevent too expensive loop
                     {
                         var hasInputsForThisTick = deterministicTime.ValueRO.storedIncomingTicksFromServer.Count >=
                                                    deterministicTime.ValueRO.forcedInputLatencyDelay - 1;
-                        
+
                         if (hasInputsForThisTick)
                         {
                             if (deterministicTime.ValueRO.deterministicLockstepElapsedTime <
@@ -122,7 +133,7 @@ namespace DeterministicLockstep
                                 // first update the component data before we will remove the info from the array to make space for more
                                 UpdateComponentsData(deterministicTime.ValueRW.storedIncomingTicksFromServer.Dequeue(),
                                     group); // it will remove it so no reason for dispose method for arrays?
-                                
+
                                 group.EntityManager.SetComponentEnabled<PlayerInputDataToUse>(localConnectionEntity[0],
                                     true);
 
@@ -132,7 +143,7 @@ namespace DeterministicLockstep
                                 group.World.PushTime(
                                     new TimeData(deterministicTime.ValueRO.deterministicLockstepElapsedTime,
                                         localDeltaTime));
-                                
+
                                 // Debug.Log("tick: " + deterministicTime.ValueRO.currentSimulationTick + " tick to send: " + deterministicTime.ValueRO.currentClientTickToSend + " how many ticked: " + deterministicTime.ValueRO.numTimesTickedThisFrame + " how many ticks to send ahead: " + deterministicTime.ValueRO.forcedInputLatencyDelay + " How many stored ticks we have: " + deterministicTime.ValueRO.storedIncomingTicksFromServer.Count);
 
                                 return true;
@@ -150,17 +161,18 @@ namespace DeterministicLockstep
                     deterministicTime.ValueRW.timeLeftToSendNextTick =
                         1f / deterministicTime.ValueRO.GameTickRate; // reset the time until next tick
                     deterministicTime.ValueRW.numTimesTickedThisFrame = 0;
-                    
+
                     // Debug.Log("tick: " + deterministicTime.ValueRO.currentSimulationTick + " tick to send: " + deterministicTime.ValueRO.currentClientTickToSend + " how many ticked: " + deterministicTime.ValueRO.numTimesTickedThisFrame + " how many ticks to send ahead: " + deterministicTime.ValueRO.forcedInputLatencyDelay + " How many stored ticks we have: " + deterministicTime.ValueRO.storedIncomingTicksFromServer.Count);
 
                     return false;
                 }
-                
+
                 //check if we already pushed time this frame
                 for (int i = 0; i < deterministicTime.ValueRO.numTimesTickedThisFrame; i++)
                 {
                     group.World.PopTime();
                 }
+
                 deterministicTime.ValueRW.numTimesTickedThisFrame = 0;
                 return false;
             }
@@ -175,7 +187,6 @@ namespace DeterministicLockstep
                 UpdateComponentsData(RpcBroadcastTickDataToClients rpc,
                     ComponentSystemGroup group) // When do I want to refresh the screen? When input from the server arrives or together with the tick??
             {
-                // NativeQueue<>
                 var networkIDs = rpc.NetworkIDs;
                 var inputs = rpc.PlayersPongGameInputs;
 
@@ -205,68 +216,38 @@ namespace DeterministicLockstep
                     group.EntityManager.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity, true);
                 }
             }
-
-            // private void CheckGroupCreated(ComponentSystemGroup group)
-            // {
-            //     if (!group.Created)
-            //         throw new InvalidOperationException(
-            //             $"Group of type {group.GetType()} has not been created, either the derived class forgot to call base.OnCreate(), or it has been destroyed");
-            // }
-
-            // void UpdateAllGroupSystems(ComponentSystemGroup group)
-            // {
-            //     if (group.m_systemSortDirty)
-            //         SortSystems();
-            //
-            //     // Update all unmanaged and managed systems together, in the correct sort order.
-            //     // The master update list contains indices for both managed and unmanaged systems.
-            //     // Negative values indicate an index in the unmanaged system list.
-            //     // Positive values indicate an index in the managed system list.
-            //     var world = World.Unmanaged;
-            //     ref var worldImpl = ref world.GetImpl();
-            //
-            //     // Cache the update list length before updating; any new systems added mid-loop will change the length and
-            //     // should not be processed until the subsequent group update, to give SortSystems() a chance to run.
-            //     int updateListLength = m_MasterUpdateList.Length;
-            //     for (int i = 0; i < updateListLength; ++i)
-            //     {
-            //         try
-            //         {
-            //             var index = m_MasterUpdateList[i];
-            //
-            //             if (!index.IsManaged)
-            //             {
-            //                 // Update unmanaged (burstable) code.
-            //                 var handle = m_UnmanagedSystemsToUpdate[index.Index];
-            //                 worldImpl.UpdateSystem(handle);
-            //             }
-            //             else
-            //             {
-            //                 // Update managed code.
-            //                 var sys = m_managedSystemsToUpdate[index.Index];
-            //                 sys.Update();
-            //             }
-            //         }
-            //         catch (Exception e)
-            //         {
-            //             Debug.LogException(e);
-            //         }
-            //
-            //         if (World.QuitUpdate)
-            //             break;
-            //     }
-            // }
         }
-    }
 
+        void UpdateAllGroupSystems(ComponentSystemGroup group)
+        {
+            // assumption that we are talking only about unmanaged systems
+            var systems = group.GetAllSystems();
+            var determinismCheckSystem = group.World.GetExistingSystem<DeterminismCheckSystem>();
 
-    /// <summary>
-    /// System group that is used for any game logic stuff (can be ticked when rolling back or catching up).
-    /// </summary>
-    [UpdateInGroup(typeof(DeterministicSimulationSystemGroup), OrderFirst = true)]
-    [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
-    public partial class GameStateUpdateSystemGroup : ComponentSystemGroup
-    {
+            for (int i=0; i<systems.Length; i++)
+            {
+                var system = systems[i];
+                try
+                {
+                    if (i <= systems.Length - 4)
+                    {
+                        system.Update(World.Unmanaged);
+                        determinismCheckSystem.Update(World.Unmanaged);
+                    }
+                    else
+                    {
+                        system.Update(World.Unmanaged);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                }
+
+                if (World.QuitUpdate)
+                    break;
+            }
+        }
     }
 
     public partial struct ManualSystemTicking : ISystem
@@ -277,7 +258,6 @@ namespace DeterministicLockstep
 
             world.GetOrCreateSystem<DeterministicSimulationSystemGroup>();
             world.GetOrCreateSystem<ConnectionHandleSystemGroup>();
-            world.GetOrCreateSystem<GameStateUpdateSystemGroup>();
             world.GetOrCreateSystem<UserSystemGroup>();
         }
     }

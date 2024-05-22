@@ -8,7 +8,7 @@ using Unity.Transforms;
 namespace PongGame
 {
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
-    [UpdateInGroup(typeof(GameStateUpdateSystemGroup))]
+    [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
     public partial struct PongBallDestructionSystem : ISystem
     {
         private EntityQuery ballsQuery;

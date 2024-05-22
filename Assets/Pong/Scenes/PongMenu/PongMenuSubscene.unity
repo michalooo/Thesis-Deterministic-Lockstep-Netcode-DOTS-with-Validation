@@ -154,9 +154,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   simulationTickRate: 30
   allowedConnectionsPerGame: 2
-  ticksAhead: 4
+  ticksAhead: 9
   serverPort: 7979
-  hashCalculationOption: 2
+  hashCalculationOption: 0
   packetDelayMs: 0
   packetJitterMs: 0
   packetDropInterval: 0

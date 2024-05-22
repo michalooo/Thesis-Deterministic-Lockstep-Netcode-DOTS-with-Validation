@@ -5,12 +5,11 @@ using Unity.Entities;
 using Unity.Jobs;
 using Unity.Transforms;
 using Unity.Mathematics;
-using UnityEngine;
 
 namespace PongGame
 {
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
-    [UpdateInGroup(typeof(GameStateUpdateSystemGroup))]
+    [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
     // [UpdateAfter(typeof(BallMovementSystem))]
     [BurstCompile]
     public partial struct BallBounceSystem : ISystem

@@ -133,8 +133,11 @@ namespace DeterministicLockstep
                     determinismSystemGroup.Enabled = false;
                     break;
                 case RpcID.BroadcastPlayerTickDataToServer:
-                    Debug.LogError("BroadcastPlayerTickDataToServer should never be received by the server");
+                    Debug.LogError("BroadcastPlayerTickDataToServer should never be received by the client");
                     break;
+                // case RpcID.PlayerConfiguration:
+                //     Debug.LogError("PlayerConfiguration should never be received by the client");
+                //     break;
                 default:
                     Debug.LogError("Received RPC ID not proceeded by the client: " + id);
                     break;
@@ -178,14 +181,33 @@ namespace DeterministicLockstep
             deterministicTime.ValueRW.timeLeftToSendNextTick = 1f / rpc.TickRate;
             deterministicTime.ValueRW.currentSimulationTick = 0;
             deterministicTime.ValueRW.currentClientTickToSend = 0;
-            deterministicTime.ValueRW.hashForTheCurrentTick = 0;
+            deterministicTime.ValueRW.hashesForTheCurrentTick = new NativeList<ulong>(Allocator.Persistent);
             deterministicTime.ValueRW.numTimesTickedThisFrame = 0;
             deterministicTime.ValueRW.realTime = 0;
             deterministicTime.ValueRW.deterministicLockstepElapsedTime = 0;
 
             var client = SystemAPI.GetSingleton<DeterministicClientComponent>();
             client.deterministicClientWorkingMode = DeterministicClientWorkingMode.SendData;
+            client.randomSeed = rpc.SeedForPlayerRandomActions;
             SystemAPI.SetSingleton(client);
+            
+            // foreach (var connectionReference in SystemAPI
+            //              .Query<RefRO<NetworkConnectionReference>>()
+            //              .WithAll<GhostOwnerIsLocal>())
+            // {
+            //     Debug.Log("Sending player configuration to server");
+            //     
+            //     var deterministicSystemNames = new NativeList<FixedString32Bytes>(Allocator.Temp);
+            //     var deterministicSystemGroup = World.
+            //     
+            //     var configRPC = new RpcPlayerConfiguration
+            //     {
+            //         DeterministicSystemNamesDebug = 
+            //     };
+            //
+            //     configRPC.Serialize(connectionReference.ValueRO.driverReference, connectionReference.ValueRO.connectionReference,
+            //         connectionReference.ValueRO.reliableSimulationPipelineReference);
+            // }
         }
 
         /// <summary>

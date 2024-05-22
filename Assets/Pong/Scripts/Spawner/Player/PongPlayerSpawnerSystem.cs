@@ -1,6 +1,5 @@
 ﻿using Unity.Collections;
 using Unity.Entities;
-using Unity.Networking.Transport;
 using Unity.Transforms;
 using UnityEngine;
 using DeterministicLockstep;
@@ -11,7 +10,7 @@ namespace PongGame
     /// <summary>
     /// System used to spawn the player prefab for the connections that are not spawned yet
     /// </summary>
-    [UpdateInGroup(typeof(GameStateUpdateSystemGroup))]
+    [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     public partial class PongPlayerSpawnerSystem : SystemBase
     {
@@ -33,7 +32,7 @@ namespace PongGame
 
                 commandBuffer.AddComponent<PlayerSpawned>(connectionEntity);
                 var player = commandBuffer.Instantiate(prefab);
-                commandBuffer.AddComponent(connectionEntity, new CommandTarget() { connectionCommandsTargetEntity = player }); // is it necessery for the package? This is user implementation
+                commandBuffer.AddComponent(connectionEntity, new CommandTarget() { connectionCommandsTargetEntity = player }); // is it necessary for the package? This is user implementation
 
                 if (ghostOwner.ValueRO.connectionNetworkId % 2 == 0)
                 {
