@@ -23,7 +23,7 @@
                 {
                     verticalInput = Input.GetKey(KeyCode.S) ? -1 : Input.GetKey(KeyCode.W) ? 1 : 0;
                 }
-                else if (World.Name == "ClientWorld1")
+                else if (World.Name == "ClientWorld1" || World.Name == "ClientWorld2")
                 {
                     verticalInput = Input.GetKey(KeyCode.DownArrow) ? -1 : Input.GetKey(KeyCode.UpArrow) ? 1 : 0;
                 }

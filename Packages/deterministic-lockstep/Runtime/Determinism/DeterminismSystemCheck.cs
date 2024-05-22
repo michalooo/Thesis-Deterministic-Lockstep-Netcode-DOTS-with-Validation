@@ -2,6 +2,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
+using UnityEngine;
 
 namespace DeterministicLockstep
 {
@@ -53,7 +54,7 @@ namespace DeterministicLockstep
             ulong hash = 0;
             foreach (var result in _resultsArray)
                 hash = TypeHash.CombineFNV1A64(hash, result);
-
+            
             // // Save the results for the future
             // var currentTick = _everyTickHashBuffer.Count + 1;
             // _everyTickHashBuffer[currentTick] = hash;

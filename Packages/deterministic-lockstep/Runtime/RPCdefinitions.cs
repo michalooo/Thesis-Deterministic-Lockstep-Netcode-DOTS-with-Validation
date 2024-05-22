@@ -172,7 +172,6 @@ namespace DeterministicLockstep
             {
                 writer.WriteULong(hash);
             }
-            Debug.LogWarning("size: " + hashesSize);
             
             if (writer.HasFailedWrites)
             {

@@ -288,8 +288,22 @@ namespace DeterministicLockstep
         private void 
             SaveTheData(RpcBroadcastPlayerTickDataToServer rpc, NetworkConnection connection)
         {
+            string playerArrivingHashes = "";
+
+            for (var i = 0;
+                 i < rpc.HashesForFutureTick.Length;
+                 i++)
+            {
+                    // Append the current hash to the allHashes string
+                    playerArrivingHashes +=
+                        rpc.HashesForFutureTick[i] +
+                        ", ";
+                
+            }
+            
             Debug.Log("Data received: " + " Player network id --> " + rpc.PlayerNetworkID + " tick to apply --> " + rpc.FutureTick + 
-                      " hash to apply size --> " + rpc.HashesForFutureTick.Length + " inputs to apply --> " + rpc.PongGameInputs.verticalInput);
+                      " hash to apply --> " + playerArrivingHashes + " inputs to apply --> " + rpc.PongGameInputs.verticalInput);
+            Debug.Log("Connected players: " + _connectedPlayers.Length);
             for (var i = 0; i < _connectedPlayers.Length; i++)
             {
                 if (!_connectedPlayers[i].Equals(connection)) continue;
@@ -315,10 +329,6 @@ namespace DeterministicLockstep
                 }
                 
                 NativeList<ulong> playerHashes = new NativeList<ulong>(Allocator.Persistent);
-                foreach (var hash in rpc.HashesForFutureTick)
-                {
-                    playerHashes.Add(hash);
-                }
             
                 _everyTickInputBuffer[(ulong) rpc.FutureTick].Add(rpc);
                 _everyTickHashBuffer[(ulong) rpc.FutureTick].Add(playerHashes);
@@ -416,9 +426,28 @@ namespace DeterministicLockstep
                         // If the hashes are not equal, log an error and set desynchronized to true
                         if (firstPlayerHash != currentPlayerHash)
                         {
+                            string allHashes = "";
+
+                            for (var i = 0;
+                                 i < _everyTickHashBuffer[(ulong)_lastTickReceivedFromClient].Length;
+                                 i++)
+                            {
+                                // Iterate over each hash for the current player
+                                for (var hashIndex = 0;
+                                     hashIndex < _everyTickHashBuffer[(ulong)_lastTickReceivedFromClient][i]
+                                         .Length;
+                                     hashIndex++)
+                                {
+                                    // Append the current hash to the allHashes string
+                                    allHashes +=
+                                        _everyTickHashBuffer[(ulong)_lastTickReceivedFromClient][i][hashIndex] +
+                                        ", ";
+                                }
+                            }
+                            
                             Debug.LogError("DESYNCHRONIZATION HAPPENED! HASHES ARE NOT EQUAL! " + "Ticks: " +
                                            _lastTickReceivedFromClient + " Hashes: " + firstPlayerHash + " and " +
-                                           currentPlayerHash + " System number: " + systemHash);
+                                           currentPlayerHash + " System number: " + systemHash + ". All hashes: " + allHashes);
                             desynchronized = true;
                             break;
                         }
@@ -434,7 +463,26 @@ namespace DeterministicLockstep
             
                 if (!desynchronized)
                 {
-                    Debug.Log("All hashes are equal: " + _everyTickHashBuffer[(ulong)_lastTickReceivedFromClient][0] + ". Number of players: " +
+                    string allHashes = "";
+
+                    for (var i = 0;
+                         i < _everyTickHashBuffer[(ulong)_lastTickReceivedFromClient].Length;
+                         i++)
+                    {
+                        // Iterate over each hash for the current player
+                        for (var hashIndex = 0;
+                             hashIndex < _everyTickHashBuffer[(ulong)_lastTickReceivedFromClient][i]
+                                 .Length;
+                             hashIndex++)
+                        {
+                            // Append the current hash to the allHashes string
+                            allHashes +=
+                                _everyTickHashBuffer[(ulong)_lastTickReceivedFromClient][i][hashIndex] +
+                                ", ";
+                        }
+                    }
+                    
+                    Debug.Log("All hashes are equal: " + allHashes + ". Number of players: " +
                               _everyTickHashBuffer[(ulong) _lastTickReceivedFromClient].Length + ". Tick: " + _lastTickReceivedFromClient + " Number of hashes per player: " + _everyTickHashBuffer[(ulong)_lastTickReceivedFromClient][0].Length);
             
                     // Send the RPC to all connections

@@ -153,7 +153,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   simulationTickRate: 30
-  allowedConnectionsPerGame: 2
+  allowedConnectionsPerGame: 4
   ticksAhead: 9
   serverPort: 7979
   hashCalculationOption: 0
