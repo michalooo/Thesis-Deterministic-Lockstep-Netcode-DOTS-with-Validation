@@ -60,6 +60,15 @@ namespace PongGame
                     {
                         newPositionZ = maxZ;
                     }
+
+                    // TESTING DETERMINISM CHECKS
+                    var newPositionX = targetPosition.x;
+                    if (Input.GetKey(KeyCode.R))
+                    {
+                        newPositionX += Random.Range(-1f, 1f);
+                    }
+                    targetPosition.x = Mathf.Lerp(targetPosition.x, newPositionX, interpolationSpeed);
+                    // END OF TESTING DETERMINISM CHECKS
                     
                     // Interpolate from the current position to the new position
                     targetPosition.z = Mathf.Lerp(targetPosition.z, newPositionZ, interpolationSpeed);

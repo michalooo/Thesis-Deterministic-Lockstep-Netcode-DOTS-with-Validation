@@ -327,11 +327,9 @@ namespace DeterministicLockstep
                         return; // Stop executing the function here, since we don't want to add the new inputData
                     }
                 }
-                
-                NativeList<ulong> playerHashes = new NativeList<ulong>(Allocator.Persistent);
             
                 _everyTickInputBuffer[(ulong) rpc.FutureTick].Add(rpc);
-                _everyTickHashBuffer[(ulong) rpc.FutureTick].Add(playerHashes);
+                _everyTickHashBuffer[(ulong) rpc.FutureTick].Add(rpc.HashesForFutureTick);
                 _lastTickReceivedFromClient = rpc.FutureTick;
             }
         }
@@ -411,6 +409,7 @@ namespace DeterministicLockstep
                 //TODO add name of the system
                 // Get the number of hashes (assuming all players have the same number of hashes)
                 var numHashesPerPlayer = _everyTickHashBuffer[(ulong)_lastTickReceivedFromClient][0].Length;
+                Debug.Log("hush hush: " + _everyTickHashBuffer[(ulong)_lastTickReceivedFromClient][0].IsEmpty);
 
                 // Iterate over each hash index
                 for (var systemHash = 0; systemHash < numHashesPerPlayer; systemHash++)
