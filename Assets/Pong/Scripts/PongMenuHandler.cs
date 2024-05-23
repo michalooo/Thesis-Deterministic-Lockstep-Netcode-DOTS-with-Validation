@@ -43,10 +43,14 @@ namespace PongGame
                         out Entity deterministicSettings2))
                 {
                     EntityManager anotherClientEntityManager = secondClient.EntityManager;
-                    Entity anotherClientDeterministicSettings =
+                    Entity anotherClientDeterministicSettingsEntity =
                         anotherClientEntityManager.CreateEntity(typeof(DeterministicSettings));
-                    anotherClientEntityManager.SetComponentData(anotherClientDeterministicSettings,
-                        entityManager.GetComponentData<DeterministicSettings>(deterministicSettings2));
+                    
+                    var anotherClientSettings = entityManager.GetComponentData<DeterministicSettings>(deterministicSettings2);
+                    anotherClientSettings._serverAddress = Address.text;
+                    anotherClientSettings._serverPort = ushort.Parse(Port.text);
+                    anotherClientEntityManager.SetComponentData(anotherClientDeterministicSettingsEntity,
+                        anotherClientSettings);
                 }
                 else
                 {
@@ -69,9 +73,13 @@ namespace PongGame
 
 
                 EntityManager clientEntityManager = client.EntityManager;
-                Entity clientDeterministicSettings = clientEntityManager.CreateEntity(typeof(DeterministicSettings));
-                clientEntityManager.SetComponentData(clientDeterministicSettings,
-                    entityManager.GetComponentData<DeterministicSettings>(deterministicSettings));
+                Entity clientDeterministicSettingsEntity = clientEntityManager.CreateEntity(typeof(DeterministicSettings));
+                
+                var clientSettings = entityManager.GetComponentData<DeterministicSettings>(deterministicSettings);
+                clientSettings._serverAddress = Address.text;
+                clientSettings._serverPort = ushort.Parse(Port.text);
+                clientEntityManager.SetComponentData(clientDeterministicSettingsEntity,
+                    clientSettings);
             }
             else
             {
@@ -99,9 +107,13 @@ namespace PongGame
             {
                 // Create a new DeterministicSettings entity in the server world and copy the component data
                 EntityManager clientEntityManager = client.EntityManager;
-                Entity clientDeterministicSettings = clientEntityManager.CreateEntity(typeof(DeterministicSettings));
-                clientEntityManager.SetComponentData(clientDeterministicSettings,
-                    entityManager.GetComponentData<DeterministicSettings>(deterministicSettings));
+                Entity clientDeterministicSettingsEntity = clientEntityManager.CreateEntity(typeof(DeterministicSettings));
+                
+                var clientSettings = entityManager.GetComponentData<DeterministicSettings>(deterministicSettings);
+                clientSettings._serverAddress = Address.text;
+                clientSettings._serverPort = ushort.Parse(Port.text);
+                clientEntityManager.SetComponentData(clientDeterministicSettingsEntity,
+                    clientSettings);
             }
             else
             {

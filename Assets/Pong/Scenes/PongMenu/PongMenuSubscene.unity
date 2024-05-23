@@ -156,7 +156,7 @@ MonoBehaviour:
   allowedConnectionsPerGame: 4
   ticksAhead: 5
   serverPort: 7979
-  hashCalculationOption: 1
+  hashCalculationOption: 0
   packetDelayMs: 0
   packetJitterMs: 0
   packetDropInterval: 0
