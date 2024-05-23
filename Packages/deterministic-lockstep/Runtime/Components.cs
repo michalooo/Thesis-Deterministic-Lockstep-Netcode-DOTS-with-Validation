@@ -1,61 +1,50 @@
-﻿using System.Collections.Generic;
-using Unity.Collections;
+﻿using Unity.Collections;
 using Unity.Entities;
 using Unity.Networking.Transport;
 
 namespace DeterministicLockstep
 {
     /// <summary>
-    /// Component used to store the arriving player data for the server
+    /// Enum storing different server states
     /// </summary>
-    public struct StoredTicksAhead : IComponentData
+    public enum DeterministicServerWorkingMode
     {
-        public NativeQueue<RpcPlayersDataUpdate> entries; // be sure that there is no memory leak
-
-        public StoredTicksAhead(bool b) // not possible to have parameterless constructor
-        {
-            entries = new NativeQueue<RpcPlayersDataUpdate>(Allocator.Persistent);
-        }
+        ListenForConnections,
+        RunDeterministicSimulation,
+        None
     }
-
+    
     /// <summary>
-    /// Enableable tag Component used to mark if user input should be send to the server
+    /// Enum storing different client states
     /// </summary>
-    public struct PlayerInputDataToSend : IComponentData, IEnableableComponent {}
-
+    public enum DeterministicClientWorkingMode
+    {
+        Connect,
+        Disconnect,
+        SendData,
+        None
+    }
+    
+    
     /// <summary>
     /// Component used to store the player input data to use for user simulation
     /// </summary>
     public struct PlayerInputDataToUse : IComponentData, IEnableableComponent
     {
         public int playerNetworkId;
-        public CapsulesInputs inputToUse;
+        public PongInputs playerInputToApply;
         
-        public bool playerDisconnected;
+        public bool isPlayerDisconnected;
     }
 
     /// <summary>
-    /// Component used to store information about the ticks and time for the game
-    /// </summary>
-    struct TickRateInfo : IComponentData
-    {
-        public int tickRate;
-        public int tickAheadValue;
-
-        public float delayTime;
-        public int currentSimulationTick; // Received simulation tick from the server
-        public int currentClientTickToSend; // We are sending input for the tick in the future
-        public ulong hashForTheTick;
-    }
-
-    /// <summary>
-    /// Component used to store connection info for every conection
+    /// Component used to store connection info for every connection
     /// </summary>
     public struct NetworkConnectionReference : IComponentData
     {
-        public NetworkDriver driver;
-        public NetworkPipeline reliableSimulatorPipeline;
-        public NetworkConnection connection;
+        public NetworkDriver driverReference;
+        public NetworkPipeline reliableSimulationPipelineReference;
+        public NetworkConnection connectionReference;
     }
 
     /// <summary>
@@ -63,7 +52,7 @@ namespace DeterministicLockstep
     /// </summary>
     public struct GhostOwner : IComponentData
     {
-        public int networkId;
+        public int connectionNetworkId;
     }
 
     /// <summary>
@@ -71,7 +60,7 @@ namespace DeterministicLockstep
     /// </summary>
     public struct CommandTarget : IComponentData
     {
-        public Entity targetEntity;
+        public Entity connectionCommandsTargetEntity;
     }
 
     /// <summary> 
@@ -79,12 +68,123 @@ namespace DeterministicLockstep
     /// </summary>
     public struct GhostOwnerIsLocal : IComponentData, IEnableableComponent
     {
-    } // added to different entites so it may cause desync if comparing amount of components
+    } // added to different entities so it may cause desync if comparing amount of components
 
     /// <summary>
     /// Component used to tag connections for which a player prefab was spawned
     /// </summary>
     public struct PlayerSpawned : IComponentData
     {
+    }
+    
+    /// <summary>
+    /// Component used to store all the time related variables
+    /// </summary>
+    public struct DeterministicTime : IComponentData
+    {
+        /// <summary>
+        /// Variable storing the elapsed time which is used to control system groups
+        /// </summary>
+        public double deterministicLockstepElapsedTime; //seconds same as ElapsedTime
+
+        /// <summary>
+        /// Variable storing the time that has passed since the last frame
+        /// </summary>
+        public float realTime;
+
+        /// <summary>
+        /// Variable storing information of how many ticks we already processed for the current frame
+        /// </summary>
+        public int numTimesTickedThisFrame;
+
+        /// <summary>
+        /// Set constant value of what's the tick rate of the game
+        /// </summary>
+        public int GameTickRate;
+
+        /// <summary>
+        /// Value describing how many ticks ahead is client sending his inputs. This value is taking care of forced input latency (in ticks)
+        /// </summary>
+        public int forcedInputLatencyDelay;
+
+        /// <summary>
+        /// Variable that is used to calculate time before processing next tick
+        /// </summary>
+        public float timeLeftToSendNextTick;
+
+        /// <summary>
+        /// variable that takes count of which tick is being visually processed on the client
+        /// </summary>
+        public int currentSimulationTick;
+
+        /// <summary>
+        /// Variable that takes count of the current tick that we are sending to the server (future tick).
+        /// </summary>
+        public int currentClientTickToSend;
+
+        /// <summary>
+        /// Calculated hash for the current tick
+        /// </summary>
+        public NativeList<ulong> hashesForTheCurrentTick;
+
+        /// <summary>
+        /// Queue of RPCs that are received from the server with all clients inputs for a given tick.
+        /// </summary>
+        public NativeQueue<RpcBroadcastTickDataToClients> storedIncomingTicksFromServer; // be sure that there is no memory leak
+    }
+    
+    /// <summary>
+    /// Component used to mark server state
+    /// </summary>
+    public struct DeterministicServerComponent : IComponentData
+    {
+        public DeterministicServerWorkingMode deterministicServerWorkingMode;
+    }
+    
+    /// <summary>
+    /// Component used to mark client state
+    /// </summary>
+    public struct DeterministicClientComponent : IComponentData
+    {
+        public uint randomSeed;
+        public DeterministicClientWorkingMode deterministicClientWorkingMode;
+    }
+    
+    
+    public struct PongInputs: IComponentData
+    {
+        public int verticalInput;
+
+        public void SerializeInputs(ref DataStreamWriter writer)
+        {
+            writer.WriteInt(verticalInput);
+        }
+
+        public void
+            DeserializeInputs(
+                ref DataStreamReader reader) //question how user can know if the order will be correct? --> Same order as serialization
+        {
+            verticalInput = reader.ReadInt();
+        }
+    }
+    
+    public struct CapsulesInputs: IComponentData
+    {
+        public int horizontalInput;
+        public int verticalInput;
+
+        public void SerializeInputs(ref DataStreamWriter writer)
+        {
+            writer.WriteInt(verticalInput);
+            writer.WriteInt(horizontalInput);
+        }
+    
+        public void
+            DeserializeInputs(ref 
+                DataStreamReader reader) 
+        {
+            verticalInput = reader.ReadInt();
+            horizontalInput = reader.ReadInt();
+        }
     }
 }

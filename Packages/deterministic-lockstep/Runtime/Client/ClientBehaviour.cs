@@ -1,4 +1,5 @@
 using System;
+using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
 using Unity.Networking.Transport;
@@ -14,10 +15,6 @@ namespace DeterministicLockstep
     [UpdateInGroup(typeof(ConnectionHandleSystemGroup))]
     public partial class ClientBehaviour : SystemBase
     {
-        private DeterministicSettings _settings;
-        private Entity _settingsEntity;
-        private const ushort KNetworkPort = 7979;
-
         private NetworkDriver _mDriver;
         private NetworkConnection _mConnection;
         private NetworkSettings _clientSimulatorParameters;
@@ -26,21 +23,24 @@ namespace DeterministicLockstep
         protected override void OnCreate()
         {
             RequireForUpdate<DeterministicSettings>();
+            EntityManager.CreateSingleton(new DeterministicClientComponent()
+            {
+                deterministicClientWorkingMode = DeterministicClientWorkingMode.None
+            });
         }
 
         protected override void OnStartRunning()
         {
-            _settings = SystemAPI.GetSingleton<DeterministicSettings>();
-            _settingsEntity = SystemAPI.GetSingletonEntity<DeterministicSettings>();
+            var settings = SystemAPI.GetSingleton<DeterministicSettings>();
 
             _clientSimulatorParameters = new NetworkSettings();
             _clientSimulatorParameters.WithSimulatorStageParameters(
                 maxPacketCount: 1000,
-                packetDelayMs: _settings.packetDelayMs,
-                packetJitterMs: _settings.packetJitterMs,
-                packetDropInterval: _settings.packetDropInterval,
-                packetDropPercentage: _settings.packetDropPercentage,
-                packetDuplicationPercentage: _settings.packetDuplicationPercentage);
+                packetDelayMs: settings.packetDelayMs,
+                packetJitterMs: settings.packetJitterMs,
+                packetDropInterval: settings.packetDropInterval,
+                packetDropPercentage: settings.packetDropPercentage,
+                packetDuplicationPercentage: settings.packetDuplicationPercentage);
 
             _mDriver = NetworkDriver.Create(_clientSimulatorParameters);
             _reliableSimulatorPipeline =
@@ -54,20 +54,30 @@ namespace DeterministicLockstep
 
         protected override void OnUpdate()
         {
-            if (SystemAPI.IsComponentEnabled<DeterministicClientConnect>(_settingsEntity))
-            {
-                var endpoint = NetworkEndpoint.Parse("127.0.0.1", KNetworkPort); //change to chosen IP
-                _mConnection = _mDriver.Connect(endpoint);
-                SystemAPI.SetComponentEnabled<DeterministicClientConnect>(_settingsEntity, false);
-            }
+            if(SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode == DeterministicClientWorkingMode.None) return;
             
-            if (SystemAPI.IsComponentEnabled<DeterministicClientDisconnect>(_settingsEntity))
+            if (SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode == DeterministicClientWorkingMode.Connect && !_mConnection.IsCreated)
+            {
+                Debug.Log("connecting");
+                if (SystemAPI.TryGetSingleton<DeterministicSettings>(out DeterministicSettings deterministicSettings))
+                {
+                    var endpoint = NetworkEndpoint.Parse(deterministicSettings._serverAddress.ToString(), (ushort) deterministicSettings._serverPort);
+                    _mConnection = _mDriver.Connect(endpoint);
+                }
+                else
+                {
+                    var endpoint = NetworkEndpoint.Parse("127.0.0.1", 7979); 
+                    _mConnection = _mDriver.Connect(endpoint);
+                }
+            }
+
+            if (SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode == DeterministicClientWorkingMode.Disconnect &&
+                !_mConnection.IsCreated)
             {
                 _mConnection.Disconnect(_mDriver);
                 _mConnection = default;
-                SystemAPI.SetComponentEnabled<DeterministicClientDisconnect>(_settingsEntity, false);
             }
-            
+
             if (!_mConnection.IsCreated) return;
             _mDriver.ScheduleUpdate().Complete();
 
@@ -77,8 +87,16 @@ namespace DeterministicLockstep
                 switch (cmd)
                 {
                     case NetworkEvent.Type.Connect:
-                        Debug.Log(
-                            $"[ConnectToServer] Called on '127.0.0:{KNetworkPort}'.");
+                        if (SystemAPI.TryGetSingleton<DeterministicSettings>(out DeterministicSettings deterministicSettings))
+                        {
+                            Debug.Log(
+                                $"[ConnectToServer] Called on " + deterministicSettings._serverAddress + ":" + deterministicSettings._serverPort + ".");
+                        }
+                        else
+                        {
+                            Debug.Log(
+                                $"[ConnectToServer] Called on '127.0.0:7979'.");
+                        }
                         break;
                     case NetworkEvent.Type.Data:
                         HandleRpc(stream);
@@ -99,7 +117,7 @@ namespace DeterministicLockstep
         /// Function used to handle incoming RPCs from server.
         /// </summary>
         /// <param name="stream">Stream from which the data arrived</param>
-        private void HandleRpc(Unity.Collections.DataStreamReader stream)
+        private void HandleRpc(DataStreamReader stream)
         {
             var copyOfStream = stream;
             var id = (RpcID)copyOfStream.ReadByte(); // for the future check if its within a valid range (id as bytes)
@@ -111,26 +129,29 @@ namespace DeterministicLockstep
 
             switch (id)
             {
-                case RpcID.BroadcastAllPlayersInputsToClients:
-                    var rpcPlayersDataUpdate = new RpcPlayersDataUpdate();
+                case RpcID.BroadcastTickDataToClients:
+                    var rpcPlayersDataUpdate = new RpcBroadcastTickDataToClients();
                     rpcPlayersDataUpdate.Deserialize(ref stream);
-                    UpdatePlayersData(rpcPlayersDataUpdate); 
+                    UpdatePlayersData(rpcPlayersDataUpdate);
                     break;
-                case RpcID.StartDeterministicSimulation:
+                case RpcID.StartDeterministicGameSimulation:
                     var rpcStartDeterministicSimulation = new RpcStartDeterministicSimulation();
                     rpcStartDeterministicSimulation.Deserialize(ref stream);
                     StartGame(rpcStartDeterministicSimulation);
                     break;
-                case RpcID.PlayersDesynchronized: // Stop simulation
-                    var rpcPlayerDesynchronizationInfo = new RpcPlayerDesynchronizationInfo();
+                case RpcID.PlayersDesynchronizedMessage: // Stop simulation
+                    var rpcPlayerDesynchronizationInfo = new RpcPlayerDesynchronizationMessage();
                     rpcPlayerDesynchronizationInfo.Deserialize(ref stream);
                     var determinismSystemGroup = World.DefaultGameObjectInjectionWorld
                         .GetOrCreateSystemManaged<DeterministicSimulationSystemGroup>();
                     determinismSystemGroup.Enabled = false;
                     break;
-                case RpcID.BroadcastPlayerInputToServer:
-                    Debug.LogError("This message should never be received by the client");
+                case RpcID.BroadcastPlayerTickDataToServer:
+                    Debug.LogError("BroadcastPlayerTickDataToServer should never be received by the client");
                     break;
+                // case RpcID.PlayerConfiguration:
+                //     Debug.LogError("PlayerConfiguration should never be received by the client");
+                //     break;
                 default:
                     Debug.LogError("Received RPC ID not proceeded by the client: " + id);
                     break;
@@ -143,59 +164,82 @@ namespace DeterministicLockstep
         /// <param name="rpc">RPC from the server that contains parameters for game and request to start the game</param>
         private void StartGame(RpcStartDeterministicSimulation rpc)
         {
-            foreach (var playerNetworkId in rpc.NetworkIDs)
+            foreach (var playerNetworkId in rpc.PlayersNetworkIDs)
             {
                 var newEntity = EntityManager.CreateEntity();
 
                 EntityManager.AddComponentData(newEntity, new PlayerInputDataToUse
                 {
                     playerNetworkId = playerNetworkId,
-                    inputToUse = new CapsulesInputs(),
-                    playerDisconnected = false,
-                });
-                EntityManager.AddComponentData(newEntity, new PlayerInputDataToSend());
-                EntityManager.AddComponentData(newEntity, new TickRateInfo
-                {
-                    tickRate = rpc.TickRate,
-                    tickAheadValue = rpc.TickAhead,
-
-                    delayTime = 1f / rpc.TickRate,
-                    currentSimulationTick = 0,
-                    currentClientTickToSend = 0,
-                    hashForTheTick = 0,
+                    playerInputToApply = new PongInputs(),
+                    isPlayerDisconnected = false,
                 });
                 EntityManager.AddComponentData(newEntity, new GhostOwner
                 {
-                    networkId = playerNetworkId
+                    connectionNetworkId = playerNetworkId
                 });
                 EntityManager.AddComponentData(newEntity, new NetworkConnectionReference
                 {
-                    driver = _mDriver,
-                    reliableSimulatorPipeline = _reliableSimulatorPipeline,
-                    connection = _mConnection
+                    driverReference = _mDriver,
+                    reliableSimulationPipelineReference = _reliableSimulatorPipeline,
+                    connectionReference = _mConnection
                 });
                 EntityManager.AddComponentData(newEntity, new GhostOwnerIsLocal());
-                EntityManager.AddComponentData(newEntity, new StoredTicksAhead(false));
-                if (playerNetworkId != rpc.NetworkID)
+                if (playerNetworkId != rpc.ThisConnectionNetworkID)
                     EntityManager.SetComponentEnabled<GhostOwnerIsLocal>(newEntity, false);
-                EntityManager.SetComponentEnabled<PlayerInputDataToSend>(newEntity, false);
             }
+
+            var deterministicTime = SystemAPI.GetSingletonRW<DeterministicTime>();
+            deterministicTime.ValueRW.GameTickRate = rpc.TickRate;
+            deterministicTime.ValueRW.forcedInputLatencyDelay = rpc.TicksOfForcedInputLatency;
+            deterministicTime.ValueRW.timeLeftToSendNextTick = 1f / rpc.TickRate;
+            deterministicTime.ValueRW.currentSimulationTick = 0;
+            deterministicTime.ValueRW.currentClientTickToSend = 0;
+            deterministicTime.ValueRW.hashesForTheCurrentTick = new NativeList<ulong>(Allocator.Persistent);
+            deterministicTime.ValueRW.numTimesTickedThisFrame = 0;
+            deterministicTime.ValueRW.realTime = 0;
+            deterministicTime.ValueRW.deterministicLockstepElapsedTime = 0;
+
+            var client = SystemAPI.GetSingleton<DeterministicClientComponent>();
+            client.deterministicClientWorkingMode = DeterministicClientWorkingMode.SendData;
+            client.randomSeed = rpc.SeedForPlayerRandomActions;
+            SystemAPI.SetSingleton(client);
             
-            SystemAPI.SetComponentEnabled<DeterministicClientSendData>(_settingsEntity, true);
+            // foreach (var connectionReference in SystemAPI
+            //              .Query<RefRO<NetworkConnectionReference>>()
+            //              .WithAll<GhostOwnerIsLocal>())
+            // {
+            //     Debug.Log("Sending player configuration to server");
+            //     
+                // var deterministicSystemNames = new NativeList<FixedString32Bytes>(Allocator.Temp);
+                // var deterministicSystemGroup =
+                //     World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged(
+                //         typeof(DeterministicSimulationSystemGroup));
+                
+
+                // foreach (var system in deterministicSystemGroup.)
+                // {
+                //     
+                // }
+                
+                // var playerConfigRPC = new RpcPlayerConfiguration
+                // {
+                //     DeterministicSystemNamesDebug = 
+                // };
+                //
+                // configRPC.Serialize(connectionReference.ValueRO.driverReference, connectionReference.ValueRO.connectionReference,
+                //     connectionReference.ValueRO.reliableSimulationPipelineReference);
+            // }
         }
 
         /// <summary>
         /// Function to update the players data from incoming RPC. It will update the buffer that contains all inputs from the server.
         /// </summary>
         /// <param name="rpc">RPC from the server with input data from each player for the given tick</param>
-        void UpdatePlayersData(RpcPlayersDataUpdate rpc)
+        private void UpdatePlayersData(RpcBroadcastTickDataToClients rpc)
         {
-            foreach (var storedTicksAhead in SystemAPI.Query<RefRW<StoredTicksAhead>>().WithAll<GhostOwnerIsLocal>())
-            {
-                storedTicksAhead.ValueRW.entries.Enqueue(rpc);
-                // Are packages reliable with reliable pipeline so those will always arrive in order?
-                // Always current tick is less or equal to the server tick
-            }
+            var deterministicTime = SystemAPI.GetSingletonRW<DeterministicTime>();
+            deterministicTime.ValueRW.storedIncomingTicksFromServer.Enqueue(rpc);
         }
     }
 }

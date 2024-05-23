@@ -1,44 +1,58 @@
+using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
 
 namespace DeterministicLockstep
 {
     /// <summary>
-    /// System that gathers the player's input and sends it to the server
+    /// System that sends gathered player's input to the server. Inputs need to be gathered by the user.
     /// </summary>
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup), OrderLast = true)]
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     public partial class PlayerInputSendSystem : SystemBase
     {
-        protected override void OnCreate()
-        {
-            RequireForUpdate<PlayerInputDataToSend>();
-        }
 
         protected override void OnUpdate()
         {
-            foreach (var (connectionReference, tickRateInfo, owner, connectionEntity) in SystemAPI
-                         .Query<RefRO<NetworkConnectionReference>, RefRW<TickRateInfo>, RefRO<GhostOwner>>()
-                         .WithAll<PlayerSpawned, GhostOwnerIsLocal, PlayerInputDataToSend>().WithEntityAccess())
+            var spawnedPlayersQuery = SystemAPI.QueryBuilder().WithAll<PlayerSpawned>().Build();
+            var deterministicTime = SystemAPI.GetSingleton<DeterministicTime>();
+            
+            if (spawnedPlayersQuery.IsEmpty) // dont send anything, revert ticks TODO get rid of this check and make sure what's happening
+            {
+                deterministicTime.currentClientTickToSend--;
+                deterministicTime.hashesForTheCurrentTick.Dispose();
+                deterministicTime.hashesForTheCurrentTick = new NativeList<ulong>(Allocator.Persistent);
+                SystemAPI.SetSingleton(deterministicTime);
+                return;
+            }
+            
+            
+            
+            foreach (var (connectionReference, owner) in SystemAPI
+                         .Query<RefRO<NetworkConnectionReference>, RefRO<GhostOwner>>()
+                         .WithAll<GhostOwnerIsLocal>())
             {
                 Debug.Log("Sending player input to server");
-                if (!SystemAPI.TryGetSingleton<CapsulesInputs>(out var capsulesInputs))
+                if (!SystemAPI.TryGetSingleton<PongInputs>(out var capsulesInputs))
                 {
                     Debug.LogError("Inputs are not singleton");
                     return;
                 }
                 
-                var rpc = new RpcBroadcastPlayerInputToServer
+                var rpc = new RpcBroadcastPlayerTickDataToServer
                 {
-                    CapsuleGameInputs = capsulesInputs,
-                    PlayerNetworkID = owner.ValueRO.networkId,
-                    CurrentTick = tickRateInfo.ValueRO.currentClientTickToSend,
-                    HashForCurrentTick = tickRateInfo.ValueRO.hashForTheTick
+                    PongGameInputs = capsulesInputs,
+                    PlayerNetworkID = owner.ValueRO.connectionNetworkId,
+                    FutureTick = deterministicTime.currentClientTickToSend,
+                    HashesForFutureTick = deterministicTime.hashesForTheCurrentTick
                 };
 
-                rpc.Serialize(connectionReference.ValueRO.driver, connectionReference.ValueRO.connection,
-                    connectionReference.ValueRO.reliableSimulatorPipeline);
-                EntityManager.SetComponentEnabled<PlayerInputDataToSend>(connectionEntity, false);
+                rpc.Serialize(connectionReference.ValueRO.driverReference, connectionReference.ValueRO.connectionReference,
+                    connectionReference.ValueRO.reliableSimulationPipelineReference);
+                
+                deterministicTime.hashesForTheCurrentTick.Dispose();
+                deterministicTime.hashesForTheCurrentTick = new NativeList<ulong>(Allocator.Persistent);
+                SystemAPI.SetSingleton(deterministicTime);
             }
         }
     }

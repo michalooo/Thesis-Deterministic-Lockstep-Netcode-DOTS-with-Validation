@@ -18,13 +18,13 @@ namespace DeterministicLockstep
         public ComponentTypeHandle<LocalTransform> transform; // add more deterministic types into the job later
 
         [NativeDisableContainerSafetyRestriction]
-        public NativeArray<ulong> ResultsNativeArray;
+        public NativeArray<ulong> resultsNativeArray;
 
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask,
             in v128 chunkEnabledMask)
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
-            Debug.Assert(chunk.Has<DeterministicSimulation>());
+            Debug.Assert(chunk.Has<EnsureDeterministicBehaviour>());
 #endif
             ulong hash = 0;
 
@@ -36,7 +36,7 @@ namespace DeterministicLockstep
             foreach (var t in data)
                 hash = TypeHash.CombineFNV1A64(hash, t);
 
-            ResultsNativeArray[unfilteredChunkIndex] = hash; // check out if the array is large enough to support it 
+            resultsNativeArray[unfilteredChunkIndex] = hash; // check out if the array is large enough to support it 
         }
     }
 }

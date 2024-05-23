@@ -49,16 +49,6 @@ namespace CapsulesGame
                             anotherClientEntityManager.CreateEntity(typeof(DeterministicSettings));
                         anotherClientEntityManager.SetComponentData(anotherClientDeterministicSettings,
                             entityManager.GetComponentData<DeterministicSettings>(deterministicSettings2));
-
-                        anotherClientEntityManager.AddComponent<DeterministicClientConnect>(anotherClientDeterministicSettings);
-                        anotherClientEntityManager.SetComponentEnabled<DeterministicClientConnect>(anotherClientDeterministicSettings,
-                            true);
-                        anotherClientEntityManager.AddComponent<DeterministicClientDisconnect>(anotherClientDeterministicSettings);
-                        anotherClientEntityManager.SetComponentEnabled<DeterministicClientDisconnect>(
-                            anotherClientDeterministicSettings, false);
-                        anotherClientEntityManager.AddComponent<DeterministicClientSendData>(anotherClientDeterministicSettings);
-                        anotherClientEntityManager.SetComponentEnabled<DeterministicClientSendData>(
-                            anotherClientDeterministicSettings, false);
                     }
                     else
                     {
@@ -80,26 +70,11 @@ namespace CapsulesGame
                 serverEntityManager.SetComponentData(serverDeterministicSettings,
                     entityManager.GetComponentData<DeterministicSettings>(deterministicSettings));
 
-                serverEntityManager.AddComponent<DeterministicServerListen>(serverDeterministicSettings);
-                serverEntityManager.SetComponentEnabled<DeterministicServerListen>(serverDeterministicSettings, true);
-                serverEntityManager.AddComponent<DeterministicServerRunSimulation>(serverDeterministicSettings);
-                serverEntityManager.SetComponentEnabled<DeterministicServerRunSimulation>(serverDeterministicSettings,
-                    false);
-
 
                 EntityManager clientEntityManager = client.EntityManager;
                 Entity clientDeterministicSettings = clientEntityManager.CreateEntity(typeof(DeterministicSettings));
                 clientEntityManager.SetComponentData(clientDeterministicSettings,
                     entityManager.GetComponentData<DeterministicSettings>(deterministicSettings));
-
-                clientEntityManager.AddComponent<DeterministicClientConnect>(clientDeterministicSettings);
-                clientEntityManager.SetComponentEnabled<DeterministicClientConnect>(clientDeterministicSettings, true);
-                clientEntityManager.AddComponent<DeterministicClientDisconnect>(clientDeterministicSettings);
-                clientEntityManager.SetComponentEnabled<DeterministicClientDisconnect>(clientDeterministicSettings,
-                    false);
-                clientEntityManager.AddComponent<DeterministicClientSendData>(clientDeterministicSettings);
-                clientEntityManager.SetComponentEnabled<DeterministicClientSendData>(clientDeterministicSettings,
-                    false);
             }
             else
             {
@@ -130,15 +105,6 @@ namespace CapsulesGame
                 Entity clientDeterministicSettings = clientEntityManager.CreateEntity(typeof(DeterministicSettings));
                 clientEntityManager.SetComponentData(clientDeterministicSettings,
                     entityManager.GetComponentData<DeterministicSettings>(deterministicSettings));
-
-                clientEntityManager.AddComponent<DeterministicClientConnect>(clientDeterministicSettings);
-                clientEntityManager.SetComponentEnabled<DeterministicClientConnect>(clientDeterministicSettings, true);
-                clientEntityManager.AddComponent<DeterministicClientDisconnect>(clientDeterministicSettings);
-                clientEntityManager.SetComponentEnabled<DeterministicClientDisconnect>(clientDeterministicSettings,
-                    false);
-                clientEntityManager.AddComponent<DeterministicClientSendData>(clientDeterministicSettings);
-                clientEntityManager.SetComponentEnabled<DeterministicClientSendData>(clientDeterministicSettings,
-                    false);
             }
             else
             {
