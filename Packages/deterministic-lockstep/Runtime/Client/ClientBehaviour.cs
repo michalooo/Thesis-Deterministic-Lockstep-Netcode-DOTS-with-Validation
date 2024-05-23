@@ -15,8 +15,6 @@ namespace DeterministicLockstep
     [UpdateInGroup(typeof(ConnectionHandleSystemGroup))]
     public partial class ClientBehaviour : SystemBase
     {
-        private const ushort KNetworkPort = 7979;
-
         private NetworkDriver _mDriver;
         private NetworkConnection _mConnection;
         private NetworkSettings _clientSimulatorParameters;
@@ -61,8 +59,16 @@ namespace DeterministicLockstep
             if (SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode == DeterministicClientWorkingMode.Connect && !_mConnection.IsCreated)
             {
                 Debug.Log("connecting");
-                var endpoint = NetworkEndpoint.Parse("127.0.0.1", KNetworkPort); //change to chosen IP
-                _mConnection = _mDriver.Connect(endpoint);
+                if (SystemAPI.TryGetSingleton<DeterministicSettings>(out DeterministicSettings deterministicSettings))
+                {
+                    var endpoint = NetworkEndpoint.Parse(deterministicSettings._serverAddress.ToString(), (ushort) deterministicSettings._serverPort);
+                    _mConnection = _mDriver.Connect(endpoint);
+                }
+                else
+                {
+                    var endpoint = NetworkEndpoint.Parse("127.0.0.1", 7979); 
+                    _mConnection = _mDriver.Connect(endpoint);
+                }
             }
 
             if (SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode == DeterministicClientWorkingMode.Disconnect &&
@@ -81,8 +87,16 @@ namespace DeterministicLockstep
                 switch (cmd)
                 {
                     case NetworkEvent.Type.Connect:
-                        Debug.Log(
-                            $"[ConnectToServer] Called on '127.0.0:{KNetworkPort}'.");
+                        if (SystemAPI.TryGetSingleton<DeterministicSettings>(out DeterministicSettings deterministicSettings))
+                        {
+                            Debug.Log(
+                                $"[ConnectToServer] Called on " + deterministicSettings._serverAddress + ":" + deterministicSettings._serverPort + ".");
+                        }
+                        else
+                        {
+                            Debug.Log(
+                                $"[ConnectToServer] Called on '127.0.0:7979'.");
+                        }
                         break;
                     case NetworkEvent.Type.Data:
                         HandleRpc(stream);
@@ -197,16 +211,24 @@ namespace DeterministicLockstep
             // {
             //     Debug.Log("Sending player configuration to server");
             //     
-            //     var deterministicSystemNames = new NativeList<FixedString32Bytes>(Allocator.Temp);
-            //     var deterministicSystemGroup = World.
-            //     
-            //     var configRPC = new RpcPlayerConfiguration
-            //     {
-            //         DeterministicSystemNamesDebug = 
-            //     };
-            //
-            //     configRPC.Serialize(connectionReference.ValueRO.driverReference, connectionReference.ValueRO.connectionReference,
-            //         connectionReference.ValueRO.reliableSimulationPipelineReference);
+                // var deterministicSystemNames = new NativeList<FixedString32Bytes>(Allocator.Temp);
+                // var deterministicSystemGroup =
+                //     World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged(
+                //         typeof(DeterministicSimulationSystemGroup));
+                
+
+                // foreach (var system in deterministicSystemGroup.)
+                // {
+                //     
+                // }
+                
+                // var playerConfigRPC = new RpcPlayerConfiguration
+                // {
+                //     DeterministicSystemNamesDebug = 
+                // };
+                //
+                // configRPC.Serialize(connectionReference.ValueRO.driverReference, connectionReference.ValueRO.connectionReference,
+                //     connectionReference.ValueRO.reliableSimulationPipelineReference);
             // }
         }
 

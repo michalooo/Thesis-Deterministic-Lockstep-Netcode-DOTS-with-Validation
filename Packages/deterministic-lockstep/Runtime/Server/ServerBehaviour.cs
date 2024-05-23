@@ -17,6 +17,11 @@ namespace DeterministicLockstep
     [UpdateInGroup(typeof(ConnectionHandleSystemGroup))]
     public partial class ServerBehaviour : SystemBase
     {
+        // /// <summary>
+        // /// List of deterministic systems that are used by the client (only used to point which one is causing desynchronization)
+        // /// </summary>
+        // private NativeList<FixedString64Bytes> _clientDeterministicSystems;
+        
         /// <summary>
         /// Network driver used to handle connections
         /// </summary>
@@ -136,11 +141,11 @@ namespace DeterministicLockstep
             _reliableSimulationPipeline =
                 _mDriver.CreatePipeline(typeof(ReliableSequencedPipelineStage));
             
-            var endpoint = NetworkEndpoint.AnyIpv4.WithPort((ushort) SystemAPI.GetSingleton<DeterministicSettings>().serverPort);
+            var endpoint = NetworkEndpoint.AnyIpv4.WithPort((ushort) SystemAPI.GetSingleton<DeterministicSettings>()._serverPort);
 
             if (_mDriver.Bind(endpoint) != 0)
             {
-                Debug.LogError("Failed to bind to port: " + SystemAPI.GetSingleton<DeterministicSettings>().serverPort);
+                Debug.LogError("Failed to bind to port: " + SystemAPI.GetSingleton<DeterministicSettings>()._serverPort);
                 return;
             }
 
@@ -196,7 +201,14 @@ namespace DeterministicLockstep
                     Debug.LogError("PlayersDesynchronizedMessage should never be received by the server");
                     break;
                 // case RpcID.PlayerConfiguration:
-                //     D
+                //     var playerConfigRPC = new RpcPlayerConfiguration();
+                //     playerConfigRPC.Deserialize(ref stream);
+                //     _clientDeterministicSystems.Dispose();
+                //     _clientDeterministicSystems = new NativeList<FixedString64Bytes>(playerConfigRPC.DeterministicSystemNamesDebug.Length, Allocator.Persistent);
+                //     foreach (var systemName in playerConfigRPC.DeterministicSystemNamesDebug)
+                //     {
+                //         _clientDeterministicSystems.Add(systemName);
+                //     }
                 //     break;
                 default:
                     Debug.LogError("Received RPC ID not proceeded by the server: " + id);
@@ -405,8 +417,7 @@ namespace DeterministicLockstep
                     networkIDs.Add(inputData.PlayerNetworkID);
                     inputs.Add(inputData.PongGameInputs);
                 }
-            
-                //TODO add name of the system
+                
                 // Get the number of hashes (assuming all players have the same number of hashes)
                 var numHashesPerPlayer = _everyTickHashBuffer[(ulong)_lastTickReceivedFromClient][0].Length;
                 Debug.Log("hush hush: " + _everyTickHashBuffer[(ulong)_lastTickReceivedFromClient][0].IsEmpty);
