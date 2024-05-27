@@ -156,6 +156,7 @@ MonoBehaviour:
   allowedConnectionsPerGame: 4
   ticksAhead: 5
   serverPort: 7979
+  serverAddress: 127.0.0.1
   hashCalculationOption: 0
   packetDelayMs: 0
   packetJitterMs: 0

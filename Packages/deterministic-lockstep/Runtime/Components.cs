@@ -32,7 +32,8 @@ namespace DeterministicLockstep
     public struct PlayerInputDataToUse : IComponentData, IEnableableComponent
     {
         public int playerNetworkId;
-        public PongInputs playerInputToApply;
+        public PongInputs playerInputToApply; //buffer for inputs to use (raw bytes or buffer)
+        public FixedBytes510 rawPlayerStruct; // input cannot be over 510 when serialized
         
         public bool isPlayerDisconnected;
     }

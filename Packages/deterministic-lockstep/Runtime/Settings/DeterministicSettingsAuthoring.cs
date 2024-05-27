@@ -27,9 +27,12 @@ namespace DeterministicLockstep
         public int packetDropPercentage;
         public int packetDuplicationPercentage;
         
+        public ComponentType InputComponentType;
+        
         public FixedString32Bytes _serverAddress { get; set; }
         public int _serverPort { get; set; }
     }
+    
     
     public class DeterministicSettingsAuthoring : MonoBehaviour // Will it work both on Client and Server?
     {

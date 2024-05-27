@@ -33,8 +33,9 @@
                     return;
                 }
                 
+                //TODO automatically add input to a buffer via codegen
                 inputComponent.ValueRW.verticalInput = verticalInput;
-                SystemAPI.SetSingleton(inputComponent.ValueRO);
+                // SystemAPI.SetSingleton(inputComponent.ValueRO);
             }
             else
             {

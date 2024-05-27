@@ -204,31 +204,35 @@ namespace DeterministicLockstep
             client.deterministicClientWorkingMode = DeterministicClientWorkingMode.SendData;
             client.randomSeed = rpc.SeedForPlayerRandomActions;
             SystemAPI.SetSingleton(client);
-            
+
+            // var x = World.GetExistingSystemManaged<DeterministicSimulationSystemGroup>();
+            // var v = x.GetAllSystems();
+            // v[0].GetType();
+
             // foreach (var connectionReference in SystemAPI
             //              .Query<RefRO<NetworkConnectionReference>>()
             //              .WithAll<GhostOwnerIsLocal>())
             // {
             //     Debug.Log("Sending player configuration to server");
             //     
-                // var deterministicSystemNames = new NativeList<FixedString32Bytes>(Allocator.Temp);
-                // var deterministicSystemGroup =
-                //     World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged(
-                //         typeof(DeterministicSimulationSystemGroup));
-                
+            // var deterministicSystemNames = new NativeList<FixedString32Bytes>(Allocator.Temp);
+            // var deterministicSystemGroup =
+            //     World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged(
+            //         typeof(DeterministicSimulationSystemGroup));
 
-                // foreach (var system in deterministicSystemGroup.)
-                // {
-                //     
-                // }
-                
-                // var playerConfigRPC = new RpcPlayerConfiguration
-                // {
-                //     DeterministicSystemNamesDebug = 
-                // };
-                //
-                // configRPC.Serialize(connectionReference.ValueRO.driverReference, connectionReference.ValueRO.connectionReference,
-                //     connectionReference.ValueRO.reliableSimulationPipelineReference);
+
+            // foreach (var system in deterministicSystemGroup.)
+            // {
+            //     
+            // }
+
+            // var playerConfigRPC = new RpcPlayerConfiguration
+            // {
+            //     DeterministicSystemNamesDebug = 
+            // };
+            //
+            // configRPC.Serialize(connectionReference.ValueRO.driverReference, connectionReference.ValueRO.connectionReference,
+            //     connectionReference.ValueRO.reliableSimulationPipelineReference);
             // }
         }
 
