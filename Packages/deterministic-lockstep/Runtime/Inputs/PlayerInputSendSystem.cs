@@ -14,18 +14,7 @@ namespace DeterministicLockstep
 
         protected override void OnUpdate()
         {
-            var spawnedPlayersQuery = SystemAPI.QueryBuilder().WithAll<PlayerSpawned>().Build();
             var deterministicTime = SystemAPI.GetSingleton<DeterministicTime>();
-            
-            if (spawnedPlayersQuery.IsEmpty) // dont send anything, revert ticks TODO get rid of this check and make sure what's happening
-            {
-                deterministicTime.currentClientTickToSend--;
-                deterministicTime.hashesForTheCurrentTick.Dispose();
-                deterministicTime.hashesForTheCurrentTick = new NativeList<ulong>(Allocator.Persistent);
-                SystemAPI.SetSingleton(deterministicTime);
-                return;
-            }
-            
             
             
             foreach (var (connectionReference, owner) in SystemAPI

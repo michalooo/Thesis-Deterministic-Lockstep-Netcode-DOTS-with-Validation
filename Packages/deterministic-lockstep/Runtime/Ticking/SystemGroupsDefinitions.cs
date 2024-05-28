@@ -92,6 +92,19 @@ namespace DeterministicLockstep
                 {
                     return false; // before rpc with start game was received
                 }
+                
+                var currentLocalTime = DateTime.Now;
+                var elapsedLocalMilliseconds = (currentLocalTime - deterministicTime.ValueRO.localTimeAtTheMomentOfSynchronization).TotalMilliseconds;
+                // need to wait for the delay to start at the same moment as other clients
+                if (elapsedLocalMilliseconds < deterministicTime.ValueRO.timeToPostponeStartofSimulation) // I don't really use server time here
+                {
+                    Debug.LogError("Before: " + elapsedLocalMilliseconds + " " + deterministicTime.ValueRO.timeToPostponeStartofSimulation);
+                    return false;
+                }
+                else
+                {
+                    Debug.LogError("After: " + elapsedLocalMilliseconds + " " + deterministicTime.ValueRO.timeToPostponeStartofSimulation);
+                }
 
                 deterministicTime.ValueRW.timeLeftToSendNextTick -= deltaTime;
                 if (deterministicTime.ValueRO.timeLeftToSendNextTick <= 0) // We are ready to try to send the next tick

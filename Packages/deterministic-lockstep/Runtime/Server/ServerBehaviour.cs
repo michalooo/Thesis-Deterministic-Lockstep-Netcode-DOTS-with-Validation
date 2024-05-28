@@ -57,6 +57,9 @@ namespace DeterministicLockstep
         /// </summary>
         private int _lastTickReceivedFromClient;
 
+        private NativeList<RpcTestPing> _playersPing;
+        private double _worstPingMeasured;
+
         protected override void OnCreate()
         {
             RequireForUpdate<DeterministicSettings>();
@@ -121,6 +124,7 @@ namespace DeterministicLockstep
             _mDriver.Dispose();
             _connectedPlayers.Dispose();
             _mNetworkIDs.Dispose();
+            _playersPing.Dispose();
         }
 
         /// <summary>
@@ -132,7 +136,8 @@ namespace DeterministicLockstep
         private void StartListening()
         {
             _connectedPlayers = new NativeArray<NetworkConnection>(SystemAPI.GetSingleton<DeterministicSettings>().allowedConnectionsPerGame, Allocator.Persistent);
-            _mNetworkIDs = new NativeList<int>(SystemAPI.GetSingleton<DeterministicSettings>().allowedConnectionsPerGame, Allocator.Persistent);
+            _mNetworkIDs = new NativeList<int>(Allocator.Persistent);
+            _playersPing = new NativeList<RpcTestPing>(Allocator.Persistent);
 
             _everyTickInputBuffer = new Dictionary<ulong, NativeList<RpcBroadcastPlayerTickDataToServer>>();
             _everyTickHashBuffer = new Dictionary<ulong, NativeList<NativeList<ulong>>>();
@@ -165,7 +170,8 @@ namespace DeterministicLockstep
             SystemAPI.SetSingleton(settings);
             
             CollectInitialPlayerData();
-            SendRPCtoStartGame();
+            // SendRPCtoStartGame();
+            CheckPlayersPing();
         }
 
         /// <summary>
@@ -200,6 +206,15 @@ namespace DeterministicLockstep
                 case RpcID.PlayersDesynchronizedMessage:
                     Debug.LogError("PlayersDesynchronizedMessage should never be received by the server");
                     break;
+                case RpcID.TestClientPing:
+                    var rpcPing = new RpcTestPing();
+                    rpcPing.Deserialize(ref stream);
+                    var playerPing = DateTime.Now.TimeOfDay.TotalMilliseconds - rpcPing.TimeInMilisecondsWhenMessageWasSendFromServer;
+                    Debug.Log("Ping from player: " + rpcPing.PlayerNetworkID + ", ping value: " + playerPing);
+                    rpcPing.PingMeasuredForThisRPC = playerPing;
+                    _playersPing.Add(rpcPing);
+                    CheckIfAllPingReceived();
+                    break;
                 // case RpcID.PlayerConfiguration:
                 //     var playerConfigRPC = new RpcPlayerConfiguration();
                 //     playerConfigRPC.Deserialize(ref stream);
@@ -213,6 +228,23 @@ namespace DeterministicLockstep
                 default:
                     Debug.LogError("Received RPC ID not proceeded by the server: " + id);
                     break;
+            }
+        }
+        
+        private void CheckIfAllPingReceived()
+        {
+            if (_playersPing.Length == GetActiveConnectionCount())
+            {
+                _worstPingMeasured = 0;
+                foreach (var ping in _playersPing)
+                {
+                    if (ping.PingMeasuredForThisRPC > _worstPingMeasured)
+                    {
+                        _worstPingMeasured = ping.PingMeasuredForThisRPC;
+                    }
+                }
+                Debug.Log("Worst ping measured: " + _worstPingMeasured);
+                SendRPCtoStartGame();
             }
         }
 
@@ -233,6 +265,26 @@ namespace DeterministicLockstep
                 }
             }
         }
+        
+        /// <summary>
+        /// Function used to establish worst ping value among players.
+        /// </summary>
+        private void CheckPlayersPing()
+        {
+            RpcTestPing rpc = new RpcTestPing
+            {
+                TimeInMilisecondsWhenMessageWasSendFromServer = DateTime.Now.TimeOfDay.TotalMilliseconds
+            };
+            
+            for (ushort i = 0; i < _connectedPlayers.Length; i++)
+            {
+                if (_connectedPlayers[i].IsCreated)
+                {
+                    rpc.PlayerNetworkID = i;
+                    rpc.Serialize(_mDriver, _connectedPlayers[i], _reliableSimulationPipeline);
+                }
+            }
+        }
 
         /// <summary>
         /// Function used to send RPC to clients to start the game.
@@ -243,17 +295,29 @@ namespace DeterministicLockstep
             Random rng = new Random();
             RpcStartDeterministicSimulation rpc = new RpcStartDeterministicSimulation
             {
+                TodaysMiliseconds = DateTime.Now.TimeOfDay.TotalMilliseconds,
+                PostponedStartInMiliseconds = _worstPingMeasured * 3d,
                 PlayersNetworkIDs = _mNetworkIDs,
                 TickRate = SystemAPI.GetSingleton<DeterministicSettings>().simulationTickRate,
                 TicksOfForcedInputLatency = SystemAPI.GetSingleton<DeterministicSettings>().ticksAhead,
                 SeedForPlayerRandomActions = (uint)rng.Next(1, int.MaxValue)
             };
-
+            
             for (ushort i = 0; i < _connectedPlayers.Length; i++)
             {
+                var playerPingInMiliseconds = 0d;
+                foreach (var playerPing in _playersPing)
+                {
+                    if(playerPing.PlayerNetworkID == i)
+                    {
+                        playerPingInMiliseconds = playerPing.PingMeasuredForThisRPC;
+                    }
+                }
+                
                 if (_connectedPlayers[i].IsCreated)
                 {
                     rpc.ThisConnectionNetworkID = i;
+                    rpc.PingInMilliseconds = playerPingInMiliseconds;
                     rpc.Serialize(_mDriver, _connectedPlayers[i], _reliableSimulationPipeline);
                 }
             }
@@ -420,7 +484,6 @@ namespace DeterministicLockstep
                 
                 // Get the number of hashes (assuming all players have the same number of hashes)
                 var numHashesPerPlayer = _everyTickHashBuffer[(ulong)_lastTickReceivedFromClient][0].Length;
-                Debug.Log("hush hush: " + _everyTickHashBuffer[(ulong)_lastTickReceivedFromClient][0].IsEmpty);
 
                 // Iterate over each hash index
                 for (var systemHash = 0; systemHash < numHashesPerPlayer; systemHash++)

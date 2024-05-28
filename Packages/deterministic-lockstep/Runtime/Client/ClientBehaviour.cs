@@ -149,6 +149,11 @@ namespace DeterministicLockstep
                 case RpcID.BroadcastPlayerTickDataToServer:
                     Debug.LogError("BroadcastPlayerTickDataToServer should never be received by the client");
                     break;
+                case RpcID.TestClientPing:
+                    var pingRPC = new RpcTestPing();
+                    pingRPC.Deserialize(ref stream);
+                    pingRPC.Serialize(_mDriver, _mConnection, _reliableSimulatorPipeline);
+                    break;
                 // case RpcID.PlayerConfiguration:
                 //     Debug.LogError("PlayerConfiguration should never be received by the client");
                 //     break;
@@ -157,6 +162,17 @@ namespace DeterministicLockstep
                     break;
             }
         }
+        
+        public static DateTime SyncDateTimeWithServer(double remoteMilliseconds)
+        {
+            // Get the current date without time (midnight)
+            DateTime currentDate = DateTime.Today;
+
+            // Add the milliseconds to the current date to get the remote time
+            DateTime remoteDateTime = currentDate.AddMilliseconds(remoteMilliseconds);
+
+            return remoteDateTime;
+        }
 
         /// <summary>
         /// Function to start the game. It will load the game scene and create entities for each player connection with all necessary components.
@@ -164,6 +180,10 @@ namespace DeterministicLockstep
         /// <param name="rpc">RPC from the server that contains parameters for game and request to start the game</param>
         private void StartGame(RpcStartDeterministicSimulation rpc)
         {
+            // synchronize clock
+            DateTime syncedDateTime = SyncDateTimeWithServer(rpc.TodaysMiliseconds + rpc.PingInMilliseconds);
+            Debug.Log("Synchronized DateTime: " + syncedDateTime.TimeOfDay + " for player with ID: " + rpc.ThisConnectionNetworkID + " time to postpone: " + rpc.PostponedStartInMiliseconds);
+            
             foreach (var playerNetworkId in rpc.PlayersNetworkIDs)
             {
                 var newEntity = EntityManager.CreateEntity();
@@ -199,6 +219,9 @@ namespace DeterministicLockstep
             deterministicTime.ValueRW.numTimesTickedThisFrame = 0;
             deterministicTime.ValueRW.realTime = 0;
             deterministicTime.ValueRW.deterministicLockstepElapsedTime = 0;
+            deterministicTime.ValueRW.synchronizedDateTimeWithServer = syncedDateTime;
+            deterministicTime.ValueRW.timeToPostponeStartofSimulation = rpc.PostponedStartInMiliseconds;
+            deterministicTime.ValueRW.localTimeAtTheMomentOfSynchronization = DateTime.Now;
 
             var client = SystemAPI.GetSingleton<DeterministicClientComponent>();
             client.deterministicClientWorkingMode = DeterministicClientWorkingMode.SendData;

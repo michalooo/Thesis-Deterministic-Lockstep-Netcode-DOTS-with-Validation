@@ -1,4 +1,5 @@
-﻿using Unity.Collections;
+﻿using System;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Networking.Transport;
 
@@ -82,6 +83,13 @@ namespace DeterministicLockstep
     /// </summary>
     public struct DeterministicTime : IComponentData
     {
+        /// <summary>
+        /// Synchronized clock with the server
+        /// </summary>
+        public DateTime synchronizedDateTimeWithServer;
+        public DateTime localTimeAtTheMomentOfSynchronization;
+        public double timeToPostponeStartofSimulation;
+        
         /// <summary>
         /// Variable storing the elapsed time which is used to control system groups
         /// </summary>

@@ -27,7 +27,48 @@ namespace DeterministicLockstep
         BroadcastTickDataToClients,
         BroadcastPlayerTickDataToServer,
         PlayersDesynchronizedMessage,
+        TestClientPing,
         // PlayerConfiguration,
+    }
+    
+    /// <summary>
+    /// Struct that is being send by the server to the client in order to measure ping between them
+    /// </summary>
+    public struct RpcTestPing : INetcodeRPC
+    {
+        public RpcID GetID => RpcID.TestClientPing;
+        public double TimeInMilisecondsWhenMessageWasSendFromServer { get; set; }
+        public int PlayerNetworkID { get; set; }
+        public double PingMeasuredForThisRPC { get; set; }
+
+        public void Serialize(NetworkDriver mDriver, NetworkConnection connection, NetworkPipeline? pipeline = null)
+        {
+            DataStreamWriter writer;
+            if (!pipeline.HasValue) mDriver.BeginSend(connection, out writer);
+            else mDriver.BeginSend(pipeline.Value, connection, out writer);
+
+            writer.WriteByte((byte)GetID);
+            writer.WriteDouble(TimeInMilisecondsWhenMessageWasSendFromServer);
+            writer.WriteInt(PlayerNetworkID);
+
+            if (writer.HasFailedWrites)
+            {
+                mDriver.AbortSend(writer);
+                throw new InvalidOperationException("Driver has failed writes.: " + writer.Capacity);
+            }
+
+            mDriver.EndSend(writer);
+            Debug.Log("RPC for testing ping send from server");
+        }
+
+        public void Deserialize(ref DataStreamReader reader)
+        {
+            reader.ReadByte(); // ID
+            TimeInMilisecondsWhenMessageWasSendFromServer = reader.ReadDouble();
+            PlayerNetworkID = reader.ReadInt();
+
+            Debug.Log("RPC for testing ping received");
+        }
     }
 
     /// <summary>
@@ -70,6 +111,21 @@ namespace DeterministicLockstep
     public struct RpcStartDeterministicSimulation : INetcodeRPC
     {
         /// <summary>
+        /// Current clock time of the server
+        /// </summary>
+        public double TodaysMiliseconds { get; set; }
+        
+        /// <summary>
+        /// Time after which the simulation should start
+        /// </summary>
+        public double PostponedStartInMiliseconds { get; set; }
+        
+        /// <summary>
+        /// Ping that server has with the client
+        /// </summary>
+        public double PingInMilliseconds { get; set; }
+        
+        /// <summary>
         /// All of connected players ID so we can assign them to prefabs and connections
         /// </summary>
         public NativeList<int>  PlayersNetworkIDs { get; set; }
@@ -101,6 +157,10 @@ namespace DeterministicLockstep
             else mDriver.BeginSend(pipeline.Value, connection, out writer);
 
             writer.WriteByte((byte)GetID);
+            writer.WriteDouble(TodaysMiliseconds);
+            writer.WriteDouble(PostponedStartInMiliseconds);
+            writer.WriteDouble(PingInMilliseconds);
+            
             writer.WriteInt(PlayersNetworkIDs.Length);
             foreach (var id in PlayersNetworkIDs)
             {
@@ -125,8 +185,11 @@ namespace DeterministicLockstep
         public void Deserialize(ref DataStreamReader reader)
         {
             reader.ReadByte(); // ID
+            TodaysMiliseconds = reader.ReadDouble();
+            PostponedStartInMiliseconds = reader.ReadDouble();
+            PingInMilliseconds = reader.ReadDouble();
+            
             var count = reader.ReadInt();
-
             PlayersNetworkIDs = new NativeList<int>(count, Allocator.Temp);
 
             for (var i = 0; i < count; i++)
