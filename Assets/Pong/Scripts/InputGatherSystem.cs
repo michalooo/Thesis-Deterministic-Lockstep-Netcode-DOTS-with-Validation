@@ -1,4 +1,6 @@
-﻿namespace PongGame
+﻿using Unity.Burst;
+
+namespace PongGame
 {
     using DeterministicLockstep;
     using Unity.Entities;
@@ -6,24 +8,26 @@
 
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(UserSystemGroup))]
-    public partial class InputGatherSystem : SystemBase
+    [BurstCompile]
+    public partial struct InputGatherSystem : ISystem
     {
-        protected override void OnCreate()
+        public void OnCreate(ref SystemState state)
         {
-            RequireForUpdate<PongInputs>();
+            state.RequireForUpdate<PongInputs>();
         }
 
-        protected override void OnUpdate()
+        [BurstCompile]
+        public void OnUpdate(ref SystemState state)
         {
             if(SystemAPI.TryGetSingletonRW<PongInputs>(out var inputComponent))
             {
                 int verticalInput = 0;
 
-                if (World.Name == "ClientWorld") // for local testing purposes
+                if (state.World.Name == "ClientWorld") // for local testing purposes
                 {
                     verticalInput = Input.GetKey(KeyCode.S) ? -1 : Input.GetKey(KeyCode.W) ? 1 : 0;
                 }
-                else if (World.Name == "ClientWorld1" || World.Name == "ClientWorld2")
+                else if (state.World.Name == "ClientWorld1" || state.World.Name == "ClientWorld2")
                 {
                     verticalInput = Input.GetKey(KeyCode.DownArrow) ? -1 : Input.GetKey(KeyCode.UpArrow) ? 1 : 0;
                 }

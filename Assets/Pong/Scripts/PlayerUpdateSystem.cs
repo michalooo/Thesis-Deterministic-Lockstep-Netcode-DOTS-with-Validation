@@ -1,4 +1,5 @@
 ﻿using DeterministicLockstep;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Transforms;
@@ -11,22 +12,25 @@ namespace PongGame
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
-    public partial class PlayerUpdateSystem : SystemBase
+    [BurstCompile]
+    public partial struct PlayerUpdateSystem : ISystem
     {
         private EntityQuery playerQuery;
         private const float minZ = -3.5f;
         private const float maxZ = 3.5f;
         private const float interpolationSpeed = 0.2f;
 
-        protected override void OnCreate()
+        [BurstCompile]
+        public void OnCreate(ref SystemState state)
         {
-            RequireForUpdate<PlayerInputDataToUse>(); // component from which data should be taken
-            RequireForUpdate<PongInputs>();
+            state.RequireForUpdate<PlayerInputDataToUse>(); // component from which data should be taken
+            state.RequireForUpdate<PongInputs>();
         }
 
-        protected override void OnUpdate()
+        [BurstCompile]
+        public void OnUpdate(ref SystemState state)
         {
-            playerQuery = GetEntityQuery(typeof(CommandTarget), typeof(PlayerInputDataToUse), typeof(PlayerSpawned));
+            playerQuery = state.GetEntityQuery(typeof(CommandTarget), typeof(PlayerInputDataToUse), typeof(PlayerSpawned));
 
             // Get the component data from the entities
             var commandTargetData = playerQuery.ToComponentDataArray<CommandTarget>(Allocator.Temp);
@@ -38,8 +42,8 @@ namespace PongGame
                 if (playerInputData[i].isPlayerDisconnected)
                 {
                     Debug.Log("Destroying entity with ID: " + playerInputData[i].playerNetworkId);
-                    EntityManager.DestroyEntity(commandTargetData[i].connectionCommandsTargetEntity);
-                    EntityManager.DestroyEntity(connectionEntity[i]);
+                    state.EntityManager.DestroyEntity(commandTargetData[i].connectionCommandsTargetEntity);
+                    state.EntityManager.DestroyEntity(connectionEntity[i]);
                 }
                 else
                 {
@@ -73,10 +77,10 @@ namespace PongGame
                     // Interpolate from the current position to the new position
                     targetPosition.z = Mathf.Lerp(targetPosition.z, newPositionZ, interpolationSpeed);
                     
-                    EntityManager.SetComponentData(commandTargetData[i].connectionCommandsTargetEntity,
+                    state.EntityManager.SetComponentData(commandTargetData[i].connectionCommandsTargetEntity,
                         LocalTransform.FromPosition(targetPosition));
 
-                    EntityManager.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity[i],
+                    state.EntityManager.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity[i],
                         false); //should it be required?
                 }
             }

@@ -1,3 +1,4 @@
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -9,30 +10,34 @@ namespace DeterministicLockstep
     /// <summary>
     /// System to check the determinism of the simulation. It will hash the necessary component of all entities with the DeterministicSimulation component.
     /// </summary>
+    [BurstCompile]
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup), OrderLast = true)]
     [UpdateBefore(typeof(PlayerInputSendSystem))]
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
-    public partial class DeterminismCheckSystem : SystemBase
+    public partial struct DeterminismCheckSystem : ISystem
     {
         private NativeList<ulong> _resultsArray;
         private EntityQuery _mQuery;
 
         // private Dictionary<int, ulong> _everyTickHashBuffer;
 
-        protected override void OnCreate()
+        [BurstCompile]
+        public void OnCreate(ref SystemState state)
         {
-            RequireForUpdate<DeterministicSettings>();
+            state.RequireForUpdate<DeterministicSettings>();
+            state.RequireForUpdate<DeterministicTime>();
             _resultsArray = new NativeList<ulong>(128, Allocator.Persistent); // probably need to refine this number
             // _everyTickHashBuffer = new Dictionary<int, ulong>();
         }
 
-        protected override void OnUpdate()
+        [BurstCompile]
+        public void OnUpdate(ref SystemState state)
         {
             if (SystemAPI.GetSingleton<DeterministicSettings>().hashCalculationOption ==
                 DeterminismHashCalculationOption.None) return; // No determinism checks
             
             
-            _mQuery = EntityManager.CreateEntityQuery(
+            _mQuery = state.EntityManager.CreateEntityQuery(
                 typeof(EnsureDeterministicBehaviour)
             );
 
@@ -44,10 +49,10 @@ namespace DeterministicLockstep
 
             var job = new DeterminismCheckJob()
             {
-                transform = GetComponentTypeHandle<LocalTransform>(true),
+                transform = state.GetComponentTypeHandle<LocalTransform>(true),
                 resultsNativeArray = _resultsArray.AsArray()
             };
-            var handle = job.ScheduleParallel(_mQuery, this.Dependency);
+            var handle = job.ScheduleParallel(_mQuery, state.Dependency);
             handle.Complete();
 
             // Combine the results
@@ -65,7 +70,8 @@ namespace DeterministicLockstep
             SystemAPI.SetSingleton(timeComponent);
         }
 
-        protected override void OnDestroy()
+        [BurstCompile]
+        public void OnDestroy(ref SystemState state)
         {
             _resultsArray.Dispose();
         }

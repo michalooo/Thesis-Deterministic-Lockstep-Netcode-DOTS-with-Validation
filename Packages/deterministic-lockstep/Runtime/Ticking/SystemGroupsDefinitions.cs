@@ -1,4 +1,5 @@
 using System;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Core;
@@ -10,6 +11,7 @@ namespace DeterministicLockstep
     /// <summary>
     /// System group that contains all of user defined systems which are not affecting state of the game.
     /// </summary>
+    [BurstCompile]
     [UpdateAfter(typeof(ConnectionHandleSystemGroup))]
     public partial class UserSystemGroup : ComponentSystemGroup
     {
@@ -18,6 +20,7 @@ namespace DeterministicLockstep
     /// <summary>
     /// System group that contains connection handle systems.
     /// </summary>
+    [BurstCompile]
     public partial class ConnectionHandleSystemGroup : ComponentSystemGroup
     {
     }
@@ -25,6 +28,7 @@ namespace DeterministicLockstep
     /// <summary>
     /// System group that contains deterministic simulation systems. Systems that are using it are PlayerUpdateSystem, DeterminismSystemCheck, and PlayerInputGatherAndSendSystem.
     /// </summary>
+    [BurstCompile]
     [UpdateAfter(typeof(UserSystemGroup))]
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     public partial class DeterministicSimulationSystemGroup : ComponentSystemGroup
@@ -72,6 +76,7 @@ namespace DeterministicLockstep
             private EntityQuery _deterministicTimeQuery;
             private EntityQuery _connectionQuery;
             private EntityQuery _inputDataQuery;
+            private bool wasLogging;
 
             public DeterministicFixedStepRateManager(ComponentSystemGroup group) : this()
             {
@@ -80,6 +85,7 @@ namespace DeterministicLockstep
                     group.EntityManager.CreateEntityQuery(
                         typeof(GhostOwnerIsLocal)); // This component will only be created when RPC to start game was send
                 _inputDataQuery = group.EntityManager.CreateEntityQuery(typeof(GhostOwner));
+                wasLogging = false;
             }
 
             public bool ShouldGroupUpdate(ComponentSystemGroup group)
@@ -101,8 +107,9 @@ namespace DeterministicLockstep
                     Debug.LogError("Before: " + elapsedLocalMilliseconds + " " + deterministicTime.ValueRO.timeToPostponeStartofSimulation);
                     return false;
                 }
-                else
+                else if(!wasLogging)
                 {
+                    wasLogging = true;
                     Debug.LogError("After: " + elapsedLocalMilliseconds + " " + deterministicTime.ValueRO.timeToPostponeStartofSimulation);
                 }
 

@@ -1,9 +1,11 @@
-﻿using Unity.Entities;
+﻿using Unity.Burst;
+using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 
 namespace PongGame
 {
+    [BurstCompile]
     public struct Velocity : IComponentData
     {
         public float3 value;

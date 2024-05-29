@@ -16,10 +16,11 @@ namespace DeterministicLockstep
     {
         [ReadOnly]
         public ComponentTypeHandle<LocalTransform> transform; // add more deterministic types into the job later
-
+        
         [NativeDisableContainerSafetyRestriction]
         public NativeArray<ulong> resultsNativeArray;
-
+        
+        [BurstCompile]
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask,
             in v128 chunkEnabledMask)
         {

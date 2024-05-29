@@ -1,4 +1,5 @@
 ﻿using System;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Networking.Transport;
@@ -23,6 +24,7 @@ namespace DeterministicLockstep
         Connect,
         Disconnect,
         SendData,
+        PrepareGame,
         None
     }
     
@@ -30,6 +32,7 @@ namespace DeterministicLockstep
     /// <summary>
     /// Component used to store the player input data to use for user simulation
     /// </summary>
+    [BurstCompile]
     public struct PlayerInputDataToUse : IComponentData, IEnableableComponent
     {
         public int playerNetworkId;
@@ -41,6 +44,7 @@ namespace DeterministicLockstep
     /// <summary>
     /// Component used to store connection info for every connection
     /// </summary>
+    [BurstCompile]
     public struct NetworkConnectionReference : IComponentData
     {
         public NetworkDriver driverReference;
@@ -51,6 +55,7 @@ namespace DeterministicLockstep
     /// <summary>
     /// Component used to store the networkID of the connection
     /// </summary>
+    [BurstCompile]
     public struct GhostOwner : IComponentData
     {
         public int connectionNetworkId;
@@ -59,6 +64,7 @@ namespace DeterministicLockstep
     /// <summary>
     /// Component used to store the target spawned entity for the connection of which the arriving input will be used
     /// </summary>
+    [BurstCompile]
     public struct CommandTarget : IComponentData
     {
         public Entity connectionCommandsTargetEntity;
@@ -67,6 +73,7 @@ namespace DeterministicLockstep
     /// <summary> 
     /// An enableable tag component used to track if a ghost with an owner is owned by the local host or not.
     /// </summary>
+    [BurstCompile]
     public struct GhostOwnerIsLocal : IComponentData, IEnableableComponent
     {
     } // added to different entities so it may cause desync if comparing amount of components
@@ -74,6 +81,7 @@ namespace DeterministicLockstep
     /// <summary>
     /// Component used to tag connections for which a player prefab was spawned
     /// </summary>
+    [BurstCompile]
     public struct PlayerSpawned : IComponentData
     {
     }
@@ -81,6 +89,7 @@ namespace DeterministicLockstep
     /// <summary>
     /// Component used to store all the time related variables
     /// </summary>
+    [BurstCompile]
     public struct DeterministicTime : IComponentData
     {
         /// <summary>
@@ -144,6 +153,7 @@ namespace DeterministicLockstep
     /// <summary>
     /// Component used to mark server state
     /// </summary>
+    [BurstCompile]
     public struct DeterministicServerComponent : IComponentData
     {
         public DeterministicServerWorkingMode deterministicServerWorkingMode;
@@ -152,13 +162,14 @@ namespace DeterministicLockstep
     /// <summary>
     /// Component used to mark client state
     /// </summary>
+    [BurstCompile]
     public struct DeterministicClientComponent : IComponentData
     {
         public uint randomSeed;
         public DeterministicClientWorkingMode deterministicClientWorkingMode;
     }
     
-    
+    [BurstCompile]
     public struct PongInputs: IComponentData
     {
         public int verticalInput;
@@ -173,26 +184,6 @@ namespace DeterministicLockstep
                 ref DataStreamReader reader) //question how user can know if the order will be correct? --> Same order as serialization
         {
             verticalInput = reader.ReadInt();
-        }
-    }
-    
-    public struct CapsulesInputs: IComponentData
-    {
-        public int horizontalInput;
-        public int verticalInput;
-
-        public void SerializeInputs(ref DataStreamWriter writer)
-        {
-            writer.WriteInt(verticalInput);
-            writer.WriteInt(horizontalInput);
-        }
-    
-        public void
-            DeserializeInputs(ref 
-                DataStreamReader reader) 
-        {
-            verticalInput = reader.ReadInt();
-            horizontalInput = reader.ReadInt();
         }
     }
 }

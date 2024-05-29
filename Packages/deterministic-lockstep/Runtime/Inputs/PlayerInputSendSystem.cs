@@ -1,3 +1,4 @@
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
@@ -7,12 +8,18 @@ namespace DeterministicLockstep
     /// <summary>
     /// System that sends gathered player's input to the server. Inputs need to be gathered by the user.
     /// </summary>
+    [BurstCompile]
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup), OrderLast = true)]
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
-    public partial class PlayerInputSendSystem : SystemBase
+    public partial struct PlayerInputSendSystem : ISystem
     {
+        public void OnCreate(ref SystemState state)
+        {
+            state.RequireForUpdate<DeterministicTime>();
+        }
 
-        protected override void OnUpdate()
+        [BurstCompile]
+        public void OnUpdate(ref SystemState state)
         {
             var deterministicTime = SystemAPI.GetSingleton<DeterministicTime>();
             
@@ -21,7 +28,7 @@ namespace DeterministicLockstep
                          .Query<RefRO<NetworkConnectionReference>, RefRO<GhostOwner>>()
                          .WithAll<GhostOwnerIsLocal>())
             {
-                Debug.Log("Sending player input to server");
+                // Debug.Log("Sending player input to server");
                 if (!SystemAPI.TryGetSingleton<PongInputs>(out var capsulesInputs))
                 {
                     Debug.LogError("Inputs are not singleton");

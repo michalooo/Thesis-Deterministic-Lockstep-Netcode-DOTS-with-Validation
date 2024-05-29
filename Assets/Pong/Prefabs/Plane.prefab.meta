@@ -1,7 +1,8 @@
 fileFormatVersion: 2
-guid: 35a8f5f482b66bf4896184b8fc3972ed
-folderAsset: yes
-DefaultImporter:
+guid: b0149000d14794c4fbc4ff518209cff2
+labels:
+- Ghost
+PrefabImporter:
   externalObjects: {}
   userData: 
   assetBundleName: 

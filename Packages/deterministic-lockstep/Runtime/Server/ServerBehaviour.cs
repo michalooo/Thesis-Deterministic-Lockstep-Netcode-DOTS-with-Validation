@@ -296,7 +296,7 @@ namespace DeterministicLockstep
             RpcStartDeterministicSimulation rpc = new RpcStartDeterministicSimulation
             {
                 TodaysMiliseconds = DateTime.Now.TimeOfDay.TotalMilliseconds,
-                PostponedStartInMiliseconds = _worstPingMeasured * 3d,
+                PostponedStartInMiliseconds = 1500, //_worstPingMeasured * 3d,
                 PlayersNetworkIDs = _mNetworkIDs,
                 TickRate = SystemAPI.GetSingleton<DeterministicSettings>().simulationTickRate,
                 TicksOfForcedInputLatency = SystemAPI.GetSingleton<DeterministicSettings>().ticksAhead,
@@ -376,10 +376,10 @@ namespace DeterministicLockstep
                         ", ";
                 
             }
-            
-            Debug.Log("Data received: " + " Player network id --> " + rpc.PlayerNetworkID + " tick to apply --> " + rpc.FutureTick + 
-                      " hash to apply --> " + playerArrivingHashes + " inputs to apply --> " + rpc.PongGameInputs.verticalInput);
-            Debug.Log("Connected players: " + _connectedPlayers.Length);
+            //
+            // Debug.Log("Data received: " + " Player network id --> " + rpc.PlayerNetworkID + " tick to apply --> " + rpc.FutureTick + 
+            //           " hash to apply --> " + playerArrivingHashes + " inputs to apply --> " + rpc.PongGameInputs.verticalInput);
+            // Debug.Log("Connected players: " + _connectedPlayers.Length);
             for (var i = 0; i < _connectedPlayers.Length; i++)
             {
                 if (!_connectedPlayers[i].Equals(connection)) continue;
@@ -399,7 +399,7 @@ namespace DeterministicLockstep
                 {
                     if (oldInputData.PlayerNetworkID == i)
                     {
-                        Debug.LogError("Already received input from network ID " + i + " for tick " + rpc.FutureTick);
+                        // Debug.LogError("Already received input from network ID " + i + " for tick " + rpc.FutureTick);
                         return; // Stop executing the function here, since we don't want to add the new inputData
                     }
                 }
@@ -434,11 +434,11 @@ namespace DeterministicLockstep
                 {
                     // Assign the connection to the first available spot
                     _connectedPlayers[index] = connection; // Assign network ID based on the index
-                    Debug.Log("Accepted a connection with network ID: " + index);
+                    // Debug.Log("Accepted a connection with network ID: " + index);
                 }
                 else
                 {
-                    Debug.LogWarning("Cannot accept more connections. Server is full.");
+                    // Debug.LogWarning("Cannot accept more connections. Server is full.");
                     connection.Disconnect(_mDriver);
                 }
             }
@@ -576,7 +576,7 @@ namespace DeterministicLockstep
             }
             else if (_everyTickInputBuffer[(ulong) _lastTickReceivedFromClient].Length > GetActiveConnectionCount())
             {
-                Debug.LogError("Too many player inputs saved in one tick");
+                // Debug.LogError("Too many player inputs saved in one tick");
             }
         }
     }

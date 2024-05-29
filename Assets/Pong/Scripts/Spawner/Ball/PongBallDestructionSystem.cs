@@ -9,16 +9,20 @@ namespace PongGame
 {
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
+    [BurstCompile]
     public partial struct PongBallDestructionSystem : ISystem
     {
         private EntityQuery ballsQuery;
         private NativeArray<LocalTransform> ballTransform;
         private NativeArray<Entity> ballEntities;
+        
+        [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<PongBallSpawner>();
         }
         
+        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             var ecbSingleton = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>();

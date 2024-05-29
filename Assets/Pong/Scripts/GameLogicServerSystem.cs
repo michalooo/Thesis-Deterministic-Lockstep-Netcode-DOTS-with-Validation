@@ -1,4 +1,5 @@
 ﻿using DeterministicLockstep;
+using Unity.Burst;
 using Unity.Entities;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -7,15 +8,17 @@ namespace PongGame
 {
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
     [UpdateInGroup(typeof(UserSystemGroup))]
-    public partial class GameLogicServerSystem : SystemBase
+    [BurstCompile]
+    public partial struct GameLogicServerSystem : ISystem
     {
-
-        protected override void OnCreate()
+        [BurstCompile]
+        public void OnCreate(ref SystemState state)
         {
-            RequireForUpdate<DeterministicServerComponent>();
+            state.RequireForUpdate<DeterministicServerComponent>();
         }
 
-        protected override void OnUpdate()
+        [BurstCompile]
+        public void OnUpdate(ref SystemState state)
         {
             // option for the server to start the game
             if (SceneManager.GetActiveScene().name == "PongLoading" && Input.GetKey(KeyCode.Space))

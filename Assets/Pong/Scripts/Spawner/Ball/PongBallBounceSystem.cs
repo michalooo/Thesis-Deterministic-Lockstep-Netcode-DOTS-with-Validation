@@ -24,11 +24,13 @@ namespace PongGame
         private NativeArray<Velocity> ballVelocities;
         private NativeArray<Entity> ballEntities;
         
+        [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<PongBallSpawner>();
         }
 
+        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             playerQuery = SystemAPI.QueryBuilder().WithAll<CommandTarget>().Build();

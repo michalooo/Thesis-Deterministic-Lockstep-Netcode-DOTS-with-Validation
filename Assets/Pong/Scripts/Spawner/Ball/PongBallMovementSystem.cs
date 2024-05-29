@@ -16,6 +16,7 @@ namespace PongGame
     [BurstCompile]
     public partial struct BallMovementSystem : ISystem
     {
+        [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<PongBallSpawner>();
@@ -26,6 +27,7 @@ namespace PongGame
         private NativeArray<Velocity> ballVelocities;
         private NativeArray<Entity> ballEntities;
         
+        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             var deltaTime = SystemAPI.Time.DeltaTime;

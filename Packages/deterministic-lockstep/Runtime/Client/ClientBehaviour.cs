@@ -182,7 +182,7 @@ namespace DeterministicLockstep
         {
             // synchronize clock
             DateTime syncedDateTime = SyncDateTimeWithServer(rpc.TodaysMiliseconds + rpc.PingInMilliseconds);
-            Debug.Log("Synchronized DateTime: " + syncedDateTime.TimeOfDay + " for player with ID: " + rpc.ThisConnectionNetworkID + " time to postpone: " + rpc.PostponedStartInMiliseconds);
+            // Debug.Log("Synchronized DateTime: " + syncedDateTime.TimeOfDay + " for player with ID: " + rpc.ThisConnectionNetworkID + " time to postpone: " + rpc.PostponedStartInMiliseconds);
             
             foreach (var playerNetworkId in rpc.PlayersNetworkIDs)
             {
@@ -224,7 +224,7 @@ namespace DeterministicLockstep
             deterministicTime.ValueRW.localTimeAtTheMomentOfSynchronization = DateTime.Now;
 
             var client = SystemAPI.GetSingleton<DeterministicClientComponent>();
-            client.deterministicClientWorkingMode = DeterministicClientWorkingMode.SendData;
+            client.deterministicClientWorkingMode = DeterministicClientWorkingMode.PrepareGame;
             client.randomSeed = rpc.SeedForPlayerRandomActions;
             SystemAPI.SetSingleton(client);
             

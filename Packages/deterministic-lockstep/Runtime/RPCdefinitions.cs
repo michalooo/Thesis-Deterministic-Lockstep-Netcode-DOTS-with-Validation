@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Networking.Transport;
 using UnityEngine;
@@ -34,6 +35,7 @@ namespace DeterministicLockstep
     /// <summary>
     /// Struct that is being send by the server to the client in order to measure ping between them
     /// </summary>
+    [BurstCompile]
     public struct RpcTestPing : INetcodeRPC
     {
         public RpcID GetID => RpcID.TestClientPing;
@@ -58,7 +60,7 @@ namespace DeterministicLockstep
             }
 
             mDriver.EndSend(writer);
-            Debug.Log("RPC for testing ping send from server");
+            // Debug.Log("RPC for testing ping send from server");
         }
 
         public void Deserialize(ref DataStreamReader reader)
@@ -67,13 +69,14 @@ namespace DeterministicLockstep
             TimeInMilisecondsWhenMessageWasSendFromServer = reader.ReadDouble();
             PlayerNetworkID = reader.ReadInt();
 
-            Debug.Log("RPC for testing ping received");
+            // Debug.Log("RPC for testing ping received");
         }
     }
 
     /// <summary>
     /// Struct that is being send by the server when clients are desynchronized. Used to stop game execution
     /// </summary>
+    [BurstCompile]
     public struct RpcPlayerDesynchronizationMessage : INetcodeRPC
     {
         public RpcID GetID => RpcID.PlayersDesynchronizedMessage;
@@ -93,14 +96,14 @@ namespace DeterministicLockstep
             }
 
             mDriver.EndSend(writer);
-            Debug.Log("RPC stating that players disconnected send from server");
+            // Debug.Log("RPC stating that players disconnected send from server");
         }
 
         public void Deserialize(ref DataStreamReader reader)
         {
             reader.ReadByte(); // ID
 
-            Debug.Log("RPC stating that players disconnected received");
+            // Debug.Log("RPC stating that players disconnected received");
         }
     }
 
@@ -108,6 +111,7 @@ namespace DeterministicLockstep
     /// <summary>
     /// Struct that is being send by the server at the start of the game. It contains info about all players network IDs so the corresponding connections entities can be created. Additionally, it contains information about expected tickRate etc
     /// </summary>
+    [BurstCompile]
     public struct RpcStartDeterministicSimulation : INetcodeRPC
     {
         /// <summary>
@@ -179,7 +183,7 @@ namespace DeterministicLockstep
             }
 
             mDriver.EndSend(writer);
-            Debug.Log("RPC with start game request send from server");
+            // Debug.Log("RPC with start game request send from server");
         }
 
         public void Deserialize(ref DataStreamReader reader)
@@ -202,13 +206,14 @@ namespace DeterministicLockstep
             ThisConnectionNetworkID = reader.ReadInt();
             SeedForPlayerRandomActions = reader.ReadUInt();
 
-            Debug.Log("RPC from server about starting the game received");
+            // Debug.Log("RPC from server about starting the game received");
         }
     }
 
     /// <summary>
     /// Struct that is being send by the clients to the server at the end of each tick. It contains info about all player inputs
     /// </summary>
+    [BurstCompile]
     public struct RpcBroadcastPlayerTickDataToServer : INetcodeRPC
     {
         public PongInputs PongGameInputs;
@@ -243,7 +248,7 @@ namespace DeterministicLockstep
             }
             
             mDriver.EndSend(writer);
-            Debug.Log("RPC send from client with input values");
+            // Debug.Log("RPC send from client with input values");
         }
 
         public void Deserialize(ref DataStreamReader reader)
@@ -260,13 +265,14 @@ namespace DeterministicLockstep
                 HashesForFutureTick.Add(reader.ReadULong());
             }
             
-            Debug.Log("RPC received in the server with player data update");
+            // Debug.Log("RPC received in the server with player data update");
         }
     }
     
     /// <summary>
     /// Struct that is being send by the server to all clients after receiving inputs from all of them. It contains info about all players network IDs so they can be identified as well as their corresponding inputs to apply and the tick for which those should be assigned
     /// </summary>
+    [BurstCompile]
     public struct RpcBroadcastTickDataToClients : INetcodeRPC
     {
         /// <summary>
@@ -315,7 +321,7 @@ namespace DeterministicLockstep
             }
             
             mDriver.EndSend(writer);
-            Debug.Log("RPC with players input send from server");
+            // Debug.Log("RPC with players input send from server");
         }
 
         public void Deserialize(ref DataStreamReader reader)
@@ -340,7 +346,7 @@ namespace DeterministicLockstep
             
             SimulationTick = reader.ReadInt();
             
-            Debug.Log("RPC from server with players data update received");
+            // Debug.Log("RPC from server with players data update received");
         }
     }
     

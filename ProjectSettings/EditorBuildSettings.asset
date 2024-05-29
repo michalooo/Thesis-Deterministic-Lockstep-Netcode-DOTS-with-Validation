@@ -5,15 +5,6 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 0
-    path: Assets/3D_capsules/Scenes/CapsulesMenu.unity
-    guid: 498cf7ecc50ad8b4781fa6edc91b5d6f
-  - enabled: 0
-    path: Assets/3D_capsules/Scenes/CapsulesLoading.unity
-    guid: ebc5b90dfe3ee424189c5acdc23cb6ce
-  - enabled: 0
-    path: Assets/3D_capsules/Scenes/CapsulesGame.unity
-    guid: c67da2cd505538d4f89a623409600d2a
   - enabled: 1
     path: Assets/Pong/Scenes/PongMenu.unity
     guid: ed35553190f13de41ad4cde64363958d

@@ -3,6 +3,7 @@ using Unity.Entities;
 using Unity.Transforms;
 using UnityEngine;
 using DeterministicLockstep;
+using Unity.Burst;
 using Unity.Mathematics;
 
 namespace PongGame
@@ -12,15 +13,18 @@ namespace PongGame
     /// </summary>
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
-    public partial class PongPlayerSpawnerSystem : SystemBase
+    [BurstCompile]
+    public partial struct PongPlayerSpawnerSystem : ISystem
     {
-        protected override void OnCreate()
+        [BurstCompile]
+        public void OnCreate(ref SystemState state)
         {
-            RequireForUpdate<PongPlayerSpawner>();
-            RequireForUpdate<PongInputs>();
+            state.RequireForUpdate<PongPlayerSpawner>();
+            state.RequireForUpdate<PongInputs>();
         }
 
-        protected override void OnUpdate()
+        [BurstCompile]
+        public void OnUpdate(ref SystemState state)
         {
             var prefab = SystemAPI.GetSingleton<PongPlayerSpawner>().Player;
             var commandBuffer = new EntityCommandBuffer(Allocator.Temp);
@@ -28,7 +32,7 @@ namespace PongGame
             foreach (var (ghostOwner, connectionEntity) in SystemAPI.Query<RefRW<GhostOwner>>()
                          .WithNone<PlayerSpawned>().WithEntityAccess())
             {
-                Debug.Log($"Spawning player for connection {ghostOwner.ValueRO.connectionNetworkId}");
+                // Debug.Log($"Spawning player for connection {ghostOwner.ValueRO.connectionNetworkId}");
 
                 commandBuffer.AddComponent<PlayerSpawned>(connectionEntity);
                 var player = commandBuffer.Instantiate(prefab);
@@ -48,7 +52,7 @@ namespace PongGame
                 }
             }
 
-            commandBuffer.Playback(EntityManager);
+            commandBuffer.Playback(state.EntityManager);
         }
     }
 }
