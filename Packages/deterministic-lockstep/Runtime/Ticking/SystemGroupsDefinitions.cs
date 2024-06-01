@@ -57,17 +57,17 @@ namespace DeterministicLockstep
 
         protected override void OnUpdate()
         {
-            if (SystemAPI.GetSingleton<DeterministicSettings>().hashCalculationOption !=
+            if (SystemAPI.GetSingleton<DeterministicSettings>().hashCalculationOption ==
                 DeterminismHashCalculationOption.PerSystem)
-            {
-                base.OnUpdate();
-            }
-            else
             {
                 while (RateManager.ShouldGroupUpdate(this))
                 {
                     UpdateAllGroupSystems(this);
                 }
+            }
+            else
+            {
+                base.OnUpdate();
             }
         }
 
@@ -76,11 +76,13 @@ namespace DeterministicLockstep
             private EntityQuery _deterministicTimeQuery;
             private EntityQuery _connectionQuery;
             private EntityQuery _inputDataQuery;
+            private EntityQuery _deterministicClientQuery;
             private bool wasLogging;
 
             public DeterministicFixedStepRateManager(ComponentSystemGroup group) : this()
             {
                 _deterministicTimeQuery = group.EntityManager.CreateEntityQuery(typeof(DeterministicTime));
+                _deterministicClientQuery = group.EntityManager.CreateEntityQuery(typeof(DeterministicClientComponent));
                 _connectionQuery =
                     group.EntityManager.CreateEntityQuery(
                         typeof(GhostOwnerIsLocal)); // This component will only be created when RPC to start game was send
@@ -90,6 +92,12 @@ namespace DeterministicLockstep
 
             public bool ShouldGroupUpdate(ComponentSystemGroup group)
             {
+                var deterministicClient = _deterministicClientQuery.GetSingleton<DeterministicClientComponent>();
+                if (deterministicClient.deterministicClientWorkingMode != DeterministicClientWorkingMode.SendData)
+                    return false;
+               
+                
+                
                 var deltaTime = group.World.Time.DeltaTime;
                 var deterministicTime = _deterministicTimeQuery.GetSingletonRW<DeterministicTime>();
                 var localConnectionEntity = _connectionQuery.ToEntityArray(Allocator.Temp);
@@ -104,13 +112,13 @@ namespace DeterministicLockstep
                 // need to wait for the delay to start at the same moment as other clients
                 if (elapsedLocalMilliseconds < deterministicTime.ValueRO.timeToPostponeStartofSimulation) // I don't really use server time here
                 {
-                    Debug.LogError("Before: " + elapsedLocalMilliseconds + " " + deterministicTime.ValueRO.timeToPostponeStartofSimulation);
+                    // Debug.LogError("Before: " + elapsedLocalMilliseconds + " " + deterministicTime.ValueRO.timeToPostponeStartofSimulation);
                     return false;
                 }
                 else if(!wasLogging)
                 {
                     wasLogging = true;
-                    Debug.LogError("After: " + elapsedLocalMilliseconds + " " + deterministicTime.ValueRO.timeToPostponeStartofSimulation);
+                    // Debug.LogError("After: " + elapsedLocalMilliseconds + " " + deterministicTime.ValueRO.timeToPostponeStartofSimulation);
                 }
 
                 deterministicTime.ValueRW.timeLeftToSendNextTick -= deltaTime;

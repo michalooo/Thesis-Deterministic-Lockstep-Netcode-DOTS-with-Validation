@@ -11,7 +11,6 @@ namespace PongGame
 {
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
-    // [UpdateAfter(typeof(BallMovementSystem))]
     [BurstCompile]
     public partial struct BallBounceSystem : ISystem
     {

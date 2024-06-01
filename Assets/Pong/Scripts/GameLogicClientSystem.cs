@@ -1,12 +1,7 @@
-﻿using System.Collections;
-using DeterministicLockstep;
-using Unity.Burst;
+﻿using DeterministicLockstep;
 using Unity.Entities;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine;
-using UnityEngine.SceneManagement;
-using System.Collections;
 
 namespace PongGame
 {
@@ -14,7 +9,8 @@ namespace PongGame
     [UpdateInGroup(typeof(UserSystemGroup))]
     public partial class GameLogicClientSystem : SystemBase
     {
-        private AsyncOperation asyncLoad = null;
+        private AsyncOperation gameAsyncLoad = null;
+        
         protected override void OnCreate()
         {
             RequireForUpdate<DeterministicClientComponent>();
@@ -22,32 +18,39 @@ namespace PongGame
         
         protected override void OnUpdate()
         {
-            var client = SystemAPI.GetSingleton<DeterministicClientComponent>();
-            if (SceneManager.GetActiveScene().name == "PongGame" && Input.GetKey(KeyCode.C) &&
-                World.Name == "ClientWorld1") // Simulation of disconnection
+            var client = SystemAPI.GetSingletonRW<DeterministicClientComponent>();
+            if ((SceneManager.GetActiveScene().name == "PongGame" || SceneManager.GetActiveScene().name == "PongLoading") && (Input.GetKey(KeyCode.Q) || client.ValueRO.deterministicClientWorkingMode == DeterministicClientWorkingMode.Disconnect)) //Simulation of disconnection 
             {
-                client = SystemAPI.GetSingleton<DeterministicClientComponent>();
-                client.deterministicClientWorkingMode = DeterministicClientWorkingMode.Disconnect;
-                SystemAPI.SetSingleton(client);
+                Debug.Log("Client requested to disconnect");
+                client.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.Disconnect;
+                
+                foreach (var world in World.All)
+                {
+                    if (world.Flags is not (WorldFlags.GameServer or WorldFlags.GameClient))
+                    {
+                        Debug.Log(world);
+                        ScriptBehaviourUpdateOrder.AppendWorldToCurrentPlayerLoop(world);
+                        World.DefaultGameObjectInjectionWorld = world;
+                        break;
+                    }
+                }
 
-                SceneManager.LoadScene("PongLoading");
+                SceneManager.LoadSceneAsync("PongMenu");
             }
             else if (SceneManager.GetActiveScene().name == "PongLoading" && SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode == DeterministicClientWorkingMode.PrepareGame)
             {
-                asyncLoad = SceneManager.LoadSceneAsync("PongGame");
+                gameAsyncLoad = SceneManager.LoadSceneAsync("PongGame");
             }
             else if (SceneManager.GetActiveScene().name == "PongLoading" && SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode == DeterministicClientWorkingMode.None)
             {
-                client = SystemAPI.GetSingleton<DeterministicClientComponent>();
-                client.deterministicClientWorkingMode = DeterministicClientWorkingMode.Connect;
-                SystemAPI.SetSingleton(client);
+                client.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.Connect;
             }
-            
-            if (asyncLoad == null || !asyncLoad.isDone) return;
-            
-            client.deterministicClientWorkingMode = DeterministicClientWorkingMode.SendData;
-            SystemAPI.SetSingleton(client);
-            asyncLoad = null;
+
+            if (gameAsyncLoad != null && gameAsyncLoad.isDone)
+            {
+                client.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.SendData;
+                gameAsyncLoad = null;
+            }
         }
     }
 }

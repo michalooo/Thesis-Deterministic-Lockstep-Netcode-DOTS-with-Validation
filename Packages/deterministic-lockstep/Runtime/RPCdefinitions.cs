@@ -150,6 +150,8 @@ namespace DeterministicLockstep
         public int ThisConnectionNetworkID { get; set; }
         
         public uint SeedForPlayerRandomActions { get; set; }
+        
+        public int DeterminismHashCalculationOption { get; set; }
 
         public RpcID GetID => RpcID.StartDeterministicGameSimulation;
 
@@ -175,6 +177,7 @@ namespace DeterministicLockstep
             writer.WriteInt(TicksOfForcedInputLatency);
             writer.WriteInt(ThisConnectionNetworkID);
             writer.WriteUInt(SeedForPlayerRandomActions);
+            writer.WriteInt(DeterminismHashCalculationOption);
 
             if (writer.HasFailedWrites)
             {
@@ -205,6 +208,7 @@ namespace DeterministicLockstep
             TicksOfForcedInputLatency = reader.ReadInt();
             ThisConnectionNetworkID = reader.ReadInt();
             SeedForPlayerRandomActions = reader.ReadUInt();
+            DeterminismHashCalculationOption = reader.ReadInt();
 
             // Debug.Log("RPC from server about starting the game received");
         }
@@ -226,8 +230,12 @@ namespace DeterministicLockstep
             NetworkPipeline? pipeline = null)
         {
             DataStreamWriter writer;
+            if(!mDriver.IsCreated || !connection.IsCreated) return;
+            
             if (!pipeline.HasValue) mDriver.BeginSend(connection, out writer);
             else mDriver.BeginSend(pipeline.Value, connection, out writer);
+            
+            if(!writer.IsCreated) return;
 
             writer.WriteByte((byte)GetID);
             PongGameInputs.SerializeInputs(ref writer);
@@ -296,9 +304,13 @@ namespace DeterministicLockstep
             NetworkPipeline? pipeline = null)
         {
             DataStreamWriter writer;
+            if(!mDriver.IsCreated || !connection.IsCreated) return;
+            
             if (!pipeline.HasValue) mDriver.BeginSend(connection, out writer);
             else mDriver.BeginSend(pipeline.Value, connection, out writer);
-
+        
+            if(!writer.IsCreated) return;
+            
             writer.WriteByte((byte)GetID);
             writer.WriteInt(NetworkIDs.Length);
             foreach (var id in NetworkIDs)

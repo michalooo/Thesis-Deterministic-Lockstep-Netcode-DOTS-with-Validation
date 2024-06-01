@@ -13,6 +13,7 @@ namespace DeterministicLockstep
     {
         ListenForConnections,
         RunDeterministicSimulation,
+        Disconnect,
         None
     }
     

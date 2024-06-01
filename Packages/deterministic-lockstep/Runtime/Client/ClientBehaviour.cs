@@ -4,7 +4,6 @@ using Unity.Entities;
 using UnityEngine;
 using Unity.Networking.Transport;
 using Unity.Networking.Transport.Utilities;
-using UnityEngine.SceneManagement;
 
 namespace DeterministicLockstep
 {
@@ -72,10 +71,9 @@ namespace DeterministicLockstep
             }
 
             if (SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode == DeterministicClientWorkingMode.Disconnect &&
-                !_mConnection.IsCreated)
+                _mConnection.IsCreated)
             {
-                _mConnection.Disconnect(_mDriver);
-                _mConnection = default;
+                Disconnect();
             }
 
             if (!_mConnection.IsCreated) return;
@@ -87,7 +85,7 @@ namespace DeterministicLockstep
                 switch (cmd)
                 {
                     case NetworkEvent.Type.Connect:
-                        if (SystemAPI.TryGetSingleton<DeterministicSettings>(out DeterministicSettings deterministicSettings))
+                        if (SystemAPI.TryGetSingleton(out DeterministicSettings deterministicSettings))
                         {
                             Debug.Log(
                                 $"[ConnectToServer] Called on " + deterministicSettings._serverAddress + ":" + deterministicSettings._serverPort + ".");
@@ -103,6 +101,7 @@ namespace DeterministicLockstep
                         break;
                     case NetworkEvent.Type.Disconnect:
                         Debug.Log("Disconnected from server.");
+                        SystemAPI.GetSingletonRW<DeterministicClientComponent>().ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.Disconnect;
                         _mConnection = default;
                         break;
                     case NetworkEvent.Type.Empty:
@@ -111,6 +110,15 @@ namespace DeterministicLockstep
                         throw new ArgumentOutOfRangeException();
                 }
             }
+        }
+
+        private void Disconnect()
+        {
+            _mDriver.ScheduleUpdate().Complete();
+                
+            _mConnection.Disconnect(_mDriver);
+            _mConnection = default(NetworkConnection);
+            _mDriver.ScheduleUpdate().Complete();
         }
 
         /// <summary>
@@ -132,6 +140,7 @@ namespace DeterministicLockstep
                 case RpcID.BroadcastTickDataToClients:
                     var rpcPlayersDataUpdate = new RpcBroadcastTickDataToClients();
                     rpcPlayersDataUpdate.Deserialize(ref stream);
+                    DestroyDisconnectedClients(rpcPlayersDataUpdate);
                     UpdatePlayersData(rpcPlayersDataUpdate);
                     break;
                 case RpcID.StartDeterministicGameSimulation:
@@ -161,6 +170,36 @@ namespace DeterministicLockstep
                     Debug.LogError("Received RPC ID not proceeded by the client: " + id);
                     break;
             }
+        }
+
+        private void DestroyDisconnectedClients(RpcBroadcastTickDataToClients rpc)
+        {
+            var connectionEntities = GetEntityQuery(
+                typeof(GhostOwner),
+                ComponentType.Exclude<GhostOwnerIsLocal>()
+            ).ToEntityArray(Allocator.TempJob); // We should never even consider to destroy local player
+            
+            if(rpc.NetworkIDs.Length >= connectionEntities.Length) return;
+            
+            foreach (var entity in connectionEntities)
+            {
+                var connectionReference = EntityManager.GetComponentData<GhostOwner>(entity);
+                var connectionCommandTarget = EntityManager.GetComponentData<CommandTarget>(entity);
+
+                Debug.Log("before: " + connectionReference.connectionNetworkId);
+                if (!rpc.NetworkIDs.Contains(connectionReference.connectionNetworkId))
+                {
+                    for(int i=0; i<rpc.NetworkIDs.Length; i++)
+                    {
+                        Debug.Log("rpc: " + rpc.NetworkIDs[i]);
+                    }
+                    Debug.LogError("Destroying connection: " + connectionReference.connectionNetworkId);
+                    EntityManager.DestroyEntity(entity);
+                    EntityManager.DestroyEntity(connectionCommandTarget.connectionCommandsTargetEntity);
+                }
+            }
+
+            connectionEntities.Dispose();
         }
         
         public static DateTime SyncDateTimeWithServer(double remoteMilliseconds)
@@ -223,10 +262,14 @@ namespace DeterministicLockstep
             deterministicTime.ValueRW.timeToPostponeStartofSimulation = rpc.PostponedStartInMiliseconds;
             deterministicTime.ValueRW.localTimeAtTheMomentOfSynchronization = DateTime.Now;
 
-            var client = SystemAPI.GetSingleton<DeterministicClientComponent>();
-            client.deterministicClientWorkingMode = DeterministicClientWorkingMode.PrepareGame;
-            client.randomSeed = rpc.SeedForPlayerRandomActions;
-            SystemAPI.SetSingleton(client);
+            var client = SystemAPI.GetSingletonRW<DeterministicClientComponent>();
+            client.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.PrepareGame;
+            client.ValueRW.randomSeed = rpc.SeedForPlayerRandomActions;
+            
+            var settings = SystemAPI.GetSingletonRW<DeterministicSettings>();
+            settings.ValueRW.simulationTickRate = rpc.TickRate;
+            settings.ValueRW.ticksAhead = rpc.TicksOfForcedInputLatency;
+            settings.ValueRW.hashCalculationOption = (DeterminismHashCalculationOption) rpc.DeterminismHashCalculationOption;
             
             // foreach (var connectionReference in SystemAPI
             //              .Query<RefRO<NetworkConnectionReference>>()

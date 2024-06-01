@@ -1,4 +1,6 @@
-﻿using DeterministicLockstep;
+﻿using System;
+using System.Collections.Generic;
+using DeterministicLockstep;
 using Unity.Entities;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -11,7 +13,25 @@ namespace PongGame
         public Toggle IsLocalMultiplayerSimulation;
         public InputField Address;
         public InputField Port;
-        
+
+        private void Start()
+        {
+            List<World> worlds = new List<World>();
+            foreach (var world in World.All)
+            {
+                if (world.Flags is WorldFlags.GameServer or WorldFlags.GameClient)
+                {
+                    worlds.Add(world);
+                }
+            }
+            
+            foreach (var world in worlds)
+            {
+                Debug.Log("Destroying world: " + world.Name);
+                world.Dispose();
+            }
+        }
+
         public void QuitGame()
         {
 #if UNITY_EDITOR
@@ -22,6 +42,7 @@ namespace PongGame
         
         public void HostGame()
         {
+            Debug.Log(World.DefaultGameObjectInjectionWorld);
             EntityManager entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
             EntityQuery deterministicSettingsQuery = entityManager.CreateEntityQuery(typeof(DeterministicSettings));
 
@@ -80,8 +101,8 @@ namespace PongGame
                     "No DeterministicSettings entity found in the world. Make sure you have a DeterministicSettings entity in your world.");
             }
 
-            DestroyLocalSimulationWorld();
-            World.DefaultGameObjectInjectionWorld ??= client;
+            // DestroyLocalSimulationWorld();
+            World.DefaultGameObjectInjectionWorld = client;
         }
 
         public void ConnectToGame()
@@ -110,11 +131,9 @@ namespace PongGame
                     "No DeterministicSettings entity found in the world. Make sure you have a DeterministicSettings entity in your world.");
             }
 
-            DestroyLocalSimulationWorld();
-
             SceneManager.LoadScene("PongLoading");
 
-            World.DefaultGameObjectInjectionWorld ??= client;
+            World.DefaultGameObjectInjectionWorld = client;
         }
 
         private static World CreateServerWorld(string name)
@@ -141,24 +160,9 @@ namespace PongGame
             DefaultWorldInitialization.AddSystemsToRootLevelSystemGroups(world, systems);
             ScriptBehaviourUpdateOrder.AppendWorldToCurrentPlayerLoop(world);
 
-            World.DefaultGameObjectInjectionWorld ??= world;
+            World.DefaultGameObjectInjectionWorld = world;
 
             return world;
-        }
-
-        /// <summary>
-        /// Function that destroys local simulation world
-        /// </summary>
-        private void DestroyLocalSimulationWorld()
-        {
-            foreach (var world in World.All)
-            {
-                if (world.Flags == WorldFlags.Game)
-                {
-                    world.Dispose();
-                    break;
-                }
-            }
         }
     }
 }

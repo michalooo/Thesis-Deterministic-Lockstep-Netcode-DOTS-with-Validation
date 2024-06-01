@@ -14,8 +14,8 @@ namespace DeterministicLockstep
     public struct DeterministicSettings : IComponentData
     {
         public int ticksAhead;
-        public ushort allowedConnectionsPerGame;
-        public ushort simulationTickRate;
+        public int allowedConnectionsPerGame;
+        public int simulationTickRate;
         public DeterminismHashCalculationOption hashCalculationOption;
 
         public bool isInGame;
@@ -34,8 +34,8 @@ namespace DeterministicLockstep
     public class DeterministicSettingsAuthoring : MonoBehaviour // Will it work both on Client and Server?
     {
         [Header("Game simulation params")]
-        public ushort simulationTickRate = 30;
-        public ushort allowedConnectionsPerGame = 16;
+        public int simulationTickRate = 30;
+        public int allowedConnectionsPerGame = 16;
         public int ticksAhead = 4; // Mathf.CeilToInt(0.15f * tickRate); (delay of 0.15s)
         public int serverPort = 7979;
         public string serverAddress = "127.0.0.1";

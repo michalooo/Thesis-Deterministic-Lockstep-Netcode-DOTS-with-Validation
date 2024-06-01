@@ -4,7 +4,6 @@ using System.Linq;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Networking.Transport;
-using Unity.Networking.Transport.Utilities;
 using UnityEngine;
 using Random = System.Random;
 
@@ -71,17 +70,24 @@ namespace DeterministicLockstep
 
         protected override void OnUpdate()
         {
-            if (SystemAPI.GetSingleton<DeterministicServerComponent>().deterministicServerWorkingMode == DeterministicServerWorkingMode.ListenForConnections &&
-                !_mDriver.IsCreated)
+            if (SystemAPI.GetSingleton<DeterministicServerComponent>().deterministicServerWorkingMode == DeterministicServerWorkingMode.ListenForConnections && !_mDriver.IsCreated)
             {
                 StartListening();
             }
-            if(SystemAPI.GetSingleton<DeterministicServerComponent>().deterministicServerWorkingMode == DeterministicServerWorkingMode.RunDeterministicSimulation && !SystemAPI.GetSingleton<DeterministicSettings>().isInGame) StartGame();
             
             if(!_mDriver.IsCreated) return;
+
+            if (SystemAPI.GetSingleton<DeterministicServerComponent>().deterministicServerWorkingMode ==
+                DeterministicServerWorkingMode.RunDeterministicSimulation &&
+                !SystemAPI.GetSingleton<DeterministicSettings>().isInGame)
+            {
+                StartGame();
+            }
             
-            
-            
+            if (SystemAPI.GetSingleton<DeterministicServerComponent>().deterministicServerWorkingMode == DeterministicServerWorkingMode.Disconnect)
+            {
+                Disconnect();
+            }
             
             _mDriver.ScheduleUpdate().Complete();
             
@@ -103,7 +109,7 @@ namespace DeterministicLockstep
                             HandleRpc(stream, _connectedPlayers[i]);
                             break;
                         case NetworkEvent.Type.Disconnect:
-                            Debug.Log("Client disconnected from the server.");
+                            Debug.Log("Client disconnected from the server: " + i);
                             _connectedPlayers[i] = default;
                             CheckIfAllDataReceivedAndSendToClients();
                             break;
@@ -114,6 +120,20 @@ namespace DeterministicLockstep
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
+                }
+            }
+        }
+        
+        private void Disconnect()
+        {
+            _mDriver.ScheduleUpdate().Complete();
+
+            for (int i = 0; i < _connectedPlayers.Length; i++)
+            {
+                if (_connectedPlayers[i].IsCreated)
+                {
+                    _connectedPlayers[i].Disconnect(_mDriver);
+                    _connectedPlayers[i] = default(NetworkConnection);
                 }
             }
         }
@@ -300,7 +320,8 @@ namespace DeterministicLockstep
                 PlayersNetworkIDs = _mNetworkIDs,
                 TickRate = SystemAPI.GetSingleton<DeterministicSettings>().simulationTickRate,
                 TicksOfForcedInputLatency = SystemAPI.GetSingleton<DeterministicSettings>().ticksAhead,
-                SeedForPlayerRandomActions = (uint)rng.Next(1, int.MaxValue)
+                SeedForPlayerRandomActions = (uint)rng.Next(1, int.MaxValue),
+                DeterminismHashCalculationOption = (int) SystemAPI.GetSingleton<DeterministicSettings>().hashCalculationOption
             };
             
             for (ushort i = 0; i < _connectedPlayers.Length; i++)
@@ -416,7 +437,9 @@ namespace DeterministicLockstep
         /// <returns>Amount of active connections</returns>
         private int GetActiveConnectionCount()
         {
+            // Debug.Log(_connectedPlayers.Count(connectedPlayer => connectedPlayer.IsCreated));
             return _connectedPlayers.Count(connectedPlayer => connectedPlayer.IsCreated);
+            
         }
         
         /// <summary>
@@ -478,8 +501,11 @@ namespace DeterministicLockstep
             
                 foreach (var inputData in _everyTickInputBuffer[(ulong) _lastTickReceivedFromClient])
                 {
-                    networkIDs.Add(inputData.PlayerNetworkID);
-                    inputs.Add(inputData.PongGameInputs);
+                    if(_connectedPlayers[inputData.PlayerNetworkID].IsCreated)
+                    {
+                        networkIDs.Add(inputData.PlayerNetworkID);
+                        inputs.Add(inputData.PongGameInputs);
+                    }
                 }
                 
                 // Get the number of hashes (assuming all players have the same number of hashes)
@@ -555,8 +581,8 @@ namespace DeterministicLockstep
                         }
                     }
                     
-                    Debug.Log("All hashes are equal: " + allHashes + ". Number of players: " +
-                              _everyTickHashBuffer[(ulong) _lastTickReceivedFromClient].Length + ". Tick: " + _lastTickReceivedFromClient + " Number of hashes per player: " + _everyTickHashBuffer[(ulong)_lastTickReceivedFromClient][0].Length);
+                    // Debug.Log("All hashes are equal: " + allHashes + ". Number of players: " +
+                              // _everyTickHashBuffer[(ulong) _lastTickReceivedFromClient].Length + ". Tick: " + _lastTickReceivedFromClient + " Number of hashes per player: " + _everyTickHashBuffer[(ulong)_lastTickReceivedFromClient][0].Length);
             
                     // Send the RPC to all connections
                     SendRPCWithPlayersInputUpdate(networkIDs, inputs);

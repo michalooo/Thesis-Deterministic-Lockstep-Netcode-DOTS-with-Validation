@@ -13,18 +13,15 @@ namespace PongGame
     /// </summary>
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
-    [BurstCompile]
-    public partial struct PongPlayerSpawnerSystem : ISystem
+    public partial class PongPlayerSpawnerSystem : SystemBase
     {
-        [BurstCompile]
-        public void OnCreate(ref SystemState state)
+        protected override void OnCreate()
         {
-            state.RequireForUpdate<PongPlayerSpawner>();
-            state.RequireForUpdate<PongInputs>();
+            RequireForUpdate<PongPlayerSpawner>();
+            RequireForUpdate<PongInputs>();
         }
-
-        [BurstCompile]
-        public void OnUpdate(ref SystemState state)
+        
+        protected override void OnUpdate()
         {
             var prefab = SystemAPI.GetSingleton<PongPlayerSpawner>().Player;
             var commandBuffer = new EntityCommandBuffer(Allocator.Temp);
@@ -52,7 +49,7 @@ namespace PongGame
                 }
             }
 
-            commandBuffer.Playback(state.EntityManager);
+            commandBuffer.Playback(EntityManager);
         }
     }
 }

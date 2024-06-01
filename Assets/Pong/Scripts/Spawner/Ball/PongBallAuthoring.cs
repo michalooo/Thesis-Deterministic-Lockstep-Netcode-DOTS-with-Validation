@@ -5,15 +5,15 @@ using UnityEngine;
 
 namespace PongGame
 {
+    /// <summary>
+    /// A component used to store velocity value in float3 format.
+    /// </summary>
     [BurstCompile]
     public struct Velocity : IComponentData
     {
         public float3 value;
     }
-
-    /// <summary>
-    /// Authoring function for the Spawner
-    /// </summary>
+    
     public class PongBallAuthoring : MonoBehaviour
     {
         class Baker : Baker<PongBallAuthoring>
