@@ -97,9 +97,9 @@ namespace DeterministicLockstep
         /// <summary>
         /// Synchronized clock with the server
         /// </summary>
-        public DateTime synchronizedDateTimeWithServer;
-        public DateTime localTimeAtTheMomentOfSynchronization;
-        public double timeToPostponeStartofSimulation;
+        public DateTime serverTimestampUTC;
+        public DateTime localTimestampAtTheMomentOfSynchronizationUTC;
+        public double timeToPostponeStartofSimulationInMiliseconds;
         
         /// <summary>
         /// Variable storing the elapsed time which is used to control system groups

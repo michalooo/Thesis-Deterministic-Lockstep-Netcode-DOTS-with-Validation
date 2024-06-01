@@ -95,30 +95,25 @@ namespace DeterministicLockstep
                 var deterministicClient = _deterministicClientQuery.GetSingleton<DeterministicClientComponent>();
                 if (deterministicClient.deterministicClientWorkingMode != DeterministicClientWorkingMode.RunDeterministicSimulation)
                     return false;
-               
                 
                 
                 var deltaTime = group.World.Time.DeltaTime;
                 var deterministicTime = _deterministicTimeQuery.GetSingletonRW<DeterministicTime>();
                 var localConnectionEntity = _connectionQuery.ToEntityArray(Allocator.Temp);
-
-                if (localConnectionEntity.Length == 0)
-                {
-                    return false; // before rpc with start game was received
-                }
                 
-                var currentLocalTime = DateTime.Now;
-                var elapsedLocalMilliseconds = (currentLocalTime - deterministicTime.ValueRO.localTimeAtTheMomentOfSynchronization).TotalMilliseconds;
+                var currentLocalTime = DateTime.UtcNow;
+                var elapsedLocalMilliseconds = (currentLocalTime - deterministicTime.ValueRO.serverTimestampUTC).TotalMilliseconds;
                 // need to wait for the delay to start at the same moment as other clients
-                if (elapsedLocalMilliseconds < deterministicTime.ValueRO.timeToPostponeStartofSimulation) // I don't really use server time here
+                if (elapsedLocalMilliseconds < deterministicTime.ValueRO.timeToPostponeStartofSimulationInMiliseconds)
                 {
-                    // Debug.LogError("Before: " + elapsedLocalMilliseconds + " " + deterministicTime.ValueRO.timeToPostponeStartofSimulation);
+                    // Debug.LogError("Before: " + elapsedLocalMilliseconds + " " + deterministicTime.ValueRO.timeToPostponeStartofSimulationInMiliseconds);
                     return false;
                 }
                 else if(!wasLogging)
                 {
                     wasLogging = true;
-                    // Debug.LogError("After: " + elapsedLocalMilliseconds + " " + deterministicTime.ValueRO.timeToPostponeStartofSimulation);
+                    Debug.LogError(DateTime.UtcNow.TimeOfDay);
+                    // Debug.LogError("After: " + elapsedLocalMilliseconds + " " + deterministicTime.ValueRO.timeToPostponeStartofSimulationInMiliseconds);
                 }
 
                 deterministicTime.ValueRW.timeLeftToSendNextTick -= deltaTime;
@@ -146,8 +141,7 @@ namespace DeterministicLockstep
                     if (deterministicTime.ValueRO.numTimesTickedThisFrame <
                         MaxTicksPerFrame) // restriction to prevent too expensive loop
                     {
-                        var hasInputsForThisTick = deterministicTime.ValueRO.storedIncomingTicksFromServer.Count >=
-                                                   deterministicTime.ValueRO.forcedInputLatencyDelay - 1;
+                        var hasInputsForThisTick = deterministicTime.ValueRO.storedIncomingTicksFromServer.Count > 0;
 
                         if (hasInputsForThisTick)
                         {

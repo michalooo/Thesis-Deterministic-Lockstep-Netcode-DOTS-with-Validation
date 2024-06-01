@@ -171,11 +171,6 @@ namespace DeterministicLockstep
                 case RpcID.BroadcastPlayerTickDataToServer:
                     Debug.LogError("BroadcastPlayerTickDataToServer should never be received by the client");
                     break;
-                case RpcID.TestClientPing:
-                    var pingRPC = new RpcTestPing();
-                    pingRPC.Deserialize(ref stream);
-                    pingRPC.Serialize(_mDriver, _mConnection, _reliableSimulatorPipeline);
-                    break;
                 case RpcID.LoadGame:
                     var loadGameRPC = new RpcLoadGame();
                     loadGameRPC.Deserialize(ref stream);
@@ -204,8 +199,7 @@ namespace DeterministicLockstep
             {
                 var connectionReference = EntityManager.GetComponentData<GhostOwner>(entity);
                 var connectionCommandTarget = EntityManager.GetComponentData<CommandTarget>(entity);
-
-                Debug.Log("before: " + connectionReference.connectionNetworkId);
+                
                 if (!rpc.NetworkIDs.Contains(connectionReference.connectionNetworkId))
                 {
                     for(int i=0; i<rpc.NetworkIDs.Length; i++)
@@ -221,15 +215,16 @@ namespace DeterministicLockstep
             connectionEntities.Dispose();
         }
         
-        public static DateTime SyncDateTimeWithServer(double remoteMilliseconds)
+        private static DateTime SyncDateTimeWithServer(RpcStartDeterministicSimulation rpc)
         {
             // Get the current date without time (midnight)
-            DateTime currentDate = DateTime.Today;
+            var currentTimestampUtc = DateTime.UtcNow;
+            var pingValue = currentTimestampUtc.TimeOfDay.TotalMilliseconds - rpc.ServerTimestampUTC;
 
             // Add the milliseconds to the current date to get the remote time
-            DateTime remoteDateTime = currentDate.AddMilliseconds(remoteMilliseconds);
+            var currentServerTimestampUtc = currentTimestampUtc.AddMilliseconds(pingValue);
 
-            return remoteDateTime;
+            return currentServerTimestampUtc;
         }
 
         /// <summary>
@@ -239,7 +234,7 @@ namespace DeterministicLockstep
         private void StartGame(RpcStartDeterministicSimulation rpc)
         {
             // synchronize clock
-            DateTime syncedDateTime = SyncDateTimeWithServer(rpc.TodaysMiliseconds + rpc.PingInMilliseconds);
+            var currentServerTimestampUtc = SyncDateTimeWithServer(rpc);
             // Debug.Log("Synchronized DateTime: " + syncedDateTime.TimeOfDay + " for player with ID: " + rpc.ThisConnectionNetworkID + " time to postpone: " + rpc.PostponedStartInMiliseconds);
             
             foreach (var playerNetworkId in rpc.PlayersNetworkIDs)
@@ -277,9 +272,9 @@ namespace DeterministicLockstep
             deterministicTime.ValueRW.numTimesTickedThisFrame = 0;
             deterministicTime.ValueRW.realTime = 0;
             deterministicTime.ValueRW.deterministicLockstepElapsedTime = 0;
-            deterministicTime.ValueRW.synchronizedDateTimeWithServer = syncedDateTime;
-            deterministicTime.ValueRW.timeToPostponeStartofSimulation = rpc.PostponedStartInMiliseconds;
-            deterministicTime.ValueRW.localTimeAtTheMomentOfSynchronization = DateTime.Now;
+            deterministicTime.ValueRW.serverTimestampUTC = currentServerTimestampUtc;
+            deterministicTime.ValueRW.timeToPostponeStartofSimulationInMiliseconds = rpc.PostponedStartInMiliseconds;
+            deterministicTime.ValueRW.localTimestampAtTheMomentOfSynchronizationUTC = DateTime.UtcNow;
 
             var client = SystemAPI.GetSingletonRW<DeterministicClientComponent>();
             client.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.RunDeterministicSimulation;
