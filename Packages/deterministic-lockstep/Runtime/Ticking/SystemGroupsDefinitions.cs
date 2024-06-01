@@ -93,7 +93,7 @@ namespace DeterministicLockstep
             public bool ShouldGroupUpdate(ComponentSystemGroup group)
             {
                 var deterministicClient = _deterministicClientQuery.GetSingleton<DeterministicClientComponent>();
-                if (deterministicClient.deterministicClientWorkingMode != DeterministicClientWorkingMode.SendData)
+                if (deterministicClient.deterministicClientWorkingMode != DeterministicClientWorkingMode.RunDeterministicSimulation)
                     return false;
                
                 

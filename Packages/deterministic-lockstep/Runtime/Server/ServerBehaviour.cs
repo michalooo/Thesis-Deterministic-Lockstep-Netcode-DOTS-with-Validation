@@ -50,6 +50,7 @@ namespace DeterministicLockstep
         /// Array of all possible connection slots in the game and players that are already connected
         /// </summary>
         private NativeArray<NetworkConnection> _connectedPlayers; 
+        private NativeArray<int> playersReady;
         
         /// <summary>
         /// Specifies the last tick received
@@ -156,6 +157,7 @@ namespace DeterministicLockstep
         private void StartListening()
         {
             _connectedPlayers = new NativeArray<NetworkConnection>(SystemAPI.GetSingleton<DeterministicSettings>().allowedConnectionsPerGame, Allocator.Persistent);
+            playersReady = new NativeArray<int>(SystemAPI.GetSingleton<DeterministicSettings>().allowedConnectionsPerGame, Allocator.Persistent);
             _mNetworkIDs = new NativeList<int>(Allocator.Persistent);
             _playersPing = new NativeList<RpcTestPing>(Allocator.Persistent);
 
@@ -185,9 +187,8 @@ namespace DeterministicLockstep
             Debug.Log("Game started");
             if (SystemAPI.GetSingleton<DeterministicSettings>().isInGame) return;
             
-            var settings = SystemAPI.GetSingleton<DeterministicSettings>();
-            settings.isInGame = true;
-            SystemAPI.SetSingleton(settings);
+            var settings = SystemAPI.GetSingletonRW<DeterministicSettings>();
+            settings.ValueRW.isInGame = true;
             
             CollectInitialPlayerData();
             // SendRPCtoStartGame();
@@ -235,6 +236,11 @@ namespace DeterministicLockstep
                     _playersPing.Add(rpcPing);
                     CheckIfAllPingReceived();
                     break;
+                case RpcID.PlayerReady:
+                    var clientReadyRPC = new RpcPlayerReady();
+                    clientReadyRPC.Deserialize(ref stream);
+                    CheckIfAllClientsReady(clientReadyRPC);
+                    break;
                 // case RpcID.PlayerConfiguration:
                 //     var playerConfigRPC = new RpcPlayerConfiguration();
                 //     playerConfigRPC.Deserialize(ref stream);
@@ -251,6 +257,23 @@ namespace DeterministicLockstep
             }
         }
         
+        private void CheckIfAllClientsReady(RpcPlayerReady rpc)
+        {
+            // mark that this specific client is ready
+            playersReady[rpc.PlayerNetworkID] = 1;
+            
+            // check if all clients are ready
+            for (int i = 0; i < playersReady.Length; i++)
+            {
+                if (playersReady[i] != 1 && _connectedPlayers[i].IsCreated)
+                {
+                    return;
+                }
+            }
+            
+            SendRPCtoStartGame();
+        }
+        
         private void CheckIfAllPingReceived()
         {
             if (_playersPing.Length == GetActiveConnectionCount())
@@ -264,7 +287,20 @@ namespace DeterministicLockstep
                     }
                 }
                 Debug.Log("Worst ping measured: " + _worstPingMeasured);
-                SendRPCtoStartGame();
+                SendRPCToLoadGame();
+            }
+        }
+        
+        private void SendRPCToLoadGame()
+        {
+            RpcLoadGame rpc = new RpcLoadGame();
+            for (ushort i = 0; i < _connectedPlayers.Length; i++)
+            {
+                if (_connectedPlayers[i].IsCreated)
+                {
+                    rpc.ClientNetworkID = i;
+                    rpc.Serialize(_mDriver, _connectedPlayers[i], _reliableSimulationPipeline);
+                }
             }
         }
 

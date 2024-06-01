@@ -18,13 +18,15 @@ namespace DeterministicLockstep
         private NetworkConnection _mConnection;
         private NetworkSettings _clientSimulatorParameters;
         private NetworkPipeline _reliableSimulatorPipeline;
+        private bool _isClientReady = false;
 
         protected override void OnCreate()
         {
             RequireForUpdate<DeterministicSettings>();
             EntityManager.CreateSingleton(new DeterministicClientComponent()
             {
-                deterministicClientWorkingMode = DeterministicClientWorkingMode.None
+                deterministicClientWorkingMode = DeterministicClientWorkingMode.None,
+                clientNetworkId = 0
             });
         }
 
@@ -58,7 +60,7 @@ namespace DeterministicLockstep
             if (SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode == DeterministicClientWorkingMode.Connect && !_mConnection.IsCreated)
             {
                 Debug.Log("connecting");
-                if (SystemAPI.TryGetSingleton<DeterministicSettings>(out DeterministicSettings deterministicSettings))
+                if (SystemAPI.TryGetSingleton(out DeterministicSettings deterministicSettings))
                 {
                     var endpoint = NetworkEndpoint.Parse(deterministicSettings._serverAddress.ToString(), (ushort) deterministicSettings._serverPort);
                     _mConnection = _mDriver.Connect(endpoint);
@@ -74,6 +76,17 @@ namespace DeterministicLockstep
                 _mConnection.IsCreated)
             {
                 Disconnect();
+            }
+            
+            if (SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode == DeterministicClientWorkingMode.ClientReady &&
+                _mConnection.IsCreated && !_isClientReady)
+            {
+                var clientReadyRPC = new RpcPlayerReady
+                {
+                    PlayerNetworkID = SystemAPI.GetSingleton<DeterministicClientComponent>().clientNetworkId
+                };
+                clientReadyRPC.Serialize(_mDriver, _mConnection, _reliableSimulatorPipeline);
+                _isClientReady = true;
             }
 
             if (!_mConnection.IsCreated) return;
@@ -162,6 +175,12 @@ namespace DeterministicLockstep
                     var pingRPC = new RpcTestPing();
                     pingRPC.Deserialize(ref stream);
                     pingRPC.Serialize(_mDriver, _mConnection, _reliableSimulatorPipeline);
+                    break;
+                case RpcID.LoadGame:
+                    var loadGameRPC = new RpcLoadGame();
+                    loadGameRPC.Deserialize(ref stream);
+                    SystemAPI.GetSingletonRW<DeterministicClientComponent>().ValueRW.clientNetworkId = loadGameRPC.ClientNetworkID;
+                    SystemAPI.GetSingletonRW<DeterministicClientComponent>().ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.LoadingGame;
                     break;
                 // case RpcID.PlayerConfiguration:
                 //     Debug.LogError("PlayerConfiguration should never be received by the client");
@@ -263,7 +282,7 @@ namespace DeterministicLockstep
             deterministicTime.ValueRW.localTimeAtTheMomentOfSynchronization = DateTime.Now;
 
             var client = SystemAPI.GetSingletonRW<DeterministicClientComponent>();
-            client.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.PrepareGame;
+            client.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.RunDeterministicSimulation;
             client.ValueRW.randomSeed = rpc.SeedForPlayerRandomActions;
             
             var settings = SystemAPI.GetSingletonRW<DeterministicSettings>();

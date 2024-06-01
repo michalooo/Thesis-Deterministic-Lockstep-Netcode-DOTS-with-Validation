@@ -37,7 +37,7 @@ namespace PongGame
 
                 SceneManager.LoadSceneAsync("PongMenu");
             }
-            else if (SceneManager.GetActiveScene().name == "PongLoading" && SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode == DeterministicClientWorkingMode.PrepareGame)
+            else if (SceneManager.GetActiveScene().name == "PongLoading" && SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode == DeterministicClientWorkingMode.LoadingGame)
             {
                 gameAsyncLoad = SceneManager.LoadSceneAsync("PongGame");
             }
@@ -48,7 +48,7 @@ namespace PongGame
 
             if (gameAsyncLoad != null && gameAsyncLoad.isDone)
             {
-                client.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.SendData;
+                client.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.ClientReady;
                 gameAsyncLoad = null;
             }
         }

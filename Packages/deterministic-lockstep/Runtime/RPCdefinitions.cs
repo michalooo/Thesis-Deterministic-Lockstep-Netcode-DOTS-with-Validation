@@ -15,7 +15,7 @@ namespace DeterministicLockstep
     {
         RpcID GetID { get; }
 
-        void Serialize(NetworkDriver mDriver, NetworkConnection connection, NetworkPipeline? simulatorPipeline = null);
+        void Serialize(NetworkDriver mDriver, NetworkConnection connection, NetworkPipeline reliableSimulationPipeline);
         void Deserialize(ref DataStreamReader reader);
     }
 
@@ -29,6 +29,8 @@ namespace DeterministicLockstep
         BroadcastPlayerTickDataToServer,
         PlayersDesynchronizedMessage,
         TestClientPing,
+        LoadGame,
+        PlayerReady,
         // PlayerConfiguration,
     }
     
@@ -43,11 +45,10 @@ namespace DeterministicLockstep
         public int PlayerNetworkID { get; set; }
         public double PingMeasuredForThisRPC { get; set; }
 
-        public void Serialize(NetworkDriver mDriver, NetworkConnection connection, NetworkPipeline? pipeline = null)
+        public void Serialize(NetworkDriver mDriver, NetworkConnection connection, NetworkPipeline reliableSimulationPipeline)
         {
             DataStreamWriter writer;
-            if (!pipeline.HasValue) mDriver.BeginSend(connection, out writer);
-            else mDriver.BeginSend(pipeline.Value, connection, out writer);
+            mDriver.BeginSend(reliableSimulationPipeline, connection, out writer);
 
             writer.WriteByte((byte)GetID);
             writer.WriteDouble(TimeInMilisecondsWhenMessageWasSendFromServer);
@@ -81,11 +82,10 @@ namespace DeterministicLockstep
     {
         public RpcID GetID => RpcID.PlayersDesynchronizedMessage;
 
-        public void Serialize(NetworkDriver mDriver, NetworkConnection connection, NetworkPipeline? pipeline = null)
+        public void Serialize(NetworkDriver mDriver, NetworkConnection connection, NetworkPipeline reliableSimulationPipeline)
         {
             DataStreamWriter writer;
-            if (!pipeline.HasValue) mDriver.BeginSend(connection, out writer);
-            else mDriver.BeginSend(pipeline.Value, connection, out writer);
+            mDriver.BeginSend(reliableSimulationPipeline, connection, out writer);
 
             writer.WriteByte((byte)GetID);
 
@@ -104,6 +104,78 @@ namespace DeterministicLockstep
             reader.ReadByte(); // ID
 
             // Debug.Log("RPC stating that players disconnected received");
+        }
+    }
+    
+    /// <summary>
+    /// Struct that is being send by the server when clients are desynchronized. Used to stop game execution
+    /// </summary>
+    [BurstCompile]
+    public struct RpcLoadGame : INetcodeRPC
+    {
+        public RpcID GetID => RpcID.LoadGame;
+        public int ClientNetworkID { get; set; }
+
+        public void Serialize(NetworkDriver mDriver, NetworkConnection connection, NetworkPipeline reliableSimulationPipeline)
+        {
+            DataStreamWriter writer;
+            mDriver.BeginSend(reliableSimulationPipeline, connection, out writer);
+
+            writer.WriteByte((byte)GetID);
+            writer.WriteInt(ClientNetworkID);
+
+            if (writer.HasFailedWrites)
+            {
+                mDriver.AbortSend(writer);
+                throw new InvalidOperationException("Driver has failed writes.: " + writer.Capacity);
+            }
+
+            mDriver.EndSend(writer);
+            // Debug.Log("RPC telling clients to load the game send from server");
+        }
+
+        public void Deserialize(ref DataStreamReader reader)
+        {
+            reader.ReadByte(); // ID
+            ClientNetworkID = reader.ReadInt();
+
+            // Debug.Log("RPC ordering to load the game received");
+        }
+    }
+    
+    /// <summary>
+    /// Struct that is being send by the server when clients are desynchronized. Used to stop game execution
+    /// </summary>
+    [BurstCompile]
+    public struct RpcPlayerReady : INetcodeRPC
+    {
+        public RpcID GetID => RpcID.PlayerReady;
+        public int PlayerNetworkID { get; set; }
+
+        public void Serialize(NetworkDriver mDriver, NetworkConnection connection, NetworkPipeline reliableSimulationPipeline)
+        {
+            DataStreamWriter writer;
+            mDriver.BeginSend(reliableSimulationPipeline, connection, out writer);
+
+            writer.WriteByte((byte)GetID);
+            writer.WriteInt(PlayerNetworkID);
+
+            if (writer.HasFailedWrites)
+            {
+                mDriver.AbortSend(writer);
+                throw new InvalidOperationException("Driver has failed writes.: " + writer.Capacity);
+            }
+
+            mDriver.EndSend(writer);
+            // Debug.Log("RPC telling that the client is ready send to server");
+        }
+
+        public void Deserialize(ref DataStreamReader reader)
+        {
+            reader.ReadByte(); // ID
+            PlayerNetworkID = reader.ReadInt();
+
+            // Debug.Log("RPC telling that player is ready received");
         }
     }
 
@@ -156,11 +228,10 @@ namespace DeterministicLockstep
         public RpcID GetID => RpcID.StartDeterministicGameSimulation;
 
         public void Serialize(NetworkDriver mDriver, NetworkConnection connection,
-            NetworkPipeline? pipeline = null)
+            NetworkPipeline reliableSimulationPipeline)
         {
             DataStreamWriter writer;
-            if (!pipeline.HasValue) mDriver.BeginSend(connection, out writer);
-            else mDriver.BeginSend(pipeline.Value, connection, out writer);
+            mDriver.BeginSend(reliableSimulationPipeline, connection, out writer);
 
             writer.WriteByte((byte)GetID);
             writer.WriteDouble(TodaysMiliseconds);
@@ -227,13 +298,12 @@ namespace DeterministicLockstep
         public RpcID GetID => RpcID.BroadcastPlayerTickDataToServer;
 
         public void Serialize(NetworkDriver mDriver, NetworkConnection connection,
-            NetworkPipeline? pipeline = null)
+            NetworkPipeline reliableSimulationPipeline)
         {
             DataStreamWriter writer;
             if(!mDriver.IsCreated || !connection.IsCreated) return;
             
-            if (!pipeline.HasValue) mDriver.BeginSend(connection, out writer);
-            else mDriver.BeginSend(pipeline.Value, connection, out writer);
+            mDriver.BeginSend(reliableSimulationPipeline, connection, out writer);
             
             if(!writer.IsCreated) return;
 
@@ -301,13 +371,12 @@ namespace DeterministicLockstep
         public RpcID GetID => RpcID.BroadcastTickDataToClients;
 
         public void Serialize(NetworkDriver mDriver, NetworkConnection connection,
-            NetworkPipeline? pipeline = null)
+            NetworkPipeline reliableSimulationPipeline)
         {
             DataStreamWriter writer;
             if(!mDriver.IsCreated || !connection.IsCreated) return;
             
-            if (!pipeline.HasValue) mDriver.BeginSend(connection, out writer);
-            else mDriver.BeginSend(pipeline.Value, connection, out writer);
+            mDriver.BeginSend(reliableSimulationPipeline, connection, out writer);
         
             if(!writer.IsCreated) return;
             

@@ -24,8 +24,9 @@ namespace DeterministicLockstep
     {
         Connect,
         Disconnect,
-        SendData,
-        PrepareGame,
+        RunDeterministicSimulation,
+        ClientReady,
+        LoadingGame,
         None
     }
     
@@ -167,6 +168,7 @@ namespace DeterministicLockstep
     public struct DeterministicClientComponent : IComponentData
     {
         public uint randomSeed;
+        public int clientNetworkId;
         public DeterministicClientWorkingMode deterministicClientWorkingMode;
     }
     
