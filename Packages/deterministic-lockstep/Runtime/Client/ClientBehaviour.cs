@@ -3,7 +3,6 @@ using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
 using Unity.Networking.Transport;
-using Unity.Networking.Transport.Utilities;
 
 namespace DeterministicLockstep
 {
@@ -17,7 +16,8 @@ namespace DeterministicLockstep
         private NetworkDriver _mDriver;
         private NetworkConnection _mConnection;
         private NetworkSettings _clientSimulatorParameters;
-        private NetworkPipeline _reliableSimulatorPipeline;
+        private NetworkPipeline _reliablePipeline;
+        private NetworkPipeline _emptyPipeline;
         private bool _isClientReady = false;
 
         protected override void OnCreate()
@@ -32,20 +32,10 @@ namespace DeterministicLockstep
 
         protected override void OnStartRunning()
         {
-            var settings = SystemAPI.GetSingleton<DeterministicSettings>();
-
-            _clientSimulatorParameters = new NetworkSettings();
-            _clientSimulatorParameters.WithSimulatorStageParameters(
-                maxPacketCount: 1000,
-                packetDelayMs: settings.packetDelayMs,
-                packetJitterMs: settings.packetJitterMs,
-                packetDropInterval: settings.packetDropInterval,
-                packetDropPercentage: settings.packetDropPercentage,
-                packetDuplicationPercentage: settings.packetDuplicationPercentage);
-
-            _mDriver = NetworkDriver.Create(_clientSimulatorParameters);
-            _reliableSimulatorPipeline =
-                _mDriver.CreatePipeline(typeof(ReliableSequencedPipelineStage), typeof(SimulatorPipelineStage));
+            _mDriver = NetworkDriver.Create();
+            _reliablePipeline =
+                _mDriver.CreatePipeline(typeof(ReliableSequencedPipelineStage));
+            _emptyPipeline = _mDriver.CreatePipeline(typeof(NullPipelineStage));
         }
 
         protected override void OnDestroy()
@@ -59,17 +49,7 @@ namespace DeterministicLockstep
             
             if (SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode == DeterministicClientWorkingMode.Connect && !_mConnection.IsCreated)
             {
-                Debug.Log("connecting");
-                if (SystemAPI.TryGetSingleton(out DeterministicSettings deterministicSettings))
-                {
-                    var endpoint = NetworkEndpoint.Parse(deterministicSettings._serverAddress.ToString(), (ushort) deterministicSettings._serverPort);
-                    _mConnection = _mDriver.Connect(endpoint);
-                }
-                else
-                {
-                    var endpoint = NetworkEndpoint.Parse("127.0.0.1", 7979); 
-                    _mConnection = _mDriver.Connect(endpoint);
-                }
+               Connect();
             }
 
             if (SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode == DeterministicClientWorkingMode.Disconnect &&
@@ -85,29 +65,19 @@ namespace DeterministicLockstep
                 {
                     PlayerNetworkID = SystemAPI.GetSingleton<DeterministicClientComponent>().clientNetworkId
                 };
-                clientReadyRPC.Serialize(_mDriver, _mConnection, _reliableSimulatorPipeline);
+                clientReadyRPC.Serialize(_mDriver, _mConnection, _emptyPipeline);
                 _isClientReady = true;
             }
-
+            
             if (!_mConnection.IsCreated) return;
             _mDriver.ScheduleUpdate().Complete();
-
+            
             NetworkEvent.Type cmd;
             while ((cmd = _mConnection.PopEvent(_mDriver, out var stream)) != NetworkEvent.Type.Empty)
             {
                 switch (cmd)
                 {
                     case NetworkEvent.Type.Connect:
-                        if (SystemAPI.TryGetSingleton(out DeterministicSettings deterministicSettings))
-                        {
-                            Debug.Log(
-                                $"[ConnectToServer] Called on " + deterministicSettings._serverAddress + ":" + deterministicSettings._serverPort + ".");
-                        }
-                        else
-                        {
-                            Debug.Log(
-                                $"[ConnectToServer] Called on '127.0.0:7979'.");
-                        }
                         break;
                     case NetworkEvent.Type.Data:
                         HandleRpc(stream);
@@ -130,8 +100,22 @@ namespace DeterministicLockstep
             _mDriver.ScheduleUpdate().Complete();
                 
             _mConnection.Disconnect(_mDriver);
-            _mConnection = default(NetworkConnection);
+            _mConnection = default;
+            
             _mDriver.ScheduleUpdate().Complete();
+        }
+        
+        private void Connect()
+        {
+            if (SystemAPI.TryGetSingleton(out DeterministicSettings deterministicSettings))
+            {
+                var endpoint = NetworkEndpoint.Parse(deterministicSettings._serverAddress.ToString(), (ushort) deterministicSettings._serverPort);
+                _mConnection = _mDriver.Connect(endpoint);
+            }
+            else
+            {
+                Debug.LogError("DeterministicSettings not found. Cannot connect to server.");
+            }
         }
 
         /// <summary>
@@ -148,35 +132,41 @@ namespace DeterministicLockstep
                 return;
             }
 
+            Debug.Log(id);
             switch (id)
             {
+                case RpcID.StartDeterministicGameSimulation:
+                    var rpcStartDeterministicSimulation = new RpcStartDeterministicSimulation();
+                    rpcStartDeterministicSimulation.Deserialize(ref stream);
+                    StartGame(rpcStartDeterministicSimulation);
+                    break;
                 case RpcID.BroadcastTickDataToClients:
                     var rpcPlayersDataUpdate = new RpcBroadcastTickDataToClients();
                     rpcPlayersDataUpdate.Deserialize(ref stream);
                     DestroyDisconnectedClients(rpcPlayersDataUpdate);
                     UpdatePlayersData(rpcPlayersDataUpdate);
                     break;
-                case RpcID.StartDeterministicGameSimulation:
-                    var rpcStartDeterministicSimulation = new RpcStartDeterministicSimulation();
-                    rpcStartDeterministicSimulation.Deserialize(ref stream);
-                    StartGame(rpcStartDeterministicSimulation);
-                    break;
-                case RpcID.PlayersDesynchronizedMessage: // Stop simulation
+                case RpcID.PlayerDesynchronized:
                     var rpcPlayerDesynchronizationInfo = new RpcPlayerDesynchronizationMessage();
                     rpcPlayerDesynchronizationInfo.Deserialize(ref stream);
                     var determinismSystemGroup = World.DefaultGameObjectInjectionWorld
                         .GetOrCreateSystemManaged<DeterministicSimulationSystemGroup>();
                     determinismSystemGroup.Enabled = false;
                     break;
-                case RpcID.BroadcastPlayerTickDataToServer:
-                    Debug.LogError("BroadcastPlayerTickDataToServer should never be received by the client");
-                    break;
                 case RpcID.LoadGame:
                     var loadGameRPC = new RpcLoadGame();
                     loadGameRPC.Deserialize(ref stream);
-                    SystemAPI.GetSingletonRW<DeterministicClientComponent>().ValueRW.clientNetworkId = loadGameRPC.ClientNetworkID;
+                    SystemAPI.GetSingletonRW<DeterministicClientComponent>().ValueRW.clientNetworkId = loadGameRPC.PlayerNetworkID;
                     SystemAPI.GetSingletonRW<DeterministicClientComponent>().ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.LoadingGame;
                     break;
+                // case RpcID.PingPong:
+                //     var pingPongRPC = new RpcPingPong();
+                //     pingPongRPC.Deserialize(ref stream);
+                //     
+                //     var correctedServerTime = pingPongRPC.ServerTimeStampUTCtoday.TotalMilliseconds + SystemAPI.Time.DeltaTime*1000/2;
+                //     pingPongRPC.ServerTimeStampUTCtoday = TimeSpan.FromMilliseconds(correctedServerTime);
+                //     pingPongRPC.Serialize(_mDriver, _mConnection, _emptyPipeline);
+                //     break;
                 // case RpcID.PlayerConfiguration:
                 //     Debug.LogError("PlayerConfiguration should never be received by the client");
                 //     break;
@@ -198,7 +188,6 @@ namespace DeterministicLockstep
             foreach (var entity in connectionEntities)
             {
                 var connectionReference = EntityManager.GetComponentData<GhostOwner>(entity);
-                var connectionCommandTarget = EntityManager.GetComponentData<CommandTarget>(entity);
                 
                 if (!rpc.NetworkIDs.Contains(connectionReference.connectionNetworkId))
                 {
@@ -207,25 +196,29 @@ namespace DeterministicLockstep
                         Debug.Log("rpc: " + rpc.NetworkIDs[i]);
                     }
                     Debug.LogError("Destroying connection: " + connectionReference.connectionNetworkId);
+                    EntityManager.DestroyEntity(connectionReference.connectionCommandsTargetEntity);
                     EntityManager.DestroyEntity(entity);
-                    EntityManager.DestroyEntity(connectionCommandTarget.connectionCommandsTargetEntity);
                 }
             }
 
             connectionEntities.Dispose();
         }
         
-        private static DateTime SyncDateTimeWithServer(RpcStartDeterministicSimulation rpc)
-        {
-            // Get the current date without time (midnight)
-            var currentTimestampUtc = DateTime.UtcNow;
-            var pingValue = currentTimestampUtc.TimeOfDay.TotalMilliseconds - rpc.ServerTimestampUTC;
-
-            // Add the milliseconds to the current date to get the remote time
-            var currentServerTimestampUtc = currentTimestampUtc.AddMilliseconds(pingValue);
-
-            return currentServerTimestampUtc;
-        }
+        // private TimeSpan SyncDateTimeWithServer(RpcStartDeterministicSimulation rpc)
+        // {
+        //     // Get the current date without time (midnight)
+        //     var currentTimestampUtc = DateTime.UtcNow.TimeOfDay;
+        //     var pingValue = rpc.PlayerAveragePing;
+        //     var serverTimeWhenSendingRPC = rpc.ServerTimestampUTC;
+        //     
+        //     // Debug.LogError("Timer setup --> currentLocalTimeStamp: " + currentTimestampUtc + " ping value: " + pingValue + " serverTimeWhenSendingRPC: " + serverTimeWhenSendingRPC);
+        //
+        //     // Add the milliseconds to the current date to get the remote time
+        //     var currentServerTimestampUtc = TimeSpan.FromMilliseconds(serverTimeWhenSendingRPC.TotalMilliseconds + pingValue + SystemAPI.Time.DeltaTime*1000/2);
+        //
+        //     // Debug.LogError("Predicted server timestamp: " + currentServerTimestampUtc);
+        //     return currentServerTimestampUtc;
+        // }
 
         /// <summary>
         /// Function to start the game. It will load the game scene and create entities for each player connection with all necessary components.
@@ -233,8 +226,9 @@ namespace DeterministicLockstep
         /// <param name="rpc">RPC from the server that contains parameters for game and request to start the game</param>
         private void StartGame(RpcStartDeterministicSimulation rpc)
         {
+            // Debug.LogError("Starting game simulation...");
             // synchronize clock
-            var currentServerTimestampUtc = SyncDateTimeWithServer(rpc);
+            // var currentServerTimestampUtc = SyncDateTimeWithServer(rpc);
             // Debug.Log("Synchronized DateTime: " + syncedDateTime.TimeOfDay + " for player with ID: " + rpc.ThisConnectionNetworkID + " time to postpone: " + rpc.PostponedStartInMiliseconds);
             
             foreach (var playerNetworkId in rpc.PlayersNetworkIDs)
@@ -254,7 +248,7 @@ namespace DeterministicLockstep
                 EntityManager.AddComponentData(newEntity, new NetworkConnectionReference
                 {
                     driverReference = _mDriver,
-                    reliableSimulationPipelineReference = _reliableSimulatorPipeline,
+                    reliablePipelineReference = _reliablePipeline,
                     connectionReference = _mConnection
                 });
                 EntityManager.AddComponentData(newEntity, new GhostOwnerIsLocal());
@@ -272,9 +266,10 @@ namespace DeterministicLockstep
             deterministicTime.ValueRW.numTimesTickedThisFrame = 0;
             deterministicTime.ValueRW.realTime = 0;
             deterministicTime.ValueRW.deterministicLockstepElapsedTime = 0;
-            deterministicTime.ValueRW.serverTimestampUTC = currentServerTimestampUtc;
-            deterministicTime.ValueRW.timeToPostponeStartofSimulationInMiliseconds = rpc.PostponedStartInMiliseconds;
-            deterministicTime.ValueRW.localTimestampAtTheMomentOfSynchronizationUTC = DateTime.UtcNow;
+            // deterministicTime.ValueRW.serverTimestampUTC = currentServerTimestampUtc;
+            // deterministicTime.ValueRW.timeToPostponeStartofSimulationInMiliseconds = rpc.PostponedStartInMiliseconds;
+            // deterministicTime.ValueRW.localTimestampAtTheMomentOfSynchronizationUTC = DateTime.UtcNow.TimeOfDay;
+            // deterministicTime.ValueRW.playerAveragePing = rpc.PlayerAveragePing;
 
             var client = SystemAPI.GetSingletonRW<DeterministicClientComponent>();
             client.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.RunDeterministicSimulation;
@@ -284,6 +279,7 @@ namespace DeterministicLockstep
             settings.ValueRW.simulationTickRate = rpc.TickRate;
             settings.ValueRW.ticksAhead = rpc.TicksOfForcedInputLatency;
             settings.ValueRW.hashCalculationOption = (DeterminismHashCalculationOption) rpc.DeterminismHashCalculationOption;
+            settings.ValueRW.isInGame = true;
             
             // foreach (var connectionReference in SystemAPI
             //              .Query<RefRO<NetworkConnectionReference>>()

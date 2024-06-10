@@ -11,11 +11,12 @@ namespace PongGame
 {
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
+    [UpdateAfter(typeof(PongBallDestructionSystem))]
     [BurstCompile]
     public partial struct BallBounceSystem : ISystem
     {
-        private const float MinZ = -5f;
-        private const float MaxZ = 5f;
+        private const float MinY = -6.5f;
+        private const float MaxY = 6.5f;
         
         private EntityQuery ballsQuery;
         private EntityQuery playerQuery;
@@ -32,22 +33,26 @@ namespace PongGame
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
-            playerQuery = SystemAPI.QueryBuilder().WithAll<CommandTarget>().Build();
+            playerQuery = SystemAPI.QueryBuilder().WithAll<GhostOwner>().Build();
             ballsQuery = SystemAPI.QueryBuilder().WithAll<LocalTransform, Velocity>().Build();
             ballTransform = ballsQuery.ToComponentDataArray<LocalTransform>(Allocator.TempJob);
             ballVelocities = ballsQuery.ToComponentDataArray<Velocity>(Allocator.TempJob);
             ballEntities = ballsQuery.ToEntityArray(Allocator.TempJob);
             
-            var commandTargetData = playerQuery.ToComponentDataArray<CommandTarget>(Allocator.TempJob);
-            var playersTransforms = new NativeArray<LocalToWorld>(commandTargetData.Length, Allocator.TempJob);
+            var ghostOwnerData = playerQuery.ToComponentDataArray<GhostOwner>(Allocator.TempJob);
+            var playersTransforms = new NativeArray<LocalToWorld>(ghostOwnerData.Length, Allocator.TempJob);
 
-            for (int i = 0; i < commandTargetData.Length; i++)
+            for (int i = 0; i < ghostOwnerData.Length; i++)
             {
-                playersTransforms[i] = SystemAPI.GetComponent<LocalToWorld>(commandTargetData[i].connectionCommandsTargetEntity);
+                playersTransforms[i] = SystemAPI.GetComponent<LocalToWorld>(ghostOwnerData[i].connectionCommandsTargetEntity);
             }
             
             var ecbSingleton = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>();
             var ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
+            
+            Camera cam = Camera.main;
+            float targetXPosition = Screen.width;
+            Vector3 worldPosition = cam.ScreenToWorldPoint(new Vector3(targetXPosition, 0, cam.nearClipPlane));
             
             var ballBounceJob = new BallBounceJob
             {
@@ -55,8 +60,9 @@ namespace PongGame
                 ballVelocities = ballVelocities,
                 localTransform = ballTransform,
                 Entities = ballEntities,
-                minZPos = MinZ,
-                maxZPos = MaxZ,
+                worldPosition = worldPosition,
+                minYPos = MinY,
+                maxYPos = MaxY,
                 players = playersTransforms,
             };
             
@@ -78,8 +84,9 @@ namespace PongGame
         public NativeArray<LocalTransform> localTransform;
         public NativeArray<Velocity> ballVelocities;
 
-        public float minZPos;
-        public float maxZPos;
+        public Vector3 worldPosition;
+        public float minYPos;
+        public float maxYPos;
         
         public NativeArray<LocalToWorld> players;
     
@@ -89,27 +96,29 @@ namespace PongGame
             Velocity velocity = ballVelocities[index];
             Entity entity = Entities[index];
             
-            const float playerBoundaryOffsetX = 0.175f;
-            const float playerBoundaryOffsetZ = 1.75f;
+            const float playerBoundaryOffsetX = 0.1f;
+            const float playerBoundaryOffsetY = 1f;
+
+            if (transform.Position.x < -worldPosition.x || transform.Position.x > worldPosition.x) return;
             
             var newVelocityValue = new float3(velocity.value);
             
-            if (transform.Position.z < minZPos)
+            if (transform.Position.y < minYPos)
             {
                 // Check if the velocity is in the direction of the wall
-                if (velocity.value.z < 0)
+                if (velocity.value.y < 0)
                 {
                     // Reflect the velocity about the normal vector of the wall
-                    newVelocityValue = math.reflect(velocity.value, new float3(0, 0, 1));
+                    newVelocityValue = math.reflect(velocity.value, new float3(0, 1, 0));
                 }
             }
-            else if (transform.Position.z > maxZPos)
+            else if (transform.Position.y > maxYPos)
             {
                 // Check if the velocity is in the direction of the wall
-                if (velocity.value.z > 0)
+                if (velocity.value.y > 0)
                 {
                     // Reflect the velocity about the normal vector of the wall
-                    newVelocityValue = math.reflect(velocity.value, new float3(0, 0, -1));
+                    newVelocityValue = math.reflect(velocity.value, new float3(0, -1, 0));
                 }
             }
 
@@ -119,8 +128,8 @@ namespace PongGame
                     transform.Position.x <= player.Position.x + playerBoundaryOffsetX && // Check if the ball is within the player's right boundary
                     transform.Position.x >= player.Position.x - playerBoundaryOffsetX) // Check if the ball is within the player's left boundary
                 {
-                    if(transform.Position.z <= player.Position.z + playerBoundaryOffsetZ && // Check if the ball is within the player's top boundary
-                       transform.Position.z >= player.Position.z - playerBoundaryOffsetZ) // Check if the ball is within the player's bottom boundary
+                    if(transform.Position.y <= player.Position.y + playerBoundaryOffsetY && // Check if the ball is within the player's top boundary
+                       transform.Position.y >= player.Position.y - playerBoundaryOffsetY) // Check if the ball is within the player's bottom boundary
                     {
                         // Reflect the velocity about the normal vector of the left player
                         newVelocityValue = math.reflect(newVelocityValue, new float3(1, 0, 0));
@@ -130,8 +139,8 @@ namespace PongGame
                     transform.Position.x >= player.Position.x - playerBoundaryOffsetX && // Check if the ball is within the player's right boundary
                     transform.Position.x <= player.Position.x + playerBoundaryOffsetX) // Check if the ball is within the player's left boundary
                 {
-                    if(transform.Position.z <= player.Position.z + playerBoundaryOffsetZ && // Check if the ball is within the player's top boundary
-                       transform.Position.z >= player.Position.z - playerBoundaryOffsetZ) // Check if the ball is within the player's bottom boundary
+                    if(transform.Position.y <= player.Position.y + playerBoundaryOffsetY && // Check if the ball is within the player's top boundary
+                       transform.Position.y >= player.Position.y - playerBoundaryOffsetY) // Check if the ball is within the player's bottom boundary
                     {
                         // Reflect the velocity about the normal vector of the left player
                         newVelocityValue = math.reflect(newVelocityValue, new float3(-1, 0, 0));

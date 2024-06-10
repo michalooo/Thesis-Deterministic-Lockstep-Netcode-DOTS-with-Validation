@@ -11,7 +11,7 @@ namespace PongGame
     /// <summary>
     /// System used to spawn the player prefab for the connections that are not spawned yet
     /// </summary>
-    [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
+    [UpdateInGroup(typeof(DeterministicSimulationSystemGroup), OrderFirst = true)]
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     public partial class PongPlayerSpawnerSystem : SystemBase
     {
@@ -24,32 +24,50 @@ namespace PongGame
         protected override void OnUpdate()
         {
             var prefab = SystemAPI.GetSingleton<PongPlayerSpawner>().Player;
-            var commandBuffer = new EntityCommandBuffer(Allocator.Temp);
+            var query = SystemAPI.QueryBuilder().WithNone<PlayerSpawned>().WithAll<GhostOwner>().Build();
 
-            foreach (var (ghostOwner, connectionEntity) in SystemAPI.Query<RefRW<GhostOwner>>()
-                         .WithNone<PlayerSpawned>().WithEntityAccess())
+            if (query.IsEmpty) return;
+            
+            var ghostOwners = query.ToComponentDataArray<GhostOwner>(Allocator.Temp);
+            var connectionEntities = query.ToEntityArray(Allocator.Temp);
+            
+            
+
+            for(var i=0; i<=ghostOwners.Length-1; i++)
             {
-                // Debug.Log($"Spawning player for connection {ghostOwner.ValueRO.connectionNetworkId}");
-
-                commandBuffer.AddComponent<PlayerSpawned>(connectionEntity);
-                var player = commandBuffer.Instantiate(prefab);
-                commandBuffer.AddComponent(connectionEntity, new CommandTarget() { connectionCommandsTargetEntity = player }); // is it necessary for the package? This is user implementation
-
-                if (ghostOwner.ValueRO.connectionNetworkId % 2 == 0)
+                EntityManager.AddComponent<PlayerSpawned>(connectionEntities[i]);
+                var player = EntityManager.Instantiate(prefab);
+                        
+                if (ghostOwners[i].connectionNetworkId % 2 == 0)
                 {
-                    // Fix the position problem (those should be different but are the same)
-                    commandBuffer.SetComponent(player,
-                        LocalTransform.FromPosition(new float3(-8, 0, 0)));
+                    Camera cam = Camera.main;
+                    float targetXPosition = 0.05f * Screen.width;
+                    Vector3 worldPosition = cam.ScreenToWorldPoint(new Vector3(targetXPosition, 0, cam.nearClipPlane));
+                    
+                    EntityManager.SetComponentData(player, new LocalTransform
+                    {
+                        Position = new float3(worldPosition.x, worldPosition.y, 13f), 
+                        Scale = 1f,
+                        Rotation = quaternion.identity
+                    });
                 }
                 else
                 {
-                    // Fix the position problem (those should be different but are the same)
-                    commandBuffer.SetComponent(player,
-                        LocalTransform.FromPosition(new float3(8, 0, 0)));
+                    Camera cam = Camera.main;
+                    float targetXPosition = 0.95f * Screen.width;
+                    Vector3 worldPosition = cam.ScreenToWorldPoint(new Vector3(targetXPosition, 0, cam.nearClipPlane));
+                    
+                    EntityManager.SetComponentData(player, new LocalTransform
+                    {
+                        Position = new float3(worldPosition.x, worldPosition.y, 13f), 
+                        Scale = 1f,
+                        Rotation = quaternion.identity
+                    });
                 }
+                
+                ghostOwners[i] = new GhostOwner() { connectionNetworkId = ghostOwners[i].connectionNetworkId, connectionCommandsTargetEntity = player};
+                EntityManager.AddComponentData(connectionEntities[i], ghostOwners[i]); // is it necessary for the package? This is user implementation
             }
-
-            commandBuffer.Playback(EntityManager);
         }
     }
 }

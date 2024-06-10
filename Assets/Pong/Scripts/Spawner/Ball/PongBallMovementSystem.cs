@@ -1,5 +1,4 @@
-﻿using System.Numerics;
-using DeterministicLockstep;
+﻿using DeterministicLockstep;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
@@ -7,16 +6,14 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
-using Vector3 = System.Numerics.Vector3;
 
 namespace PongGame
 {
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
-    [BurstCompile]
+    [UpdateAfter(typeof(BallBounceSystem))]
     public partial struct BallMovementSystem : ISystem
     {
-        [BurstCompile]
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<PongBallSpawner>();
@@ -27,7 +24,6 @@ namespace PongGame
         private NativeArray<Velocity> ballVelocities;
         private NativeArray<Entity> ballEntities;
         
-        [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             var deltaTime = SystemAPI.Time.DeltaTime;
@@ -40,12 +36,17 @@ namespace PongGame
             var ecbSingleton = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>();
             var ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
             
+            Camera cam = Camera.main;
+            float targetXPosition = Screen.width;
+            Vector3 worldPosition = cam.ScreenToWorldPoint(new Vector3(targetXPosition, 0, cam.nearClipPlane));
+            
             var ballMovementJob = new BallMovementJob
             {
                 ECB = ecb,
                 ballVelocities = ballVelocities,
                 localTransform = ballTransform,
                 Entities = ballEntities,
+                worldPosition = worldPosition,
                 deltaTime = deltaTime
             };
             
@@ -67,15 +68,18 @@ namespace PongGame
         public NativeArray<LocalTransform> localTransform;
         public NativeArray<Velocity> ballVelocities;
         
+        public Vector3 worldPosition;
         public float deltaTime;
         private float interpolationSpeed; // New field for interpolation speed
-    
+        
         public void Execute(int index)
         {
             LocalTransform transform = localTransform[index];
             Velocity velocity = ballVelocities[index];
             Entity entity = Entities[index];
             interpolationSpeed = 0.2f;
+            
+            if (transform.Position.x < -worldPosition.x || transform.Position.x > worldPosition.x) return;
             
             var newPosition = transform.Position + velocity.value;
             // Interpolate from the current position to the new position
@@ -90,7 +94,7 @@ namespace PongGame
                 Rotation = transform.Rotation,
                 Scale = transform.Scale
             };
-    
+        
             ECB.SetComponent(index , entity, newTransform);
         }
     }

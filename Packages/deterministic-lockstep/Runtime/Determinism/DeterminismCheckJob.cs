@@ -11,6 +11,7 @@ namespace DeterministicLockstep
     /// <summary>
     /// Job that will run on chunks to check and hash the components in them.
     /// </summary>
+
     [BurstCompile]
     public struct DeterminismCheckJob : IJobChunk
     {

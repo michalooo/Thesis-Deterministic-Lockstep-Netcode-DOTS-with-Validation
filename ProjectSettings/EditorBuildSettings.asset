@@ -9,9 +9,7 @@ EditorBuildSettings:
     path: Assets/Pong/Scenes/PongMenu.unity
     guid: ed35553190f13de41ad4cde64363958d
   - enabled: 1
-    path: Assets/Pong/Scenes/PongLoading.unity
-    guid: 65f1fd7c227bb3b4aa642f3df7a39400
-  - enabled: 1
     path: Assets/Pong/Scenes/PongGame.unity
     guid: 59f1ce522e62eb648b0e4606c3722e32
   m_configObjects: {}
+  m_UseUCBPForAssetBundles: 0

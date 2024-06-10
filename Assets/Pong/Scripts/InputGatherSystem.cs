@@ -8,15 +8,13 @@ namespace PongGame
 
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(UserSystemGroup))]
-    [BurstCompile]
     public partial struct InputGatherSystem : ISystem
     {
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<PongInputs>();
         }
-
-        [BurstCompile]
+        
         public void OnUpdate(ref SystemState state)
         {
             if(SystemAPI.TryGetSingletonRW<PongInputs>(out var inputComponent))

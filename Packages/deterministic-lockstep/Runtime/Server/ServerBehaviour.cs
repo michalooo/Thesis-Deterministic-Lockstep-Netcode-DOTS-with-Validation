@@ -16,6 +16,7 @@ namespace DeterministicLockstep
     [UpdateInGroup(typeof(ConnectionHandleSystemGroup))]
     public partial class ServerBehaviour : SystemBase
     {
+        const int AmountOfPlayersPingMessages = 100;
         // /// <summary>
         // /// List of deterministic systems that are used by the client (only used to point which one is causing desynchronization)
         // /// </summary>
@@ -29,7 +30,12 @@ namespace DeterministicLockstep
         /// <summary>
         /// Pipeline used to handle reliable and sequenced messages
         /// </summary>
-        private NetworkPipeline _reliableSimulationPipeline;
+        private NetworkPipeline _reliablePipeline;
+        
+        /// <summary>
+        /// Pipeline used as an empty pipeline
+        /// </summary>
+        private NetworkPipeline _emptyPipeline;
         
         /// <summary>
         /// List of network IDs assigned to players
@@ -51,11 +57,15 @@ namespace DeterministicLockstep
         /// </summary>
         private NativeArray<NetworkConnection> _connectedPlayers; 
         private NativeArray<int> playersReady;
+        private NativeArray<double> averagePingPerPlayer;
+        private NativeArray<NativeList<double>> playersPings;
         
         /// <summary>
         /// Specifies the last tick received
         /// </summary>
         private int _lastTickReceivedFromClient;
+
+        private bool _allPingsReceived;
 
         protected override void OnCreate()
         {
@@ -64,6 +74,7 @@ namespace DeterministicLockstep
             {
                 deterministicServerWorkingMode = DeterministicServerWorkingMode.None
             });
+            _allPingsReceived = false;
         }
 
         protected override void OnUpdate()
@@ -79,6 +90,7 @@ namespace DeterministicLockstep
                 DeterministicServerWorkingMode.RunDeterministicSimulation &&
                 !SystemAPI.GetSingleton<DeterministicSettings>().isInGame)
             {
+                // SendPingMessage();
                 StartGame();
             }
             
@@ -122,6 +134,23 @@ namespace DeterministicLockstep
             }
         }
         
+        // private void SendPingMessage()
+        // {
+        //     var rpc = new RpcPingPong
+        //     {
+        //         ServerTimeStampUTCtoday = DateTime.UtcNow.TimeOfDay
+        //     };
+        //     
+        //     for (int i = 0; i < _connectedPlayers.Length; i++)
+        //     {
+        //         if (_connectedPlayers[i].IsCreated)
+        //         {
+        //             rpc.ClientNetworkID = i;
+        //             rpc.Serialize(_mDriver, _connectedPlayers[i], _emptyPipeline);
+        //         }
+        //     }
+        // }
+        
         private void Disconnect()
         {
             _mDriver.ScheduleUpdate().Complete();
@@ -142,6 +171,11 @@ namespace DeterministicLockstep
             _mDriver.Dispose();
             _connectedPlayers.Dispose();
             _mNetworkIDs.Dispose();
+            playersReady.Dispose();
+            playersPings.Dispose();
+            averagePingPerPlayer.Dispose();
+            _everyTickInputBuffer.Clear();
+            _everyTickHashBuffer.Clear();
         }
 
         /// <summary>
@@ -154,14 +188,17 @@ namespace DeterministicLockstep
         {
             _connectedPlayers = new NativeArray<NetworkConnection>(SystemAPI.GetSingleton<DeterministicSettings>().allowedConnectionsPerGame, Allocator.Persistent);
             playersReady = new NativeArray<int>(SystemAPI.GetSingleton<DeterministicSettings>().allowedConnectionsPerGame, Allocator.Persistent);
+            playersPings = new NativeArray<NativeList<double>>(SystemAPI.GetSingleton<DeterministicSettings>().allowedConnectionsPerGame, Allocator.Persistent);
+            averagePingPerPlayer = new NativeArray<double>(SystemAPI.GetSingleton<DeterministicSettings>().allowedConnectionsPerGame, Allocator.Persistent);
             _mNetworkIDs = new NativeList<int>(Allocator.Persistent);
 
             _everyTickInputBuffer = new Dictionary<ulong, NativeList<RpcBroadcastPlayerTickDataToServer>>();
             _everyTickHashBuffer = new Dictionary<ulong, NativeList<NativeList<ulong>>>();
             
             _mDriver = NetworkDriver.Create();
-            _reliableSimulationPipeline =
+            _reliablePipeline =
                 _mDriver.CreatePipeline(typeof(ReliableSequencedPipelineStage));
+            _emptyPipeline = _mDriver.CreatePipeline(typeof(NullPipelineStage));
             
             var endpoint = NetworkEndpoint.AnyIpv4.WithPort((ushort) SystemAPI.GetSingleton<DeterministicSettings>()._serverPort);
 
@@ -179,7 +216,6 @@ namespace DeterministicLockstep
         /// </summary>
         private void StartGame()
         {
-            Debug.Log("Game started");
             if (SystemAPI.GetSingleton<DeterministicSettings>().isInGame) return;
             
             var settings = SystemAPI.GetSingletonRW<DeterministicSettings>();
@@ -212,20 +248,16 @@ namespace DeterministicLockstep
                     SaveTheData(rpc, connection);
                     CheckIfAllDataReceivedAndSendToClients();
                     break;
-                case RpcID.StartDeterministicGameSimulation:
-                    Debug.LogError("StartDeterministicGameSimulation should never be received by the server");
-                    break;
-                case RpcID.BroadcastTickDataToClients:
-                    Debug.LogError("BroadcastTickDataToClients should never be received by the server");
-                    break;
-                case RpcID.PlayersDesynchronizedMessage:
-                    Debug.LogError("PlayersDesynchronizedMessage should never be received by the server");
-                    break;
                 case RpcID.PlayerReady:
                     var clientReadyRPC = new RpcPlayerReady();
                     clientReadyRPC.Deserialize(ref stream);
                     CheckIfAllClientsReady(clientReadyRPC);
                     break;
+                // case RpcID.PingPong:
+                //     var pingPongRPC = new RpcPingPong();
+                //     pingPongRPC.Deserialize(ref stream);
+                //     AddClientPing(pingPongRPC);
+                //     break;
                 // case RpcID.PlayerConfiguration:
                 //     var playerConfigRPC = new RpcPlayerConfiguration();
                 //     playerConfigRPC.Deserialize(ref stream);
@@ -241,6 +273,72 @@ namespace DeterministicLockstep
                     break;
             }
         }
+
+        // private void AddClientPing(RpcPingPong rpc)
+        // {
+        //     if (!playersPings[rpc.ClientNetworkID].IsCreated)
+        //     {
+        //         playersPings[rpc.ClientNetworkID] = new NativeList<double>( Allocator.Persistent);
+        //     }
+        //     
+        //     if(playersPings[rpc.ClientNetworkID].Length < AmountOfPlayersPingMessages)
+        //     {
+        //         var updatedOldServerTime = rpc.ServerTimeStampUTCtoday.TotalMilliseconds + SystemAPI.Time.DeltaTime *1000/2;
+        //         var pingValue = 0d;
+        //         if(DateTime.UtcNow.TimeOfDay.TotalMilliseconds - updatedOldServerTime < 0)
+        //         {
+        //             pingValue = 0d;
+        //         }
+        //         else
+        //         {
+        //             pingValue = DateTime.UtcNow.TimeOfDay.TotalMilliseconds - updatedOldServerTime;
+        //         }
+        //         
+        //         
+        //         playersPings[rpc.ClientNetworkID].Add(pingValue);
+        //     }
+        //
+        //     CheckIfAllClientsPingsReceived(rpc);
+        // }
+
+        // private void CheckIfAllClientsPingsReceived(RpcPingPong rpc)
+        // {
+        //     if(_allPingsReceived) return;
+        //     // Debug.Log("Checking --> PlayersPingListLength: " + playersPings.Length + " ClientToCheck:  " + rpc.ClientNetworkID + " How many pings: " + playersPings[rpc.ClientNetworkID].Length);
+        //
+        //     foreach (var player in playersPings)
+        //     {
+        //         if (player.IsCreated && player.Length < AmountOfPlayersPingMessages)
+        //         {
+        //             return;
+        //         }
+        //     }
+        //     
+        //     for(var i=0; i<playersPings.Length; i++)
+        //     {
+        //         if (!playersPings[i].IsCreated)
+        //         {
+        //             averagePingPerPlayer[i] = -1d;
+        //         }
+        //         else
+        //         {
+        //             var totalPing = 0d;
+        //             for (var j = 0; j < playersPings[i].Length; j++)
+        //             {
+        //                 totalPing += playersPings[i][j];
+        //             }
+        //             averagePingPerPlayer[i] = totalPing / playersPings[i].Length;
+        //         }
+        //     }
+        //
+        //     // Debug.Log("All pings received.");
+        //     _allPingsReceived = true;
+        //     // for (int i = 0; i < averagePingPerPlayer.Length; i++)
+        //     // {
+        //     //     // Debug.Log("AveragePing of player " + i + " equals to " + averagePingPerPlayer[i]);
+        //     // }
+        //     StartGame();
+        // }
         
         private void CheckIfAllClientsReady(RpcPlayerReady rpc)
         {
@@ -259,19 +357,6 @@ namespace DeterministicLockstep
             SendRPCtoStartGame();
         }
         
-        private void SendRPCToLoadGame()
-        {
-            RpcLoadGame rpc = new RpcLoadGame();
-            for (ushort i = 0; i < _connectedPlayers.Length; i++)
-            {
-                if (_connectedPlayers[i].IsCreated)
-                {
-                    rpc.ClientNetworkID = i;
-                    rpc.Serialize(_mDriver, _connectedPlayers[i], _reliableSimulationPipeline);
-                }
-            }
-        }
-
         /// <summary>
         /// Function used to set initial player data (network IDs and positions).
         /// </summary>
@@ -289,6 +374,30 @@ namespace DeterministicLockstep
                 }
             }
         }
+        
+        private void SendRPCToLoadGame()
+        {
+            var rpc = new RpcLoadGame();
+            var playersIDs = new NativeList<int>(Allocator.Temp);
+            for (ushort i = 0; i < _connectedPlayers.Length; i++)
+            {
+                if (_connectedPlayers[i].IsCreated)
+                {
+                    playersIDs.Add(i);
+                }
+            }
+            
+            for (ushort i = 0; i < _connectedPlayers.Length; i++)
+            {
+                if (_connectedPlayers[i].IsCreated)
+                {
+                    rpc.PlayerNetworkID = i;
+                    rpc.PlayersNetworkIDs = playersIDs;
+                    rpc.Serialize(_mDriver, _connectedPlayers[i], _emptyPipeline);
+                }
+            }
+            playersIDs.Dispose();
+        }
 
         /// <summary>
         /// Function used to send RPC to clients to start the game.
@@ -296,11 +405,12 @@ namespace DeterministicLockstep
         private void SendRPCtoStartGame()
         {
             // register OnGameStart method where they can be used to spawn entities, separation between user code and package code
-            Random rng = new Random();
+            var rng = new Random();
+            // var serverTime = DateTime.UtcNow.TimeOfDay;
             RpcStartDeterministicSimulation rpc = new RpcStartDeterministicSimulation
             {
-                ServerTimestampUTC = DateTime.UtcNow.TimeOfDay.TotalMilliseconds,
-                PostponedStartInMiliseconds =  1000,
+                // ServerTimestampUTC = serverTime,
+                // PostponedStartInMiliseconds =  1000,
                 PlayersNetworkIDs = _mNetworkIDs,
                 TickRate = SystemAPI.GetSingleton<DeterministicSettings>().simulationTickRate,
                 TicksOfForcedInputLatency = SystemAPI.GetSingleton<DeterministicSettings>().ticksAhead,
@@ -313,7 +423,8 @@ namespace DeterministicLockstep
                 if (_connectedPlayers[i].IsCreated)
                 {
                     rpc.ThisConnectionNetworkID = i;
-                    rpc.Serialize(_mDriver, _connectedPlayers[i], _reliableSimulationPipeline);
+                    // rpc.PlayerAveragePing = averagePingPerPlayer[i];
+                    rpc.Serialize(_mDriver, _connectedPlayers[i], _reliablePipeline);
                 }
             }
         }
@@ -334,7 +445,7 @@ namespace DeterministicLockstep
 
             foreach (var connectedPlayer in _connectedPlayers.Where(connectedPlayer => connectedPlayer.IsCreated))
             {
-                rpc.Serialize(_mDriver, connectedPlayer, _reliableSimulationPipeline);
+                rpc.Serialize(_mDriver, connectedPlayer, _reliablePipeline);
             }
         }
 
@@ -347,7 +458,7 @@ namespace DeterministicLockstep
 
             foreach (var connection in _connectedPlayers.Where(connection => connection.IsCreated))
             {
-                rpc.Serialize(_mDriver, connection, _reliableSimulationPipeline);
+                rpc.Serialize(_mDriver, connection, _emptyPipeline);
             }
         }
 
@@ -371,9 +482,11 @@ namespace DeterministicLockstep
                         ", ";
                 
             }
-            //
-            Debug.Log("Data received: " + " Player network id --> " + rpc.PlayerNetworkID + " tick to apply --> " + rpc.FutureTick + 
-                      " hash to apply --> " + playerArrivingHashes + " inputs to apply --> " + rpc.PongGameInputs.verticalInput);
+
+            // Debug.Log("Data received: " + " Player network id --> " + rpc.PlayerNetworkID + " tick to apply --> " +
+            //           rpc.FutureTick +
+            //           " hash to apply --> " + playerArrivingHashes + " inputs to apply --> " +
+            //           rpc.PongGameInputs.verticalInput + " client time when sending: " + rpc.ClientTimeStampUTC);
             for (var i = 0; i < _connectedPlayers.Length; i++)
             {
                 if (!_connectedPlayers[i].Equals(connection)) continue;
@@ -430,11 +543,11 @@ namespace DeterministicLockstep
                 {
                     // Assign the connection to the first available spot
                     _connectedPlayers[index] = connection; // Assign network ID based on the index
-                    // Debug.Log("Accepted a connection with network ID: " + index);
+                    Debug.Log("Accepted a connection with network ID: " + index);
                 }
                 else
                 {
-                    // Debug.LogWarning("Cannot accept more connections. Server is full.");
+                    Debug.LogWarning("Cannot accept more connections. Server is full.");
                     connection.Disconnect(_mDriver);
                 }
             }
@@ -462,6 +575,7 @@ namespace DeterministicLockstep
         /// </summary>
         private void CheckIfAllDataReceivedAndSendToClients()
         {
+            Debug.Log("Checking if all data received and sending to clients");
             var desynchronized = false;
             
             if (_everyTickInputBuffer[(ulong) _lastTickReceivedFromClient].Length == GetActiveConnectionCount() &&
@@ -516,10 +630,10 @@ namespace DeterministicLockstep
                                         ", ";
                                 }
                             }
-                            
-                            Debug.LogError("DESYNCHRONIZATION HAPPENED! HASHES ARE NOT EQUAL! " + "Ticks: " +
-                                           _lastTickReceivedFromClient + " Hashes: " + firstPlayerHash + " and " +
-                                           currentPlayerHash + " System number: " + systemHash + ". All hashes: " + allHashes);
+                            //
+                            // Debug.LogError("DESYNCHRONIZATION HAPPENED! HASHES ARE NOT EQUAL! " + "Ticks: " +
+                            //                _lastTickReceivedFromClient + " Hashes: " + firstPlayerHash + " and " +
+                            //                currentPlayerHash + " System number: " + systemHash + ". All hashes: " + allHashes);
                             desynchronized = true;
                             break;
                         }
@@ -554,8 +668,8 @@ namespace DeterministicLockstep
                         }
                     }
                     
-                    Debug.Log("All hashes are equal: " + allHashes + ". Number of players: " +
-                              _everyTickHashBuffer[(ulong) _lastTickReceivedFromClient].Length + ". Tick: " + _lastTickReceivedFromClient + " Number of hashes per player: " + _everyTickHashBuffer[(ulong)_lastTickReceivedFromClient][0].Length);
+                    // Debug.Log("All hashes are equal: " + allHashes + ". Number of players: " +
+                    //           _everyTickHashBuffer[(ulong) _lastTickReceivedFromClient].Length + ". Tick: " + _lastTickReceivedFromClient + " Number of hashes per player: " + _everyTickHashBuffer[(ulong)_lastTickReceivedFromClient][0].Length);
             
                     // Send the RPC to all connections
                     SendRPCWithPlayersInputUpdate(networkIDs, inputs);

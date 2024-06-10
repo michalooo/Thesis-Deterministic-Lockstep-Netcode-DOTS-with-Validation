@@ -19,16 +19,14 @@ namespace PongGame
         protected override void OnUpdate()
         {
             var client = SystemAPI.GetSingletonRW<DeterministicClientComponent>();
-            if ((SceneManager.GetActiveScene().name == "PongGame" || SceneManager.GetActiveScene().name == "PongLoading") && (Input.GetKey(KeyCode.Q) || client.ValueRO.deterministicClientWorkingMode == DeterministicClientWorkingMode.Disconnect)) //Simulation of disconnection 
+            if (SceneManager.GetActiveScene().name == "PongGame" && (Input.GetKey(KeyCode.Q) || client.ValueRO.deterministicClientWorkingMode == DeterministicClientWorkingMode.Disconnect)) //Simulation of disconnection 
             {
-                Debug.Log("Client requested to disconnect");
                 client.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.Disconnect;
                 
                 foreach (var world in World.All)
                 {
                     if (world.Flags is not (WorldFlags.GameServer or WorldFlags.GameClient))
                     {
-                        Debug.Log(world);
                         ScriptBehaviourUpdateOrder.AppendWorldToCurrentPlayerLoop(world);
                         World.DefaultGameObjectInjectionWorld = world;
                         break;
@@ -37,19 +35,24 @@ namespace PongGame
 
                 SceneManager.LoadSceneAsync("PongMenu");
             }
-            else if (SceneManager.GetActiveScene().name == "PongLoading" && SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode == DeterministicClientWorkingMode.LoadingGame)
+            else if (client.ValueRO.deterministicClientWorkingMode == DeterministicClientWorkingMode.LoadingGame && gameAsyncLoad == null)
             {
                 gameAsyncLoad = SceneManager.LoadSceneAsync("PongGame");
             }
-            else if (SceneManager.GetActiveScene().name == "PongLoading" && SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode == DeterministicClientWorkingMode.None)
+            else if (client.ValueRO.deterministicClientWorkingMode == DeterministicClientWorkingMode.RunDeterministicSimulation)
+            {
+                UISingleton.Instance.SetWaitingTextEnabled(false);
+            }
+            else if(client.ValueRO.deterministicClientWorkingMode == DeterministicClientWorkingMode.None)
             {
                 client.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.Connect;
             }
-
+            
+            
             if (gameAsyncLoad != null && gameAsyncLoad.isDone)
             {
-                client.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.ClientReady;
                 gameAsyncLoad = null;
+                client.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.ClientReady;
             }
         }
     }

@@ -1,3 +1,4 @@
+using System;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
@@ -18,7 +19,7 @@ namespace DeterministicLockstep
             state.RequireForUpdate<DeterministicTime>();
         }
 
-        [BurstCompile]
+        // [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             var deterministicTime = SystemAPI.GetSingleton<DeterministicTime>();
@@ -40,11 +41,12 @@ namespace DeterministicLockstep
                     PongGameInputs = capsulesInputs,
                     PlayerNetworkID = owner.ValueRO.connectionNetworkId,
                     FutureTick = deterministicTime.currentClientTickToSend,
-                    HashesForFutureTick = deterministicTime.hashesForTheCurrentTick
+                    HashesForFutureTick = deterministicTime.hashesForTheCurrentTick,
+                    // ClientTimeStampUTC = DateTime.UtcNow.TimeOfDay,
                 };
 
                 rpc.Serialize(connectionReference.ValueRO.driverReference, connectionReference.ValueRO.connectionReference,
-                    connectionReference.ValueRO.reliableSimulationPipelineReference);
+                    connectionReference.ValueRO.reliablePipelineReference);
                 
                 deterministicTime.hashesForTheCurrentTick.Dispose();
                 deterministicTime.hashesForTheCurrentTick = new NativeList<ulong>(Allocator.Persistent);

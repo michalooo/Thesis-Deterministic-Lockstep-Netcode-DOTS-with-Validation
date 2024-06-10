@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using DeterministicLockstep;
+using TMPro;
 using Unity.Entities;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -10,9 +11,19 @@ namespace PongGame
 {
     public class PongMenuHandler : MonoBehaviour
     {
+        private const string LOCAL_SERVER_ADDRESS = "127.0.0.1";
+        // Host option
         public Toggle IsLocalMultiplayerSimulation;
-        public InputField Address;
-        public InputField Port;
+        public InputField GamePort;
+        public InputField FrameRate;
+        public InputField ForcedInputLatency;
+        public TMP_Dropdown hashOption;
+        
+        // Client option
+        public InputField HostAddress;
+        public InputField HostPort;
+        
+       
 
         private void Start()
         {
@@ -27,7 +38,7 @@ namespace PongGame
             
             foreach (var world in worlds)
             {
-                Debug.Log("Destroying world: " + world.Name);
+                // Debug.Log("Destroying world: " + world.Name);
                 world.Dispose();
             }
         }
@@ -42,97 +53,65 @@ namespace PongGame
         
         public void HostGame()
         {
-            Debug.Log(World.DefaultGameObjectInjectionWorld);
-            EntityManager entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
-            EntityQuery deterministicSettingsQuery = entityManager.CreateEntityQuery(typeof(DeterministicSettings));
-
-            Debug.Log($"[HostGame]");
             var server = CreateServerWorld("ServerWorld");
             var client = CreateClientWorld("ClientWorld");
-
-
+            
+            EntityManager serverEntityManager = server.EntityManager;
+            EntityManager clientEntityManager = client.EntityManager;
+            
+            serverEntityManager.CreateSingleton(new DeterministicSettings
+            {
+                _serverAddress = LOCAL_SERVER_ADDRESS,
+                _serverPort = int.Parse(GamePort.text),
+                hashCalculationOption = (DeterminismHashCalculationOption) hashOption.value,
+                ticksAhead = int.Parse(ForcedInputLatency.text),
+                simulationTickRate = int.Parse(FrameRate.text),
+                allowedConnectionsPerGame = 2
+            
+            });
+            
+            clientEntityManager.CreateSingleton(new DeterministicSettings
+            {
+                _serverAddress = LOCAL_SERVER_ADDRESS,
+                _serverPort = int.Parse(GamePort.text),
+                hashCalculationOption = (DeterminismHashCalculationOption) hashOption.value,
+                ticksAhead = int.Parse(ForcedInputLatency.text),
+                simulationTickRate = int.Parse(FrameRate.text),
+                allowedConnectionsPerGame = 2
+            });
+            
             if (IsLocalMultiplayerSimulation.isOn)
             {
                 var secondClient = CreateClientWorld($"ClientWorld1");
-                if (deterministicSettingsQuery.TryGetSingletonEntity<DeterministicSettings>(
-                        out Entity deterministicSettings2))
+                EntityManager secondClientEntityManager = secondClient.EntityManager;
+                secondClientEntityManager.CreateSingleton(new DeterministicSettings
                 {
-                    EntityManager anotherClientEntityManager = secondClient.EntityManager;
-                    Entity anotherClientDeterministicSettingsEntity =
-                        anotherClientEntityManager.CreateEntity(typeof(DeterministicSettings));
-                    
-                    var anotherClientSettings = entityManager.GetComponentData<DeterministicSettings>(deterministicSettings2);
-                    anotherClientSettings._serverAddress = Address.text;
-                    anotherClientSettings._serverPort = ushort.Parse(Port.text);
-                    anotherClientEntityManager.SetComponentData(anotherClientDeterministicSettingsEntity,
-                        anotherClientSettings);
-                }
-                else
-                {
-                    Debug.LogError(
-                        "No DeterministicSettings entity found in the world. Make sure you have a DeterministicSettings entity in your world.");
-                }
+                    _serverAddress = LOCAL_SERVER_ADDRESS,
+                    _serverPort = int.Parse(GamePort.text),
+                    hashCalculationOption = (DeterminismHashCalculationOption) hashOption.value,
+                    ticksAhead = int.Parse(ForcedInputLatency.text),
+                    simulationTickRate = int.Parse(FrameRate.text),
+                    allowedConnectionsPerGame = 2
+                });
             }
+            
 
-            SceneManager.LoadScene("PongLoading");
-
-
-            if (deterministicSettingsQuery.TryGetSingletonEntity<DeterministicSettings>(
-                    out Entity deterministicSettings))
-            {
-                EntityManager serverEntityManager = server.EntityManager;
-                Entity serverDeterministicSettings = serverEntityManager.CreateEntity(typeof(DeterministicSettings));
-                serverEntityManager.SetComponentData(serverDeterministicSettings,
-                    entityManager.GetComponentData<DeterministicSettings>(deterministicSettings));
-
-
-                EntityManager clientEntityManager = client.EntityManager;
-                Entity clientDeterministicSettingsEntity = clientEntityManager.CreateEntity(typeof(DeterministicSettings));
-                
-                var clientSettings = entityManager.GetComponentData<DeterministicSettings>(deterministicSettings);
-                clientSettings._serverAddress = Address.text;
-                clientSettings._serverPort = ushort.Parse(Port.text);
-                clientEntityManager.SetComponentData(clientDeterministicSettingsEntity,
-                    clientSettings);
-            }
-            else
-            {
-                Debug.LogError(
-                    "No DeterministicSettings entity found in the world. Make sure you have a DeterministicSettings entity in your world.");
-            }
-
-            // DestroyLocalSimulationWorld();
+            SceneManager.LoadScene("PongGame");
             World.DefaultGameObjectInjectionWorld = client;
         }
 
         public void ConnectToGame()
         {
-            EntityManager entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
-            EntityQuery deterministicSettingsQuery = entityManager.CreateEntityQuery(typeof(DeterministicSettings));
-
-            Debug.Log($"[ConnectToServer]");
             var client = CreateClientWorld("ClientWorld");
-
-            if (deterministicSettingsQuery.TryGetSingletonEntity<DeterministicSettings>(
-                    out Entity deterministicSettings))
+            EntityManager clientEntityManager = client.EntityManager;
+            
+            clientEntityManager.CreateSingleton(new DeterministicSettings
             {
-                EntityManager clientEntityManager = client.EntityManager;
-                Entity clientDeterministicSettingsEntity = clientEntityManager.CreateEntity(typeof(DeterministicSettings));
-                
-                var clientSettings = entityManager.GetComponentData<DeterministicSettings>(deterministicSettings);
-                clientSettings._serverAddress = Address.text;
-                clientSettings._serverPort = ushort.Parse(Port.text);
-                clientEntityManager.SetComponentData(clientDeterministicSettingsEntity,
-                    clientSettings);
-            }
-            else
-            {
-                Debug.LogError(
-                    "No DeterministicSettings entity found in the world. Make sure you have a DeterministicSettings entity in your world.");
-            }
-
-            SceneManager.LoadScene("PongLoading");
-
+                _serverAddress = HostAddress.text,
+                _serverPort = int.Parse(GamePort.text)
+            });
+            
+            SceneManager.LoadScene("PongGame");
             World.DefaultGameObjectInjectionWorld = client;
         }
 

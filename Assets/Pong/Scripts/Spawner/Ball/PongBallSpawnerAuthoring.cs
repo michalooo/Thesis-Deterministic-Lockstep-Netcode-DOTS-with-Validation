@@ -1,6 +1,4 @@
-﻿using Unity.Burst;
-using Unity.Entities;
-using Unity.Mathematics;
+﻿using Unity.Entities;
 using UnityEngine;
 
 namespace PongGame
@@ -9,7 +7,6 @@ namespace PongGame
     /// <summary>
     /// Component used to store the player prefab entity
     /// </summary>
-    [BurstCompile]
     public struct PongBallSpawner : IComponentData
     {
         public Entity Ball;

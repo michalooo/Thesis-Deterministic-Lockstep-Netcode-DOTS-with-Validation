@@ -10,7 +10,6 @@ namespace DeterministicLockstep
     /// <summary>
     /// System to check the determinism of the simulation. It will hash the necessary component of all entities with the DeterministicSimulation component.
     /// </summary>
-    [BurstCompile]
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup), OrderLast = true)]
     [UpdateBefore(typeof(PlayerInputSendSystem))]
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
@@ -20,27 +19,24 @@ namespace DeterministicLockstep
         private EntityQuery _mQuery;
 
         // private Dictionary<int, ulong> _everyTickHashBuffer;
-
-        [BurstCompile]
+        
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<DeterministicSettings>();
             state.RequireForUpdate<DeterministicTime>();
             _resultsArray = new NativeList<ulong>(128, Allocator.Persistent); // probably need to refine this number
             // _everyTickHashBuffer = new Dictionary<int, ulong>();
+            _mQuery = state.EntityManager.CreateEntityQuery(
+                typeof(EnsureDeterministicBehaviour)
+            );
         }
-
-        [BurstCompile]
+        
         public void OnUpdate(ref SystemState state)
         {
             if (SystemAPI.GetSingleton<DeterministicSettings>().hashCalculationOption ==
                 DeterminismHashCalculationOption.None) return; // No determinism checks
             
             
-            _mQuery = state.EntityManager.CreateEntityQuery(
-                typeof(EnsureDeterministicBehaviour)
-            );
-
             var resultsArrayCapacity = _mQuery.CalculateChunkCount();
             _resultsArray.Clear(); // Clear the array to avoid data from old frames
             var length = math.ceilpow2(resultsArrayCapacity);
@@ -65,9 +61,8 @@ namespace DeterministicLockstep
             // _everyTickHashBuffer[currentTick] = hash;
 
             // Save Hash in the DeterministicTime component
-            var timeComponent = SystemAPI.GetSingleton<DeterministicTime>();
-            timeComponent.hashesForTheCurrentTick.Add(hash);
-            SystemAPI.SetSingleton(timeComponent);
+            var timeComponent = SystemAPI.GetSingletonRW<DeterministicTime>();
+            timeComponent.ValueRW.hashesForTheCurrentTick.Add(hash);
         }
 
         [BurstCompile]

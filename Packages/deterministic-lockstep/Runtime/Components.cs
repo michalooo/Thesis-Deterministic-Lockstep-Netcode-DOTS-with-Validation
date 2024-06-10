@@ -34,7 +34,6 @@ namespace DeterministicLockstep
     /// <summary>
     /// Component used to store the player input data to use for user simulation
     /// </summary>
-    [BurstCompile]
     public struct PlayerInputDataToUse : IComponentData, IEnableableComponent
     {
         public int playerNetworkId;
@@ -46,36 +45,25 @@ namespace DeterministicLockstep
     /// <summary>
     /// Component used to store connection info for every connection
     /// </summary>
-    [BurstCompile]
     public struct NetworkConnectionReference : IComponentData
     {
         public NetworkDriver driverReference;
-        public NetworkPipeline reliableSimulationPipelineReference;
+        public NetworkPipeline reliablePipelineReference;
         public NetworkConnection connectionReference;
     }
 
     /// <summary>
     /// Component used to store the networkID of the connection
     /// </summary>
-    [BurstCompile]
     public struct GhostOwner : IComponentData
     {
         public int connectionNetworkId;
-    }
-
-    /// <summary>
-    /// Component used to store the target spawned entity for the connection of which the arriving input will be used
-    /// </summary>
-    [BurstCompile]
-    public struct CommandTarget : IComponentData
-    {
         public Entity connectionCommandsTargetEntity;
     }
 
     /// <summary> 
     /// An enableable tag component used to track if a ghost with an owner is owned by the local host or not.
     /// </summary>
-    [BurstCompile]
     public struct GhostOwnerIsLocal : IComponentData, IEnableableComponent
     {
     } // added to different entities so it may cause desync if comparing amount of components
@@ -83,7 +71,6 @@ namespace DeterministicLockstep
     /// <summary>
     /// Component used to tag connections for which a player prefab was spawned
     /// </summary>
-    [BurstCompile]
     public struct PlayerSpawned : IComponentData
     {
     }
@@ -91,15 +78,15 @@ namespace DeterministicLockstep
     /// <summary>
     /// Component used to store all the time related variables
     /// </summary>
-    [BurstCompile]
     public struct DeterministicTime : IComponentData
     {
         /// <summary>
         /// Synchronized clock with the server
         /// </summary>
-        public DateTime serverTimestampUTC;
-        public DateTime localTimestampAtTheMomentOfSynchronizationUTC;
+        public TimeSpan serverTimestampUTC;
+        public TimeSpan localTimestampAtTheMomentOfSynchronizationUTC;
         public double timeToPostponeStartofSimulationInMiliseconds;
+        public double playerAveragePing;
         
         /// <summary>
         /// Variable storing the elapsed time which is used to control system groups
@@ -129,7 +116,7 @@ namespace DeterministicLockstep
         /// <summary>
         /// Variable that is used to calculate time before processing next tick
         /// </summary>
-        public float timeLeftToSendNextTick;
+        public double timeLeftToSendNextTick;
 
         /// <summary>
         /// variable that takes count of which tick is being visually processed on the client
@@ -155,7 +142,6 @@ namespace DeterministicLockstep
     /// <summary>
     /// Component used to mark server state
     /// </summary>
-    [BurstCompile]
     public struct DeterministicServerComponent : IComponentData
     {
         public DeterministicServerWorkingMode deterministicServerWorkingMode;
@@ -164,15 +150,16 @@ namespace DeterministicLockstep
     /// <summary>
     /// Component used to mark client state
     /// </summary>
-    [BurstCompile]
     public struct DeterministicClientComponent : IComponentData
     {
         public uint randomSeed;
         public int clientNetworkId;
         public DeterministicClientWorkingMode deterministicClientWorkingMode;
     }
-    
-    [BurstCompile]
+   
+    /// <summary>
+    /// Predefined struct for managing player inputs in the sample Pong game
+    /// </summary>
     public struct PongInputs: IComponentData
     {
         public int verticalInput;
@@ -184,7 +171,7 @@ namespace DeterministicLockstep
 
         public void
             DeserializeInputs(
-                ref DataStreamReader reader) //question how user can know if the order will be correct? --> Same order as serialization
+                ref DataStreamReader reader)
         {
             verticalInput = reader.ReadInt();
         }
