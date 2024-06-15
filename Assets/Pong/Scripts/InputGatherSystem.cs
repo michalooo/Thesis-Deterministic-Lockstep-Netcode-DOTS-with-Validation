@@ -23,11 +23,11 @@ namespace PongGame
 
                 if (state.World.Name == "ClientWorld") // for local testing purposes
                 {
-                    verticalInput = Input.GetKey(KeyCode.S) ? -1 : Input.GetKey(KeyCode.W) ? 1 : 0;
+                    verticalInput = Input.GetKey(KeyCode.S) ? -50 : Input.GetKey(KeyCode.W) ? 50 : 0;
                 }
                 else if (state.World.Name == "ClientWorld1" || state.World.Name == "ClientWorld2")
                 {
-                    verticalInput = Input.GetKey(KeyCode.DownArrow) ? -1 : Input.GetKey(KeyCode.UpArrow) ? 1 : 0;
+                    verticalInput = Input.GetKey(KeyCode.DownArrow) ? -50 : Input.GetKey(KeyCode.UpArrow) ? 50 : 0;
                 }
                 else
                 {

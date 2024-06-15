@@ -81,7 +81,7 @@ namespace PongGame
             
             if (transform.Position.x < -worldPosition.x || transform.Position.x > worldPosition.x) return;
             
-            var newPosition = transform.Position + velocity.value;
+            var newPosition = transform.Position + deltaTime * velocity.value;
             // Interpolate from the current position to the new position
             var interpolatedPositionX = Mathf.Lerp(transform.Position.x, newPosition.x, interpolationSpeed * deltaTime);
             var interpolatedPositionY = Mathf.Lerp(transform.Position.y, newPosition.y, interpolationSpeed * deltaTime);

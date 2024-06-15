@@ -17,8 +17,8 @@ namespace PongGame
         private int totalBallsSpawned = 0;
         private int totalBallsToSpawn = 1000;
         
-        private int minSpeed = 10;
-        private int maxSpeed = 50;
+        private int minSpeed = 200;
+        private int maxSpeed = 500;
         
         private float timeBetweenSpawning = 0.003f;
         private float timeSinceLastSpawn = 0f;

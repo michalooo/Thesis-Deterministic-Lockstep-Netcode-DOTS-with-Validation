@@ -45,13 +45,23 @@ namespace PongGame
                 }
                 else
                 {
-                    var verticalInput = playerInputData[i].playerInputToApply.verticalInput*1.5f;
+                    var verticalInput = playerInputData[i].playerInputToApply.verticalInput;
 
                     var targetTransform = SystemAPI.GetComponentRW<LocalTransform>(ghostOwnerData[i].connectionCommandsTargetEntity);
                     var targetPosition = targetTransform.ValueRO.Position;
                     
-                    var newPositionY = targetPosition.y + verticalInput;
+                    var newPositionY = targetPosition.y + (state.World.Time.DeltaTime * verticalInput);
                     
+                    // TESTING DETERMINISM CHECKS
+                    if (Input.GetKey(KeyCode.R))
+                    {
+                        float randomChance = UnityEngine.Random.value; // Generate a random number between 0 and 1
+                        if (randomChance <= 0.2f)
+                        {
+                            newPositionY = targetPosition.y + (state.World.Time.DeltaTime * verticalInput * 1.05f);
+                        }
+                    }
+                    // END OF TESTING DETERMINISM CHECKS
                     
                     // Check if the new position is within the bounds
                     if (newPositionY < minY)
@@ -62,24 +72,7 @@ namespace PongGame
                     {
                         newPositionY = maxY;
                     }
-
-                    // // TESTING DETERMINISM CHECKS
-                    // if (playerInputData[i].playerNetworkId % 2 == 0 )
-                    // {
-                    //     targetPosition.x = -8f;
-                    // }
-                    // else
-                    // {
-                    //     targetPosition.x = 8f;
-                    // }
                     
-                    // var newPositionX = targetPosition.x;
-                    // if (Input.GetKey(KeyCode.R))
-                    // {
-                    //     newPositionX += Random.Range(-1f, 1f);
-                    // }
-                    // targetPosition.x = Mathf.Lerp(targetPosition.x, newPositionX, interpolationSpeed);
-                    // END OF TESTING DETERMINISM CHECKS
                     
                     // Interpolate from the current position to the new position
                     targetPosition.y = Mathf.Lerp(targetPosition.y, newPositionY, interpolationSpeed);
