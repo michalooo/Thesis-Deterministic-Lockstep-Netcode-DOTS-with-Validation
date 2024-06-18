@@ -14,23 +14,23 @@ namespace PongGame
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
     // [UpdateAfter(typeof(PongBallDestructionSystem))]
-    public partial struct PlayerUpdateSystem : ISystem
+    public partial struct PlayerMovementSystem : ISystem
     {
         private EntityQuery playerQuery;
         private const float minY = -6f;
         private const float maxY = 6f;
         private const float interpolationSpeed = 0.2f;
-        
+
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<PlayerInputDataToUse>(); // component from which data should be taken
             state.RequireForUpdate<PongInputs>();
             playerQuery = state.GetEntityQuery(typeof(GhostOwner), typeof(PlayerInputDataToUse), typeof(PlayerSpawned));
         }
-        
+
         public void OnUpdate(ref SystemState state)
         {
-            // Get the component data from the entities
+    // Get the component data from the entities
             var ghostOwnerData = playerQuery.ToComponentDataArray<GhostOwner>(Allocator.Temp);
             var playerInputData = playerQuery.ToComponentDataArray<PlayerInputDataToUse>(Allocator.Temp);
             var connectionEntity = playerQuery.ToEntityArray(Allocator.Temp);
@@ -55,11 +55,7 @@ namespace PongGame
                     // TESTING DETERMINISM CHECKS
                     if (Input.GetKey(KeyCode.R))
                     {
-                        float randomChance = UnityEngine.Random.value; // Generate a random number between 0 and 1
-                        if (randomChance <= 0.2f)
-                        {
-                            newPositionY = targetPosition.y + (state.World.Time.DeltaTime * verticalInput * 1.05f);
-                        }
+                        newPositionY = targetPosition.y + (state.World.Time.DeltaTime * verticalInput * 2f);
                     }
                     // END OF TESTING DETERMINISM CHECKS
                     
