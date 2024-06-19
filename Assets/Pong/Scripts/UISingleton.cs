@@ -10,13 +10,12 @@ namespace PongGame
         [SerializeField] private TextMeshProUGUI scoreLeft;
         [SerializeField] private TextMeshProUGUI scoreRight;
         [SerializeField] private TextMeshProUGUI gameStatusText;
+        [SerializeField] private TextMeshProUGUI gameResultText;
         
         public static UISingleton Instance { get; private set; }
         
         private void Awake() 
         { 
-            // If there is an instance, and it's not me, delete myself.
-    
             if (Instance != null && Instance != this) 
             { 
                 Destroy(this); 
@@ -25,6 +24,41 @@ namespace PongGame
             { 
                 Instance = this; 
             } 
+            
+            gameResultText.gameObject.SetActive(false);
+        }
+
+        public bool IsLeftPlayerWinning()
+        {
+            return int.Parse(scoreLeft.text) > int.Parse(scoreRight.text);
+        }
+        
+        public bool IsRightPlayerWinning()
+        {
+            return int.Parse(scoreLeft.text) < int.Parse(scoreRight.text);
+        }
+        
+        public bool IsDraw()
+        {
+            return int.Parse(scoreLeft.text) == int.Parse(scoreRight.text);
+        }
+
+        public int GetTotalScore()
+        {
+            return int.Parse(scoreLeft.text) + int.Parse(scoreRight.text);
+        }
+
+        public void SetGameResult(bool leftPlayerWon)
+        {
+            if (leftPlayerWon)
+            {
+                gameResultText.text = "Left player won!";
+            }
+            else
+            {
+                gameResultText.text = "Right player won!";
+            }
+            gameResultText.gameObject.SetActive(true);
         }
 
         public void AddLeftScore(int score)

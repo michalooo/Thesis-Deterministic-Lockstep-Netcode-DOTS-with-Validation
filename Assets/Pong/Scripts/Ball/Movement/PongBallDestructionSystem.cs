@@ -54,6 +54,11 @@ namespace PongGame
             {
                 UISingleton.Instance.AddRightScore(rightPointsQueue.Count);
                 UISingleton.Instance.AddLeftScore(leftPointsQueue.Count);
+
+                if (UISingleton.Instance.GetTotalScore() == GameSettings.Instance.GetTotalBallsToSpawn())
+                {
+                    UISingleton.Instance.SetGameResult(UISingleton.Instance.IsLeftPlayerWinning());
+                }
             }
             
             ecb.Dispose();
@@ -83,12 +88,12 @@ namespace PongGame
 
             if (transform.Position.x < -worldPosition.x)
             {
-                leftCounter.Enqueue(1);
+                rightCounter.Enqueue(1);
                 ECB.DestroyEntity(index, entity);
             }
             else if (transform.Position.x > worldPosition.x)
             {
-                rightCounter.Enqueue(1);
+                leftCounter.Enqueue(1);
                 ECB.DestroyEntity(index, entity);
             }
         }

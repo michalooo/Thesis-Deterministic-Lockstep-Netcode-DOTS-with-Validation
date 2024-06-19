@@ -14,12 +14,6 @@ namespace PongGame
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     public partial class PongBallSpawnerSystem : SystemBase
     {
-        private int totalBallsSpawned = 0;
-        private int totalBallsToSpawn = 1000;
-        
-        private int minSpeed = 2000;
-        private int maxSpeed = 5000;
-
         private uint randomSeedFromServer;
         private Random random;
         
@@ -37,7 +31,7 @@ namespace PongGame
 
         protected override void OnUpdate()
         {
-            if (totalBallsSpawned >= totalBallsToSpawn) return;
+            if (GameSettings.Instance.GetTotalBallsSpawned() >= GameSettings.Instance.GetTotalBallsToSpawn()) return;
             
             var prefab = SystemAPI.GetSingleton<PongBallSpawner>().Ball;
                 
@@ -73,12 +67,15 @@ namespace PongGame
             direction = math.normalize(direction);
 
             // Generate a random speed
-            var speed = random.Next(minSpeed, maxSpeed);
+            var speed = random.Next(GameSettings.Instance.GetMinBallSpeed(), GameSettings.Instance.GetMaxBallSpeed());
 
             // Set the velocity of the ball
             EntityManager.SetComponentData(ball, new Velocity { value = direction * speed });
                     
-            totalBallsSpawned++;
+            if (World.Name == "ClientWorld") // To prevent local simulation for counting points twice (from both worlds)
+            {
+                GameSettings.Instance.AddSpawnedBalls(1);
+            }
         }
     }
 }
