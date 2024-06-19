@@ -23,8 +23,7 @@ namespace PongGame
         
         public void OnUpdate(ref SystemState state)
         {
-            var ecbSingleton = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>();
-            var ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
+            var ecb = new EntityCommandBuffer(Allocator.TempJob);
 
             ballsQuery = SystemAPI.QueryBuilder().WithAll<LocalTransform, Velocity>().Build();
             ballTransform = ballsQuery.ToComponentDataArray<LocalTransform>(Allocator.TempJob);
@@ -39,7 +38,7 @@ namespace PongGame
            
             var ballDestructionJob = new BallDestructionJob
             {
-                ECB = ecb,
+                ECB = ecb.AsParallelWriter(),
                 localTransform = ballTransform,
                 Entities = ballEntities,
                 worldPosition = worldPosition,
@@ -49,10 +48,17 @@ namespace PongGame
             
             JobHandle ballDestructionHandle = ballDestructionJob.Schedule(ballTransform.Length,1);
             ballDestructionHandle.Complete();
+            ecb.Playback(state.EntityManager);
+
+            if (state.World.Name == "ClientWorld") // To prevent local simulation for counting points twice (from both worlds)
+            {
+                UISingleton.Instance.AddRightScore(rightPointsQueue.Count);
+                UISingleton.Instance.AddLeftScore(leftPointsQueue.Count);
+            }
             
-            UISingleton.Instance.AddRightScore(rightPointsQueue.Count);
-            UISingleton.Instance.AddLeftScore(leftPointsQueue.Count);
-            
+            ecb.Dispose();
+            rightPointsQueue.Dispose();
+            leftPointsQueue.Dispose();
             ballTransform.Dispose();
             ballEntities.Dispose();
         }

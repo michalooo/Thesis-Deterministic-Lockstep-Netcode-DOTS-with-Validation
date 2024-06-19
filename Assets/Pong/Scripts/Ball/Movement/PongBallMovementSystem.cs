@@ -33,8 +33,7 @@ namespace PongGame
             ballVelocities = ballsQuery.ToComponentDataArray<Velocity>(Allocator.TempJob);
             ballEntities = ballsQuery.ToEntityArray(Allocator.TempJob);
             
-            var ecbSingleton = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>();
-            var ecb = ecbSingleton.CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
+            var ecb = new EntityCommandBuffer(Allocator.TempJob);
             
             Camera cam = Camera.main;
             float targetXPosition = Screen.width;
@@ -42,7 +41,7 @@ namespace PongGame
             
             var ballMovementJob = new BallMovementJob
             {
-                ECB = ecb,
+                ECB = ecb.AsParallelWriter(),
                 ballVelocities = ballVelocities,
                 localTransform = ballTransform,
                 Entities = ballEntities,
@@ -52,7 +51,9 @@ namespace PongGame
             
             JobHandle ballMovementHandle = ballMovementJob.Schedule(ballTransform.Length,1);
             ballMovementHandle.Complete();
+            ecb.Playback(state.EntityManager);
             
+            ecb.Dispose();
             ballTransform.Dispose();
             ballVelocities.Dispose();
             ballEntities.Dispose();
