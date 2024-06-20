@@ -44,6 +44,14 @@ namespace DeterministicLockstep
             var length = math.ceilpow2(resultsArrayCapacity);
             _resultsArray.Capacity = length;
             _resultsArray.Length = length; // refine this part at some point
+            
+            // var listOfDeterministicTypes = SystemAPI.GetSingleton<DeterministicSimulation>().deterministicComponents;
+            // var deterministicTypeDynamicHandles = new NativeList<DynamicComponentTypeHandle>(listOfDeterministicTypes.Length, Allocator.TempJob);
+            //
+            // foreach (var deterministicType in listOfDeterministicTypes)
+            // {
+            //     deterministicTypeDynamicHandles.Add(state.GetDynamicComponentTypeHandle(deterministicType));
+            // }
 
             var job = new DeterminismCheckJob()
             {
@@ -64,6 +72,7 @@ namespace DeterministicLockstep
 
             // Save Hash in the DeterministicTime component
             timeComponent.ValueRW.hashesForTheCurrentTick.Add(hash);
+            // deterministicTypeDynamicHandles.Dispose();
         }
 
         [BurstCompile]

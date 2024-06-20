@@ -26,7 +26,7 @@ namespace DeterministicLockstep
             in v128 chunkEnabledMask)
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
-            Debug.Assert(chunk.Has<EnsureDeterministicBehaviour>()); // this will be used for whitelisting
+            Debug.Assert(chunk.Has<EnsureDeterministicBehaviour>());
 #endif
             ulong hash = 0;
 
@@ -42,3 +42,18 @@ namespace DeterministicLockstep
         }
     }
 }
+
+//
+// public NativeList<DynamicComponentTypeHandle> listOfDeterministicTypes;
+//         
+
+//     var dynamicTypeListPtr = listOfDeterministicTypes.GetUnsafePtr();
+//     var hash = (ulong) listOfDeterministicTypes.Length;
+//
+//     foreach (var dynamicComponentTypeHandle in listOfDeterministicTypes)
+//     {
+//         var typeInfo = TypeManager.GetTypeInfo(dynamicComponentTypeHandle.);
+//         var rawByteData = chunk.GetDynamicComponentDataArrayReinterpret<byte>(ref dynamicComponentTypeHandle, typeInfo.TypeSize);
+//         foreach (var byteData in rawByteData)
+//             hash = TypeHash.CombineFNV1A64(hash, byteData);
+//     }

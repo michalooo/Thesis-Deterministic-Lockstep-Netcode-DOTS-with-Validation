@@ -1,5 +1,6 @@
 ﻿using DeterministicLockstep;
 using Unity.Entities;
+using Unity.Transforms;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -14,8 +15,16 @@ namespace PongGame
         protected override void OnCreate()
         {
             RequireForUpdate<DeterministicClientComponent>();
+            RequireForUpdate<DeterministicComponents>();
         }
-        
+
+        protected override void OnStartRunning()
+        {
+            var client = SystemAPI.GetSingletonRW<DeterministicComponents>();
+            client.ValueRW.Value.Add(ComponentType.ReadOnly<LocalTransform>());
+            client.ValueRW.Value.Add(ComponentType.ReadOnly<DeterministicSettings>());
+        }
+
         protected override void OnUpdate()
         {
             var client = SystemAPI.GetSingletonRW<DeterministicClientComponent>();

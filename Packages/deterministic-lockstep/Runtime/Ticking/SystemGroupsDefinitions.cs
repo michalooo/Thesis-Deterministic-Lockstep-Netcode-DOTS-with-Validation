@@ -41,6 +41,10 @@ namespace DeterministicLockstep
         {
             base.OnCreate();
             RateManager = new DeterministicFixedStepRateManager(this);
+            EntityManager.CreateSingleton(new DeterministicComponents()
+            {
+                Value = new NativeList<ComponentType>()
+            });
             EntityManager.CreateSingleton(new DeterministicTime()
             {
                 storedIncomingTicksFromServer = new NativeQueue<RpcBroadcastTickDataToClients>(Allocator.Persistent),
