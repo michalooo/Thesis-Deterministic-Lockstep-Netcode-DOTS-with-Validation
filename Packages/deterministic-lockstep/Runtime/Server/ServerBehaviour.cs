@@ -727,8 +727,7 @@ namespace DeterministicLockstep
         private void CheckEndGameHashes(RpcGameEnded rpc)
         {
             // add new rpc
-            // Debug.Log(rpc.PlayerNetworkID + " ended the game " + rpc.HashForGameEnd);
-            // Debug.Log("third message: " + endGameHashes.Length);
+            Debug.Log("Player: " + rpc.PlayerNetworkID + " ended the game with hash: " + rpc.HashForGameEnd);
             for (var i = 0; i < endGameHashes.Length; i++)
             {
                 if (rpc.PlayerNetworkID == endGameHashes[i].PlayerNetworkID) return;
@@ -736,32 +735,32 @@ namespace DeterministicLockstep
             endGameHashes.Add(rpc);
             
             // check if all received
-            Disconnect();
+            // Disconnect();
             if (endGameHashes.Length == GetActiveConnectionCount())
             {
                 // // desync or disconnect
-                // var desynchronized = false;
-                // var hostHash = endGameHashes[0].HashForGameEnd;
-                // for (var i = 1; i < endGameHashes.Length; i++)
-                // {
-                //     if(hostHash != endGameHashes[i].HashForGameEnd)
-                //     {
-                //         desynchronized = true;
-                //         break;
-                //     }
-                // }
-                //
-                // if (desynchronized)
-                // {
-                //     Debug.LogError("Desynchronized on game end");
-                //     SendRPCWithPlayersDesynchronizationInfo();
-                // }
-                // else
-                // {
-                //     Debug.Log("Game ended successfully");
-                //     Disconnect();
-                // }
-                Disconnect();
+                var desynchronized = false;
+                var hostHash = endGameHashes[0].HashForGameEnd;
+                for (var i = 1; i < endGameHashes.Length; i++)
+                {
+                    if(hostHash != endGameHashes[i].HashForGameEnd)
+                    {
+                        desynchronized = true;
+                        break;
+                    }
+                }
+                
+                if (desynchronized)
+                {
+                    Debug.LogError("Desynchronized on game end");
+                    SendRPCWithPlayersDesynchronizationInfo();
+                }
+                else
+                {
+                    Debug.Log("Game ended successfully");
+                    Disconnect();
+                }
+                // Disconnect();
             }
         }
     }

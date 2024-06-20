@@ -54,7 +54,10 @@ namespace PongGame
             {
                 UISingleton.Instance.AddRightScore(rightPointsQueue.Count);
                 UISingleton.Instance.AddLeftScore(leftPointsQueue.Count);
+            }
 
+            if (rightPointsQueue.Count != 0 || leftPointsQueue.Count != 0)
+            {
                 if (UISingleton.Instance.GetTotalScore() == GameSettings.Instance.GetTotalBallsToSpawn())
                 {
                     UISingleton.Instance.SetGameResult(UISingleton.Instance.IsLeftPlayerWinning());

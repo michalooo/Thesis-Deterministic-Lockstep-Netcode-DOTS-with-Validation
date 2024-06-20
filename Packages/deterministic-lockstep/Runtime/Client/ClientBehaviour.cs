@@ -76,20 +76,20 @@ namespace DeterministicLockstep
                 if(timeWaitedAfterEndingTheGame >= TimeToWaitBeforeEndingGame)
                 {
                     timeWaitedAfterEndingTheGame = -1.0f;
-                    // SystemAPI.GetSingletonRW<DeterministicClientComponent>().ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.Disconnect;
                     // Send RPC to server to disconnect
-                    // var deterministicTime = SystemAPI.GetSingleton<DeterministicTime>();
-                    // var determinismCheckSystem = World.GetExistingSystem<DeterminismCheckSystem>();
+                    var deterministicTime = SystemAPI.GetSingleton<DeterministicTime>();
+                    var determinismCheckSystem = World.GetExistingSystem<DeterminismCheckSystem>();
                     
-                    // determinismCheckSystem.Update(World.Unmanaged);
+                    determinismCheckSystem.Update(World.Unmanaged);
                     
                     foreach (var (connectionReference, owner) in SystemAPI
                                  .Query<RefRO<NetworkConnectionReference>, RefRO<GhostOwner>>()
                                  .WithAll<GhostOwnerIsLocal>())
                     {
+                        Debug.Log("Sending game ended RPC to server from player: " + owner.ValueRO.connectionNetworkId);
                         var rpc = new RpcGameEnded()
                         {
-                            // HashForGameEnd = deterministicTime.hashesForTheCurrentTick[0],
+                            HashForGameEnd = deterministicTime.hashesForTheCurrentTick[0],
                             PlayerNetworkID = owner.ValueRO.connectionNetworkId
                         };
 
