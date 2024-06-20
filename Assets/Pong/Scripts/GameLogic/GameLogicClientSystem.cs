@@ -46,7 +46,11 @@ namespace PongGame
             }
             else if (client.ValueRO.deterministicClientWorkingMode == DeterministicClientWorkingMode.LoadingGame && gameAsyncLoad == null)
             {
-                gameAsyncLoad = SceneManager.LoadSceneAsync("PongGame");
+                if (SceneManager.GetActiveScene().name == "PongGame")
+                {
+                    client.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.ClientReady;
+                }
+                else gameAsyncLoad = SceneManager.LoadSceneAsync("PongGame");
             }
             else if (client.ValueRO.deterministicClientWorkingMode == DeterministicClientWorkingMode.RunDeterministicSimulation)
             {
