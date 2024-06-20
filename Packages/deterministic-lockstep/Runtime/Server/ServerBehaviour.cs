@@ -360,34 +360,32 @@ namespace DeterministicLockstep
             playersReady[rpc.PlayerNetworkID] = rpc.StartingHash;
             
             // check if all clients are ready
-            // var hostHash = playersReady[0];
-            // var desynchronized = false;
-            // if (hostHash == 1) return;
+            var hostHash = playersReady[0];
+            var desynchronized = false;
+            if (hostHash == 1) return;
             
             for (int i = 0; i < playersReady.Length; i++)
             {
+                // Debug.Log("Hash: " + i + " = " + playersReady[i]);
                 if (playersReady[i] == 1 && _connectedPlayers[i].IsCreated)
                 {
                     return;
                 }
-                // else
-                // {
-                //     if(playersReady[i] != hostHash)
-                //     {
-                //         desynchronized = true;
-                //     }
-                // }
+                if(playersReady[i] != hostHash && _connectedPlayers[i].IsCreated)
+                {
+                    desynchronized = true;
+                }
             }
 
-            // if (desynchronized)
-            // {
-            //     SendRPCWithPlayersDesynchronizationInfo();
-            // }
-            // else
-            // {
-            //     SendRPCtoStartGame();
-            // }
-            SendRPCtoStartGame();
+            if (desynchronized)
+            {
+                SendRPCWithPlayersDesynchronizationInfo();
+            }
+            else
+            {
+                SendRPCtoStartGame();
+            }
+            // SendRPCtoStartGame();
         }
         
         /// <summary>

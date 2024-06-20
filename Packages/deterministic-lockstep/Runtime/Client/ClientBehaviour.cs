@@ -108,16 +108,15 @@ namespace DeterministicLockstep
             if (SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode == DeterministicClientWorkingMode.ClientReady &&
                 _mConnection.IsCreated && !_isClientReady)
             {
-                // var determinismCheckSystem = World.GetExistingSystem<DeterminismCheckSystem>();
-                // var deterministicTime = SystemAPI.GetSingleton<DeterministicTime>();
+                var determinismCheckSystem = World.GetExistingSystem<DeterminismCheckSystem>();
+                var deterministicTime = SystemAPI.GetSingleton<DeterministicTime>();
                     
-                // determinismCheckSystem.Update(World.Unmanaged);
+                determinismCheckSystem.Update(World.Unmanaged);
                 
-                // Debug.Log(deterministicTime.hashesForTheCurrentTick.Length + " " + deterministicTime.hashesForTheCurrentTick[0]);
                 var clientReadyRPC = new RpcPlayerReady
                 {
                     PlayerNetworkID = SystemAPI.GetSingleton<DeterministicClientComponent>().clientNetworkId,
-                    // StartingHash = deterministicTime.hashesForTheCurrentTick[0],
+                    StartingHash = deterministicTime.hashesForTheCurrentTick[0], // always only 1 hash
                 };
                 clientReadyRPC.Serialize(_mDriver, _mConnection, _emptyPipeline);
                 ClearSavedHashes();
@@ -316,7 +315,6 @@ namespace DeterministicLockstep
             deterministicTime.ValueRW.timeLeftToSendNextTick = 1f / rpc.TickRate;
             deterministicTime.ValueRW.currentSimulationTick = 0;
             deterministicTime.ValueRW.currentClientTickToSend = 0;
-            deterministicTime.ValueRW.hashesForTheCurrentTick = new NativeList<ulong>(Allocator.Persistent);
             deterministicTime.ValueRW.numTimesTickedThisFrame = 0;
             deterministicTime.ValueRW.realTime = 0;
             deterministicTime.ValueRW.deterministicLockstepElapsedTime = 0;

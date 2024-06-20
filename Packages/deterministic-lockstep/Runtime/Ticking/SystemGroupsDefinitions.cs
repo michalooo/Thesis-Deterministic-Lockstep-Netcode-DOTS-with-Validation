@@ -43,20 +43,26 @@ namespace DeterministicLockstep
             RateManager = new DeterministicFixedStepRateManager(this);
             EntityManager.CreateSingleton(new DeterministicComponents()
             {
-                Value = new NativeList<ComponentType>()
+                Value = new NativeList<ComponentType>(Allocator.Persistent)
             });
             EntityManager.CreateSingleton(new DeterministicTime()
             {
                 storedIncomingTicksFromServer = new NativeQueue<RpcBroadcastTickDataToClients>(Allocator.Persistent),
+                hashesForTheCurrentTick = new NativeList<ulong>(Allocator.Persistent),
             });
             EntityManager.CreateSingleton<PongInputs>();
         }
 
         protected override void OnDestroy()
         {
-            if (!SystemAPI.TryGetSingletonRW<DeterministicTime>(out var value))
+            if (!SystemAPI.TryGetSingletonRW<DeterministicTime>(out var deterministicTime))
             {
-                value.ValueRW.storedIncomingTicksFromServer.Dispose();
+                deterministicTime.ValueRW.storedIncomingTicksFromServer.Dispose();
+                deterministicTime.ValueRW.hashesForTheCurrentTick.Dispose();
+            }
+            if (!SystemAPI.TryGetSingletonRW<DeterministicComponents>(out var deterministicComponents))
+            {
+                deterministicComponents.ValueRW.Value.Dispose();
             }
         }
 
