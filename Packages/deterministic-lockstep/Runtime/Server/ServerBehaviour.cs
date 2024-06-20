@@ -662,9 +662,9 @@ namespace DeterministicLockstep
                                 }
                             }
                             //
-                            // Debug.LogError("DESYNCHRONIZATION HAPPENED! HASHES ARE NOT EQUAL! " + "Ticks: " +
-                            //                _lastTickReceivedFromClient + " Hashes: " + firstPlayerHash + " and " +
-                            //                currentPlayerHash + " System number: " + systemHash + ". All hashes: " + allHashes);
+                            Debug.LogError("DESYNCHRONIZATION HAPPENED! HASHES ARE NOT EQUAL! " + "Ticks: " +
+                                           _lastTickReceivedFromClient + " Hashes: " + firstPlayerHash + " and " +
+                                           currentPlayerHash + " System number: " + systemHash + ". All hashes: " + allHashes);
                             desynchronized = true;
                             break;
                         }

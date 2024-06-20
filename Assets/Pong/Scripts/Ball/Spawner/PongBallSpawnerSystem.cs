@@ -16,12 +16,15 @@ namespace PongGame
     {
         private uint randomSeedFromServer;
         private Random random;
-        
+
+        private bool specialBoolforLocalClient;
         protected override void OnCreate()
         {
             RequireForUpdate<PongBallSpawner>();
             RequireForUpdate<PongInputs>();
             RequireForUpdate<DeterministicTime>();
+            
+            specialBoolforLocalClient = false;
         }
 
         protected override void OnStartRunning()
@@ -31,7 +34,14 @@ namespace PongGame
 
         protected override void OnUpdate()
         {
-            if (GameSettings.Instance.GetTotalBallsSpawned() >= GameSettings.Instance.GetTotalBallsToSpawn()) return;
+            if (GameSettings.Instance.GetTotalBallsSpawned() >= GameSettings.Instance.GetTotalBallsToSpawn())
+            {
+                if (World.Name == "ClientWorld1" && !specialBoolforLocalClient)
+                {
+                    specialBoolforLocalClient = true;
+                }
+                else return;
+            }
             
             var prefab = SystemAPI.GetSingleton<PongBallSpawner>().Ball;
                 
