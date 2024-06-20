@@ -168,7 +168,7 @@ MonoBehaviour:
   ticksAhead: 9
   serverPort: 7979
   serverAddress: 127.0.0.1
-  hashCalculationOption: 2
+  hashCalculationOption: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

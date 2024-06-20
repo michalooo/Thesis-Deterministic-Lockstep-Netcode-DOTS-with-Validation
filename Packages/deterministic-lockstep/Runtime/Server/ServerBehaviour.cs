@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Entities.UniversalDelegates;
 using Unity.Networking.Transport;
 using UnityEngine;
 using Random = System.Random;
@@ -52,11 +53,13 @@ namespace DeterministicLockstep
         /// </summary>
         private Dictionary<ulong, NativeList<NativeList<ulong>>> _everyTickHashBuffer; // here if we will point to indeterminism system we also don't need to store all of them (needs to be confirmed)
 
+        private NativeList<RpcGameEnded> endGameHashes;
+
         /// <summary>
         /// Array of all possible connection slots in the game and players that are already connected
         /// </summary>
         private NativeArray<NetworkConnection> _connectedPlayers; 
-        private NativeArray<int> playersReady;
+        private NativeArray<ulong> playersReady; //hash for each ready player
         private NativeArray<double> averagePingPerPlayer;
         private NativeArray<NativeList<double>> playersPings;
         
@@ -176,6 +179,7 @@ namespace DeterministicLockstep
             averagePingPerPlayer.Dispose();
             _everyTickInputBuffer.Clear();
             _everyTickHashBuffer.Clear();
+            endGameHashes.Dispose();
         }
 
         /// <summary>
@@ -187,13 +191,18 @@ namespace DeterministicLockstep
         private void StartListening()
         {
             _connectedPlayers = new NativeArray<NetworkConnection>(SystemAPI.GetSingleton<DeterministicSettings>().allowedConnectionsPerGame, Allocator.Persistent);
-            playersReady = new NativeArray<int>(SystemAPI.GetSingleton<DeterministicSettings>().allowedConnectionsPerGame, Allocator.Persistent);
+            playersReady = new NativeArray<ulong>(SystemAPI.GetSingleton<DeterministicSettings>().allowedConnectionsPerGame, Allocator.Persistent);
+            for (int i = 0; i < playersReady.Length; i++)
+            {
+                playersReady[i] = 1;
+            }
             playersPings = new NativeArray<NativeList<double>>(SystemAPI.GetSingleton<DeterministicSettings>().allowedConnectionsPerGame, Allocator.Persistent);
             averagePingPerPlayer = new NativeArray<double>(SystemAPI.GetSingleton<DeterministicSettings>().allowedConnectionsPerGame, Allocator.Persistent);
             _mNetworkIDs = new NativeList<int>(Allocator.Persistent);
 
             _everyTickInputBuffer = new Dictionary<ulong, NativeList<RpcBroadcastPlayerTickDataToServer>>();
             _everyTickHashBuffer = new Dictionary<ulong, NativeList<NativeList<ulong>>>();
+            endGameHashes = new NativeList<RpcGameEnded>(Allocator.Persistent);
             
             _mDriver = NetworkDriver.Create();
             _reliablePipeline =
@@ -252,6 +261,11 @@ namespace DeterministicLockstep
                     var clientReadyRPC = new RpcPlayerReady();
                     clientReadyRPC.Deserialize(ref stream);
                     CheckIfAllClientsReady(clientReadyRPC);
+                    break;
+                case RpcID.GameEnded:
+                    var gameEndedRPC = new RpcGameEnded();
+                    gameEndedRPC.Deserialize(ref stream);
+                    CheckEndGameHashes(gameEndedRPC);
                     break;
                 // case RpcID.PingPong:
                 //     var pingPongRPC = new RpcPingPong();
@@ -343,17 +357,36 @@ namespace DeterministicLockstep
         private void CheckIfAllClientsReady(RpcPlayerReady rpc)
         {
             // mark that this specific client is ready
-            playersReady[rpc.PlayerNetworkID] = 1;
+            playersReady[rpc.PlayerNetworkID] = rpc.StartingHash;
             
             // check if all clients are ready
+            // var hostHash = playersReady[0];
+            // var desynchronized = false;
+            // if (hostHash == 1) return;
+            
             for (int i = 0; i < playersReady.Length; i++)
             {
-                if (playersReady[i] != 1 && _connectedPlayers[i].IsCreated)
+                if (playersReady[i] == 1 && _connectedPlayers[i].IsCreated)
                 {
                     return;
                 }
+                // else
+                // {
+                //     if(playersReady[i] != hostHash)
+                //     {
+                //         desynchronized = true;
+                //     }
+                // }
             }
-            
+
+            // if (desynchronized)
+            // {
+            //     SendRPCWithPlayersDesynchronizationInfo();
+            // }
+            // else
+            // {
+            //     SendRPCtoStartGame();
+            // }
             SendRPCtoStartGame();
         }
         
@@ -454,6 +487,7 @@ namespace DeterministicLockstep
         /// </summary>
         private void SendRPCWithPlayersDesynchronizationInfo()
         {
+            Debug.LogError("Desynchronized");
             var rpc = new RpcPlayerDesynchronizationMessage { };
 
             foreach (var connection in _connectedPlayers.Where(connection => connection.IsCreated))
@@ -575,7 +609,6 @@ namespace DeterministicLockstep
         /// </summary>
         private void CheckIfAllDataReceivedAndSendToClients()
         {
-            Debug.Log("Checking if all data received and sending to clients");
             var desynchronized = false;
             
             if (_everyTickInputBuffer[(ulong) _lastTickReceivedFromClient].Length == GetActiveConnectionCount() &&
@@ -690,6 +723,47 @@ namespace DeterministicLockstep
             else if (_everyTickInputBuffer[(ulong) _lastTickReceivedFromClient].Length > GetActiveConnectionCount())
             {
                 // Debug.LogError("Too many player inputs saved in one tick");
+            }
+        }
+        
+        private void CheckEndGameHashes(RpcGameEnded rpc)
+        {
+            // add new rpc
+            // Debug.Log(rpc.PlayerNetworkID + " ended the game " + rpc.HashForGameEnd);
+            // Debug.Log("third message: " + endGameHashes.Length);
+            for (var i = 0; i < endGameHashes.Length; i++)
+            {
+                if (rpc.PlayerNetworkID == endGameHashes[i].PlayerNetworkID) return;
+            }
+            endGameHashes.Add(rpc);
+            
+            // check if all received
+            Disconnect();
+            if (endGameHashes.Length == GetActiveConnectionCount())
+            {
+                // // desync or disconnect
+                // var desynchronized = false;
+                // var hostHash = endGameHashes[0].HashForGameEnd;
+                // for (var i = 1; i < endGameHashes.Length; i++)
+                // {
+                //     if(hostHash != endGameHashes[i].HashForGameEnd)
+                //     {
+                //         desynchronized = true;
+                //         break;
+                //     }
+                // }
+                //
+                // if (desynchronized)
+                // {
+                //     Debug.LogError("Desynchronized on game end");
+                //     SendRPCWithPlayersDesynchronizationInfo();
+                // }
+                // else
+                // {
+                //     Debug.Log("Game ended successfully");
+                //     Disconnect();
+                // }
+                Disconnect();
             }
         }
     }

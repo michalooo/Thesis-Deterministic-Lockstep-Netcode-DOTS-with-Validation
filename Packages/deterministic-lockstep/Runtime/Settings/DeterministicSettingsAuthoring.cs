@@ -19,7 +19,8 @@ namespace DeterministicLockstep
         public DeterminismHashCalculationOption hashCalculationOption;
 
         public bool isInGame;
-        public bool isSimulationCatchingUpOrRollingBack; // need to be set
+        public bool isSimulationCatchingUp; // need to be set
+        public bool isGameFinished;
         
         public FixedString32Bytes _serverAddress { get; set; }
         public int _serverPort { get; set; }
@@ -36,7 +37,8 @@ namespace DeterministicLockstep
         public DeterminismHashCalculationOption hashCalculationOption = DeterminismHashCalculationOption.None;
 
         private bool isInGame = false;
-        private bool isSimulationCatchingUpOrRollingBack = false;
+        private bool isSimulationCatchingUp = false;
+        private bool isGameFinished = false;
         
         class SettingBaker : Baker<DeterministicSettingsAuthoring>
         {
@@ -47,7 +49,8 @@ namespace DeterministicLockstep
                 component.allowedConnectionsPerGame = authoring.allowedConnectionsPerGame;
                 component.simulationTickRate = authoring.simulationTickRate;
                 component.isInGame = authoring.isInGame;
-                component.isSimulationCatchingUpOrRollingBack = authoring.isSimulationCatchingUpOrRollingBack;
+                component.isSimulationCatchingUp = authoring.isSimulationCatchingUp;
+                component.isGameFinished = authoring.isGameFinished;
                 component.hashCalculationOption = authoring.hashCalculationOption;
                 component._serverPort = authoring.serverPort;
                 component._serverAddress = authoring.serverAddress;

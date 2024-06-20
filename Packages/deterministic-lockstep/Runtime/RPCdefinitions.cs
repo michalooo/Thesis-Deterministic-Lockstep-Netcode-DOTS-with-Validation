@@ -27,10 +27,47 @@ namespace DeterministicLockstep
     {
         StartDeterministicGameSimulation, // Server -> Client
         BroadcastTickDataToClients, // Server -> Client
-        BroadcastPlayerTickDataToServer, // Client -> Server
         PlayerDesynchronized, // Server -> Client
         LoadGame, // Server -> Client
+        
         PlayerReady, // Client -> Server
+        BroadcastPlayerTickDataToServer, // Client -> Server
+        GameEnded, // Client -> Server
+    }
+    
+    /// <summary>
+    /// Struct that is being send by the client when the game is considered finished
+    /// </summary>
+    [BurstCompile]
+    public struct RpcGameEnded : INetcodeRPC
+    {
+        public ulong HashForGameEnd { get; set; } // size(1), cannot do per system because those are not running
+        public int PlayerNetworkID { get; set; }
+        public RpcID GetID => RpcID.GameEnded;
+
+        public void Serialize(NetworkDriver mDriver, NetworkConnection connection, NetworkPipeline reliableSimulationPipeline)
+        {
+            mDriver.BeginSend(reliableSimulationPipeline, connection, out var writer);
+
+            writer.WriteByte((byte)GetID);
+            writer.WriteInt(PlayerNetworkID);
+            writer.WriteULong(HashForGameEnd);
+
+            if (writer.HasFailedWrites)
+            {
+                mDriver.AbortSend(writer);
+                throw new InvalidOperationException("Driver has failed writes.: " + writer.Capacity);
+            }
+
+            mDriver.EndSend(writer);
+        }
+
+        public void Deserialize(ref DataStreamReader reader)
+        {
+            reader.ReadByte(); // ID
+            PlayerNetworkID = reader.ReadInt();
+            HashForGameEnd = reader.ReadULong();
+        }
     }
 
     /// <summary>
@@ -150,6 +187,8 @@ namespace DeterministicLockstep
     {
         public RpcID GetID => RpcID.PlayerReady;
         public int PlayerNetworkID { get; set; }
+        
+        public ulong StartingHash { get; set; }
 
         public void Serialize(NetworkDriver mDriver, NetworkConnection connection, NetworkPipeline reliableSimulationPipeline)
         {
@@ -157,6 +196,7 @@ namespace DeterministicLockstep
 
             writer.WriteByte((byte)GetID);
             writer.WriteInt(PlayerNetworkID);
+            writer.WriteULong(StartingHash);
 
             if (writer.HasFailedWrites)
             {
@@ -171,6 +211,7 @@ namespace DeterministicLockstep
         {
             reader.ReadByte(); // ID
             PlayerNetworkID = reader.ReadInt();
+            StartingHash = reader.ReadULong();
         }
     }
 
@@ -291,7 +332,6 @@ namespace DeterministicLockstep
         public void Serialize(NetworkDriver mDriver, NetworkConnection connection,
             NetworkPipeline reliableSimulationPipeline)
         {
-            Debug.Log("Sending data");
             if(!mDriver.IsCreated || !connection.IsCreated) return;
             
             mDriver.BeginSend(reliableSimulationPipeline, connection, out var writer);

@@ -50,7 +50,7 @@ namespace PongGame
             ballDestructionHandle.Complete();
             ecb.Playback(state.EntityManager);
 
-            if (state.World.Name == "ClientWorld") // To prevent local simulation for counting points twice (from both worlds)
+            if (state.World.Name == "ClientWorld" && (rightPointsQueue.Count != 0 || leftPointsQueue.Count != 0)) // To prevent local simulation for counting points twice (from both worlds)
             {
                 UISingleton.Instance.AddRightScore(rightPointsQueue.Count);
                 UISingleton.Instance.AddLeftScore(leftPointsQueue.Count);
@@ -58,6 +58,8 @@ namespace PongGame
                 if (UISingleton.Instance.GetTotalScore() == GameSettings.Instance.GetTotalBallsToSpawn())
                 {
                     UISingleton.Instance.SetGameResult(UISingleton.Instance.IsLeftPlayerWinning());
+                    var client = SystemAPI.GetSingletonRW<DeterministicClientComponent>();
+                    client.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.GameFinished;
                 }
             }
             

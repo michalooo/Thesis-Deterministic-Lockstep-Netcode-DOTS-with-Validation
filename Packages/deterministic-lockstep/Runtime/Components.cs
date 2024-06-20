@@ -27,6 +27,7 @@ namespace DeterministicLockstep
         RunDeterministicSimulation,
         ClientReady,
         LoadingGame,
+        GameFinished,
         None
     }
     

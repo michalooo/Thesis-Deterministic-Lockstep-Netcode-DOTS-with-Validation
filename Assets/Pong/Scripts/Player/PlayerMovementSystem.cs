@@ -53,7 +53,7 @@ namespace PongGame
                     var newPositionY = targetPosition.y + (state.World.Time.DeltaTime * verticalInput);
                     
                     // TESTING DETERMINISM CHECKS
-                    if (Input.GetKey(KeyCode.R))
+                    if (Input.GetKey(KeyCode.R) && state.World.Name == "ClientWorld")
                     {
                         newPositionY = targetPosition.y + (state.World.Time.DeltaTime * verticalInput * 2f);
                     }

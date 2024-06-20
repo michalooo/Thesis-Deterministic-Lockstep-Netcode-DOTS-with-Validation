@@ -33,9 +33,11 @@ namespace DeterministicLockstep
         
         public void OnUpdate(ref SystemState state)
         {
-            if (SystemAPI.GetSingleton<DeterministicSettings>().hashCalculationOption ==
-                DeterminismHashCalculationOption.None) return; // No determinism checks
-            
+            var timeComponent = SystemAPI.GetSingletonRW<DeterministicTime>();
+            if (SystemAPI.GetSingleton<DeterministicSettings>().hashCalculationOption == DeterminismHashCalculationOption.None) {
+                timeComponent.ValueRW.hashesForTheCurrentTick.Add(0);
+                return; // No determinism checks
+            }
             
             var resultsArrayCapacity = _mQuery.CalculateChunkCount();
             _resultsArray.Clear(); // Clear the array to avoid data from old frames
@@ -61,7 +63,6 @@ namespace DeterministicLockstep
             // _everyTickHashBuffer[currentTick] = hash;
 
             // Save Hash in the DeterministicTime component
-            var timeComponent = SystemAPI.GetSingletonRW<DeterministicTime>();
             timeComponent.ValueRW.hashesForTheCurrentTick.Add(hash);
         }
 

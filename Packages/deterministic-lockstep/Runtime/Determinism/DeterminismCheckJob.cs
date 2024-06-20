@@ -26,7 +26,7 @@ namespace DeterministicLockstep
             in v128 chunkEnabledMask)
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
-            Debug.Assert(chunk.Has<EnsureDeterministicBehaviour>());
+            Debug.Assert(chunk.Has<EnsureDeterministicBehaviour>()); // this will be used for whitelisting
 #endif
             ulong hash = 0;
 
