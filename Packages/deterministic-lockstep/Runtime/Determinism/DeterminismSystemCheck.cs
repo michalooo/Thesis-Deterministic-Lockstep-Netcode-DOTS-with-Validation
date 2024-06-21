@@ -54,8 +54,7 @@ namespace DeterministicLockstep
             // }
             var list = new DynamicTypeList();
             DynamicTypeList.PopulateList(ref state, listOfDeterministicTypes, false, ref list);
-
-            Debug.Log(list.Length);
+            
             var job = new DeterminismCheckJob()
             {
                 listOfDeterministicTypes = list,

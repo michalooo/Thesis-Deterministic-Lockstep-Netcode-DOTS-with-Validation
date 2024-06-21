@@ -1,4 +1,5 @@
 ﻿using DeterministicLockstep;
+using TMPro;
 using Unity.Entities;
 using Unity.Transforms;
 using UnityEngine;
@@ -23,11 +24,11 @@ namespace PongGame
             var client = SystemAPI.GetSingletonBuffer<DeterministicComponent>();
             client.Add(new DeterministicComponent
             {
-                Type = ComponentType.ReadOnly<LocalTransform>(),
+                Type = ComponentType.ReadOnly<TextMeshProUGUI>(),
             });
             client.Add(new DeterministicComponent
             {
-                Type = ComponentType.ReadOnly<DeterministicSettings>(),
+                Type = ComponentType.ReadOnly<GameSettings>(),
             });
         }
 

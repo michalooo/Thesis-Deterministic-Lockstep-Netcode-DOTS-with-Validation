@@ -139,15 +139,6 @@ namespace DeterministicLockstep
         /// </summary>
         public NativeQueue<RpcBroadcastTickDataToClients> storedIncomingTicksFromServer; // be sure that there is no memory leak
     }
-    
-    
-    /// <summary>
-    /// Component used to store all the parameters and values related to determinism
-    /// </summary>
-    // public struct DeterministicComponents : IComponentData
-    // {
-    //     public DynamicBuffer<DeterministicComponent> Value;
-    // }
 
     public struct DeterministicComponent : IBufferElementData
     {

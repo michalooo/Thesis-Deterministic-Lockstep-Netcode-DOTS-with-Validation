@@ -5,6 +5,7 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Core;
 using Unity.Entities;
 using Unity.Mathematics;
+using Unity.Transforms;
 using UnityEngine;
 
 namespace DeterministicLockstep
@@ -41,7 +42,18 @@ namespace DeterministicLockstep
         {
             base.OnCreate();
             RateManager = new DeterministicFixedStepRateManager(this);
+            
             EntityManager.CreateSingletonBuffer<DeterministicComponent>();
+            var client = SystemAPI.GetSingletonBuffer<DeterministicComponent>();
+            client.Add(new DeterministicComponent
+            {
+                Type = ComponentType.ReadOnly<LocalTransform>(),
+            });
+            client.Add(new DeterministicComponent
+            {
+                Type = ComponentType.ReadOnly<DeterministicSettings>(),
+            });
+            
             EntityManager.CreateSingleton(new DeterministicTime()
             {
                 storedIncomingTicksFromServer = new NativeQueue<RpcBroadcastTickDataToClients>(Allocator.Persistent),
