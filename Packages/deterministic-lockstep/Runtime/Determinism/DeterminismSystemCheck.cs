@@ -1,9 +1,10 @@
-using System.Security.Cryptography;
+using System.Collections.Generic;
+using System.Linq;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Logging;
 using Unity.Mathematics;
-using Unity.Transforms;
 using UnityEngine;
 
 namespace DeterministicLockstep
@@ -22,20 +23,18 @@ namespace DeterministicLockstep
         private bool isQueryCreated;
 
         // private Dictionary<int, ulong> _everyTickHashBuffer;
-        
+
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<DeterministicSettings>();
             state.RequireForUpdate<DeterministicTime>();
             state.RequireForUpdate<DeterministicComponent>();
-            
+
             _resultsArray = new NativeList<ulong>(128, Allocator.Persistent); // probably need to refine this number
             isQueryCreated = false;
             // _everyTickHashBuffer = new Dictionary<int, ulong>();
         }
-        
-        
-        
+
         public void OnUpdate(ref SystemState state)
         {
             var timeComponent = SystemAPI.GetSingletonRW<DeterministicTime>();
@@ -76,16 +75,17 @@ namespace DeterministicLockstep
             var length = math.ceilpow2(resultsArrayCapacity);
             _resultsArray.Capacity = length;
             _resultsArray.Length = length; // refine this part at some point
-            
-           
+            var logMap = new NativeParallelMultiHashMap<Entity, KeyValuePair<TypeIndex, ulong>>(_mQuery.CalculateEntityCount()*listOfDeterministicTypes.Length, Allocator.TempJob);
             
             var job = new DeterminismCheckJob()
             {
                 hashCalculationOption = hashCalculationOption,
                 listOfDeterministicTypes = list,
-                resultsNativeArray = _resultsArray.AsArray()
+                resultsNativeArray = _resultsArray.AsArray(),
+                entityType = SystemAPI.GetEntityTypeHandle(),
+                logMap = logMap.AsParallelWriter()
             };
-            // Debug.Log(_mQuery.CalculateChunkCount()); //Weird because each chunk kind of represents one entity
+            
             var handle = job.ScheduleParallel(_mQuery, state.Dependency);
             handle.Complete();
             
@@ -94,13 +94,36 @@ namespace DeterministicLockstep
             foreach (var result in _resultsArray)
                 hash = TypeHash.CombineFNV1A64(hash, result);
             
-            Debug.Log("Option: " + hashCalculationOption + " - Hash: " + hash);
+            // Debug.Log("Option: " + hashCalculationOption + " - Hash: " + hash);
             // // Save the results for the future
             // var currentTick = _everyTickHashBuffer.Count + 1;
             // _everyTickHashBuffer[currentTick] = hash;
 
             // Save Hash in the DeterministicTime component
             timeComponent.ValueRW.hashesForTheCurrentTick.Add(hash);
+            
+            var keys = logMap.GetKeyArray(Allocator.Temp);
+            keys.Sort();
+            var keyIndex = -1;
+            var keyVersion = -1;
+            foreach (var key in keys)
+            {
+                if (keyIndex != key.Index || keyVersion != key.Version)
+                {
+                    keyIndex = key.Index;
+                    keyVersion = key.Version;
+                    Log.Info($"          Entity({key.Index}:{key.Version})");
+                    var values = logMap.GetValuesForKey(key);
+                    foreach (var value in values)
+                    {
+                        Log.Info($"               [{value.Key}] - {value.Value}");
+                    }
+                }
+            }
+            
+            
+            logMap.Dispose();
+            keys.Dispose();
         }
 
         [BurstCompile]

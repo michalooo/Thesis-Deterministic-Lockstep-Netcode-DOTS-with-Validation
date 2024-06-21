@@ -4,6 +4,8 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Core;
 using Unity.Entities;
+using Unity.Logging;
+using Unity.Logging.Sinks;
 using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
@@ -60,6 +62,15 @@ namespace DeterministicLockstep
                 hashesForTheCurrentTick = new NativeList<ulong>(Allocator.Persistent),
             });
             EntityManager.CreateSingleton<PongInputs>();
+            
+            
+            var debugFileName = "NonDeterminismLogs/_" + DateTime.Now.Year + "_" + DateTime.Now.Month + "_" +
+                                DateTime.Now.Day + "_" + DateTime.Now.Hour + "_" + DateTime.Now.Minute + "_" + DateTime.Now.Second + "_" + World.Name + ".log";
+            Log.Logger = new Unity.Logging.Logger(new LoggerConfig()
+                .MinimumLevel.Debug()
+                .OutputTemplate("{Message}")
+                .WriteTo.File(debugFileName, minLevel: LogLevel.Verbose)
+                .WriteTo.StdOut(outputTemplate: "{Message}"));
         }
 
         protected override void OnDestroy()
@@ -73,7 +84,9 @@ namespace DeterministicLockstep
 
         protected override void OnUpdate()
         {
+            
             LocalDeltaTime = 1.0f/(float)SystemAPI.GetSingleton<DeterministicTime>().GameTickRate;
+            
             if (SystemAPI.GetSingleton<DeterministicSettings>().hashCalculationOption ==
                 DeterminismHashCalculationOption.WhitelistHashPerSystem ||
                 SystemAPI.GetSingleton<DeterministicSettings>().hashCalculationOption ==
@@ -114,7 +127,6 @@ namespace DeterministicLockstep
                 var deterministicClient = _deterministicClientQuery.GetSingleton<DeterministicClientComponent>();
                 if (deterministicClient.deterministicClientWorkingMode != DeterministicClientWorkingMode.RunDeterministicSimulation)
                     return false;
-                
                 
                 var deltaTime = (double) group.World.Time.DeltaTime;
                 var deterministicTime = _deterministicTimeQuery.GetSingletonRW<DeterministicTime>();
@@ -186,6 +198,7 @@ namespace DeterministicLockstep
                 
                 if (isTimeToSendNextTick) // We should  try to send the next tick
                 {
+                    Log.Info("Tick " + deterministicTime.ValueRO.currentClientTickToSend);
                     if (deterministicTime.ValueRO.currentClientTickToSend <=
                         deterministicTime.ValueRO
                             .forcedInputLatencyDelay) // If current Tick to send is less or equal to tickAhead then upgrade it and do nothing about the presentation update (it should mean we are processing those first ticks)
@@ -305,13 +318,15 @@ namespace DeterministicLockstep
                 var system = systems[i];
                 try
                 {
-                    if (i <= systems.Length - 4)
+                    if (i < systems.Length - 3)
                     {
+                        Log.Info("     " + i);
                         system.Update(World.Unmanaged);
                         determinismCheckSystem.Update(World.Unmanaged);
                     }
                     else
                     {
+                        if(i<systems.Length-2) Log.Info("     " + i);
                         system.Update(World.Unmanaged);
                     }
                 }
