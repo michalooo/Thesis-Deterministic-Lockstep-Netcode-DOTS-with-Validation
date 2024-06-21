@@ -6,8 +6,10 @@ namespace DeterministicLockstep
 {
     public enum DeterminismHashCalculationOption
     {
-        PerSystem,
-        PerTick,
+        FullStateHashPerSystem,
+        FullStateHashPerTick,
+        WhitelistHashPerSystem,
+        WhiteListHashPerTick,
         None
     }
     

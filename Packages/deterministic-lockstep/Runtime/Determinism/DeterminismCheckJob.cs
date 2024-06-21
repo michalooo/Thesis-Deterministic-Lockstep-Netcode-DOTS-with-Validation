@@ -16,6 +16,9 @@ namespace DeterministicLockstep
     public unsafe struct DeterminismCheckJob : IJobChunk
     {
         [ReadOnly]
+        public DeterminismHashCalculationOption hashCalculationOption;
+        
+        [ReadOnly]
         public DynamicTypeList listOfDeterministicTypes;
         
         [NativeDisableContainerSafetyRestriction]
@@ -25,21 +28,43 @@ namespace DeterministicLockstep
         public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask,
             in v128 chunkEnabledMask)
         {
-#if ENABLE_UNITY_COLLECTIONS_CHECKS
-            Debug.Assert(chunk.Has<EnsureDeterministicBehaviour>());
-#endif
             var dynamicTypeListPtr = listOfDeterministicTypes.GetData();
-            var hash = (ulong) listOfDeterministicTypes.Length;
-
-            for (var i = 0; i < listOfDeterministicTypes.Length; i++)
+            var hash = (ulong) 0;
+            
+            
+            switch (hashCalculationOption)
             {
-                var dynamicComponentTypeHandle = dynamicTypeListPtr[i];; 
-                var typeInfo = TypeManager.GetTypeInfo(dynamicComponentTypeHandle.TypeIndex);
-                var rawByteData = chunk.GetDynamicComponentDataArrayReinterpret<byte>(ref dynamicComponentTypeHandle, typeInfo.TypeSize);
+                case DeterminismHashCalculationOption.WhitelistHashPerSystem or DeterminismHashCalculationOption.WhiteListHashPerTick:
+                    if (chunk.Has<EnsureDeterministicBehaviour>())
+                    {
+                        for (var i = 0; i < listOfDeterministicTypes.Length; i++)
+                        {
+                            var dynamicComponentTypeHandle = dynamicTypeListPtr[i];; 
+                            var typeInfo = TypeManager.GetTypeInfo(dynamicComponentTypeHandle.TypeIndex);
+                            var rawByteData = chunk.GetDynamicComponentDataArrayReinterpret<byte>(ref dynamicComponentTypeHandle, typeInfo.TypeSize);
                 
-                foreach (var byteData in rawByteData)
-                    hash = TypeHash.CombineFNV1A64(hash, byteData);
+                            foreach (var byteData in rawByteData)
+                                hash = TypeHash.CombineFNV1A64(hash, byteData);
+                        }
+                    }
+
+                    break;
+                case DeterminismHashCalculationOption.FullStateHashPerSystem or DeterminismHashCalculationOption.FullStateHashPerTick:
+                    for (var i = 0; i < listOfDeterministicTypes.Length; i++)
+                    {
+                        var dynamicComponentTypeHandle = dynamicTypeListPtr[i];; 
+                        var typeInfo = TypeManager.GetTypeInfo(dynamicComponentTypeHandle.TypeIndex);
+                        var rawByteData = chunk.GetDynamicComponentDataArrayReinterpret<byte>(ref dynamicComponentTypeHandle, typeInfo.TypeSize);
+                
+                        foreach (var byteData in rawByteData)
+                            hash = TypeHash.CombineFNV1A64(hash, byteData);
+                    }
+
+                    break;
             }
+            
+
+            
 
             resultsNativeArray[unfilteredChunkIndex] = hash; // check out if the array is large enough to support it 
         }

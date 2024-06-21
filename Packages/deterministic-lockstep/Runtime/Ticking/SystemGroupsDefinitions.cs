@@ -75,7 +75,9 @@ namespace DeterministicLockstep
         {
             LocalDeltaTime = 1.0f/(float)SystemAPI.GetSingleton<DeterministicTime>().GameTickRate;
             if (SystemAPI.GetSingleton<DeterministicSettings>().hashCalculationOption ==
-                DeterminismHashCalculationOption.PerSystem)
+                DeterminismHashCalculationOption.WhitelistHashPerSystem ||
+                SystemAPI.GetSingleton<DeterministicSettings>().hashCalculationOption ==
+                DeterminismHashCalculationOption.FullStateHashPerSystem)
             {
                 while (RateManager.ShouldGroupUpdate(this))
                 {
