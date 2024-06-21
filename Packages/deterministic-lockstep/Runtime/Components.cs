@@ -144,9 +144,14 @@ namespace DeterministicLockstep
     /// <summary>
     /// Component used to store all the parameters and values related to determinism
     /// </summary>
-    public struct DeterministicComponents : IComponentData
+    // public struct DeterministicComponents : IComponentData
+    // {
+    //     public DynamicBuffer<DeterministicComponent> Value;
+    // }
+
+    public struct DeterministicComponent : IBufferElementData
     {
-        public NativeList<ComponentType> Value;
+        public ComponentType Type;
     }
     
     

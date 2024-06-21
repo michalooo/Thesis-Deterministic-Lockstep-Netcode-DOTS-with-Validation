@@ -41,10 +41,7 @@ namespace DeterministicLockstep
         {
             base.OnCreate();
             RateManager = new DeterministicFixedStepRateManager(this);
-            EntityManager.CreateSingleton(new DeterministicComponents()
-            {
-                Value = new NativeList<ComponentType>(Allocator.Persistent)
-            });
+            EntityManager.CreateSingletonBuffer<DeterministicComponent>();
             EntityManager.CreateSingleton(new DeterministicTime()
             {
                 storedIncomingTicksFromServer = new NativeQueue<RpcBroadcastTickDataToClients>(Allocator.Persistent),
@@ -59,10 +56,6 @@ namespace DeterministicLockstep
             {
                 deterministicTime.ValueRW.storedIncomingTicksFromServer.Dispose();
                 deterministicTime.ValueRW.hashesForTheCurrentTick.Dispose();
-            }
-            if (!SystemAPI.TryGetSingletonRW<DeterministicComponents>(out var deterministicComponents))
-            {
-                deterministicComponents.ValueRW.Value.Dispose();
             }
         }
 

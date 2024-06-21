@@ -13,10 +13,10 @@ namespace DeterministicLockstep
     /// </summary>
 
     [BurstCompile]
-    public struct DeterminismCheckJob : IJobChunk
+    public unsafe struct DeterminismCheckJob : IJobChunk
     {
         [ReadOnly]
-        public ComponentTypeHandle<LocalTransform> transform; // add more deterministic types into the job later
+        public DynamicTypeList listOfDeterministicTypes;
         
         [NativeDisableContainerSafetyRestriction]
         public NativeArray<ulong> resultsNativeArray;
@@ -28,32 +28,20 @@ namespace DeterministicLockstep
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             Debug.Assert(chunk.Has<EnsureDeterministicBehaviour>());
 #endif
-            ulong hash = 0;
+            var dynamicTypeListPtr = listOfDeterministicTypes.GetData();
+            var hash = (ulong) listOfDeterministicTypes.Length;
 
-            var transforms =
-                chunk.GetNativeArray(
-                    ref transform); // LocalTransform can already be broken because of floats. Test on different devices to see if it's the case
-            var data = transforms.Reinterpret<byte>(UnsafeUtility.SizeOf<LocalTransform>());
-
-            foreach (var t in data)
-                hash = TypeHash.CombineFNV1A64(hash, t);
+            for (var i = 0; i < listOfDeterministicTypes.Length; i++)
+            {
+                var dynamicComponentTypeHandle = dynamicTypeListPtr[i];; 
+                var typeInfo = TypeManager.GetTypeInfo(dynamicComponentTypeHandle.TypeIndex);
+                var rawByteData = chunk.GetDynamicComponentDataArrayReinterpret<byte>(ref dynamicComponentTypeHandle, typeInfo.TypeSize);
+                
+                foreach (var byteData in rawByteData)
+                    hash = TypeHash.CombineFNV1A64(hash, byteData);
+            }
 
             resultsNativeArray[unfilteredChunkIndex] = hash; // check out if the array is large enough to support it 
         }
     }
 }
-
-//
-// public NativeList<DynamicComponentTypeHandle> listOfDeterministicTypes;
-//         
-
-//     var dynamicTypeListPtr = listOfDeterministicTypes.GetUnsafePtr();
-//     var hash = (ulong) listOfDeterministicTypes.Length;
-//
-//     foreach (var dynamicComponentTypeHandle in listOfDeterministicTypes)
-//     {
-//         var typeInfo = TypeManager.GetTypeInfo(dynamicComponentTypeHandle.);
-//         var rawByteData = chunk.GetDynamicComponentDataArrayReinterpret<byte>(ref dynamicComponentTypeHandle, typeInfo.TypeSize);
-//         foreach (var byteData in rawByteData)
-//             hash = TypeHash.CombineFNV1A64(hash, byteData);
-//     }

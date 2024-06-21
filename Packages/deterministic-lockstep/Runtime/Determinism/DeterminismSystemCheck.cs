@@ -24,6 +24,7 @@ namespace DeterministicLockstep
         {
             state.RequireForUpdate<DeterministicSettings>();
             state.RequireForUpdate<DeterministicTime>();
+            state.RequireForUpdate<DeterministicComponent>();
             _resultsArray = new NativeList<ulong>(128, Allocator.Persistent); // probably need to refine this number
             // _everyTickHashBuffer = new Dictionary<int, ulong>();
             _mQuery = state.EntityManager.CreateEntityQuery(
@@ -45,17 +46,19 @@ namespace DeterministicLockstep
             _resultsArray.Capacity = length;
             _resultsArray.Length = length; // refine this part at some point
             
-            // var listOfDeterministicTypes = SystemAPI.GetSingleton<DeterministicSimulation>().deterministicComponents;
-            // var deterministicTypeDynamicHandles = new NativeList<DynamicComponentTypeHandle>(listOfDeterministicTypes.Length, Allocator.TempJob);
-            //
+            var listOfDeterministicTypes = SystemAPI.GetSingletonBuffer<DeterministicComponent>();
+            
             // foreach (var deterministicType in listOfDeterministicTypes)
             // {
             //     deterministicTypeDynamicHandles.Add(state.GetDynamicComponentTypeHandle(deterministicType));
             // }
+            var list = new DynamicTypeList();
+            DynamicTypeList.PopulateList(ref state, listOfDeterministicTypes, false, ref list);
 
+            Debug.Log(list.Length);
             var job = new DeterminismCheckJob()
             {
-                transform = state.GetComponentTypeHandle<LocalTransform>(true),
+                listOfDeterministicTypes = list,
                 resultsNativeArray = _resultsArray.AsArray()
             };
             var handle = job.ScheduleParallel(_mQuery, state.Dependency);
@@ -72,7 +75,6 @@ namespace DeterministicLockstep
 
             // Save Hash in the DeterministicTime component
             timeComponent.ValueRW.hashesForTheCurrentTick.Add(hash);
-            // deterministicTypeDynamicHandles.Dispose();
         }
 
         [BurstCompile]

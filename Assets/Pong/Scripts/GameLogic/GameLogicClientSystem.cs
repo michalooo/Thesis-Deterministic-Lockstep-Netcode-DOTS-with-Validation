@@ -15,14 +15,20 @@ namespace PongGame
         protected override void OnCreate()
         {
             RequireForUpdate<DeterministicClientComponent>();
-            RequireForUpdate<DeterministicComponents>();
+            RequireForUpdate<DeterministicComponent>();
         }
 
         protected override void OnStartRunning()
         {
-            var client = SystemAPI.GetSingletonRW<DeterministicComponents>();
-            client.ValueRW.Value.Add(ComponentType.ReadOnly<LocalTransform>());
-            client.ValueRW.Value.Add(ComponentType.ReadOnly<DeterministicSettings>());
+            var client = SystemAPI.GetSingletonBuffer<DeterministicComponent>();
+            client.Add(new DeterministicComponent
+            {
+                Type = ComponentType.ReadOnly<LocalTransform>(),
+            });
+            client.Add(new DeterministicComponent
+            {
+                Type = ComponentType.ReadOnly<DeterministicSettings>(),
+            });
         }
 
         protected override void OnUpdate()
