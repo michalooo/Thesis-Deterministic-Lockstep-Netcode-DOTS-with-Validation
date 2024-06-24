@@ -1,11 +1,9 @@
 using System.Collections.Generic;
-using System.Linq;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Logging;
 using Unity.Mathematics;
-using UnityEngine;
 
 namespace DeterministicLockstep
 {
@@ -21,8 +19,7 @@ namespace DeterministicLockstep
         private EntityQuery _mQuery;
         private DynamicBuffer<DeterministicComponent> listOfDeterministicTypes;
         private bool isQueryCreated;
-
-        // private Dictionary<int, ulong> _everyTickHashBuffer;
+        
 
         public void OnCreate(ref SystemState state)
         {
@@ -32,7 +29,6 @@ namespace DeterministicLockstep
 
             _resultsArray = new NativeList<ulong>(128, Allocator.Persistent); // probably need to refine this number
             isQueryCreated = false;
-            // _everyTickHashBuffer = new Dictionary<int, ulong>();
         }
 
         public void OnUpdate(ref SystemState state)
@@ -93,11 +89,6 @@ namespace DeterministicLockstep
             ulong hash = 0;
             foreach (var result in _resultsArray)
                 hash = TypeHash.CombineFNV1A64(hash, result);
-            
-            // Debug.Log("Option: " + hashCalculationOption + " - Hash: " + hash);
-            // // Save the results for the future
-            // var currentTick = _everyTickHashBuffer.Count + 1;
-            // _everyTickHashBuffer[currentTick] = hash;
 
             // Save Hash in the DeterministicTime component
             timeComponent.ValueRW.hashesForTheCurrentTick.Add(hash);
@@ -112,11 +103,11 @@ namespace DeterministicLockstep
                 {
                     keyIndex = key.Index;
                     keyVersion = key.Version;
-                    Log.Info($"          Entity({key.Index}:{key.Version})");
+                    DeterministicLogger.Instance.LogHash($"          Entity({key.Index}:{key.Version})");
                     var values = logMap.GetValuesForKey(key);
                     foreach (var value in values)
                     {
-                        Log.Info($"               [{value.Key}] - {value.Value}");
+                        DeterministicLogger.Instance.LogHash($"               [{value.Key}] - {value.Value}");
                     }
                 }
             }

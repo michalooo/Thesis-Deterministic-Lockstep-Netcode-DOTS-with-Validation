@@ -4,6 +4,8 @@ using System.Linq;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Entities.UniversalDelegates;
+using Unity.Logging;
+using Unity.Logging.Sinks;
 using Unity.Networking.Transport;
 using UnityEngine;
 using Random = System.Random;
@@ -678,6 +680,11 @@ namespace DeterministicLockstep
                 }
                 
             
+                DeterministicLogger.Instance.LogInput("Tick " + _lastTickReceivedFromClient);
+                for(int i=0; i<inputs.Length; i++)
+                {
+                    DeterministicLogger.Instance.LogInput("PlayerID: " + networkIDs[i] + " Inputs: " + inputs[i].verticalInput);
+                }
                 if (!desynchronized)
                 {
                     string allHashes = "";
@@ -760,7 +767,6 @@ namespace DeterministicLockstep
                     Debug.Log("Game ended successfully");
                     Disconnect();
                 }
-                // Disconnect();
             }
         }
     }
