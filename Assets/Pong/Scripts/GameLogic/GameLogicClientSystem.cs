@@ -30,6 +30,10 @@ namespace PongGame
             {
                 Type = ComponentType.ReadOnly<GameSettings>(),
             });
+            client.Add(new DeterministicComponent
+            {
+                Type = ComponentType.ReadOnly<Velocity>(),
+            });
         }
 
         protected override void OnUpdate()

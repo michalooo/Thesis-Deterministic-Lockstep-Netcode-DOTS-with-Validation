@@ -4,6 +4,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Logging;
 using Unity.Mathematics;
+using Unity.Transforms;
 
 namespace DeterministicLockstep
 {
@@ -113,7 +114,19 @@ namespace DeterministicLockstep
                         var values = logMap.GetValuesForKey(key);
                         foreach (var value in values)
                         {
-                            DeterministicLogger.Instance.AddToHashDictionary((ulong) hashTick, $"               [{value.Key}] - {value.Value}");
+                            if (value.Key == TypeManager.GetTypeIndex<LocalTransform>())
+                            {
+                                LocalTransform localTransform = state.EntityManager.GetComponentData<LocalTransform>(key);
+                                DeterministicLogger.Instance.AddToHashDictionary((ulong) hashTick, $"               Component [{value.Key}] - Hash value {value.Value}");
+                                DeterministicLogger.Instance.AddToHashDictionary((ulong) hashTick, $"                    Position {localTransform.Position}");
+                                DeterministicLogger.Instance.AddToHashDictionary((ulong) hashTick, $"                    Rotation {localTransform.Rotation}");
+                                DeterministicLogger.Instance.AddToHashDictionary((ulong) hashTick, $"                    Scale {localTransform.Scale}");
+                            }
+                            else
+                            {
+                                DeterministicLogger.Instance.AddToHashDictionary((ulong) hashTick, $"               Component [{value.Key}] - Hash value {value.Value}");
+                            }
+                            
                         }
                     }
                 }
