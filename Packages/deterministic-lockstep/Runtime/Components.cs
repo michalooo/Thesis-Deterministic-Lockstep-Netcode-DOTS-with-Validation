@@ -28,6 +28,7 @@ namespace DeterministicLockstep
         ClientReady,
         LoadingGame,
         GameFinished,
+        Desync,
         None
     }
     

@@ -67,6 +67,10 @@ namespace PongGame
             {
                 client.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.Connect;
             }
+            else if(client.ValueRO.deterministicClientWorkingMode == DeterministicClientWorkingMode.Desync)
+            {
+                UISingleton.Instance.SetDesyncMessageEnabled(true);
+            }
             
             
             if (gameAsyncLoad != null && gameAsyncLoad.isDone)

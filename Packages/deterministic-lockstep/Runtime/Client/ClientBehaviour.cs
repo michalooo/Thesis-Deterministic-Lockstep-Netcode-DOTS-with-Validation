@@ -206,7 +206,11 @@ namespace DeterministicLockstep
                     var determinismSystemGroup = World.DefaultGameObjectInjectionWorld
                         .GetOrCreateSystemManaged<DeterministicSimulationSystemGroup>();
                     determinismSystemGroup.Enabled = false;
-                    if(World.Name == "ClientWorld") DeterministicLogger.Instance.LogHashesToFile(rpcPlayerDesynchronizationInfo.NonDeterministicTick);
+                    if (World.Name == "ClientWorld")
+                    {
+                        SystemAPI.GetSingletonRW<DeterministicClientComponent>().ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.Desync;
+                        DeterministicLogger.Instance.LogHashesToFile(rpcPlayerDesynchronizationInfo.NonDeterministicTick);
+                    }
                     break;
                 case RpcID.LoadGame:
                     var loadGameRPC = new RpcLoadGame();

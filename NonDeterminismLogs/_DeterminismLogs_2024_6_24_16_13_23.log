@@ -1,0 +1,210 @@
+Tick 106
+          Entity(233:5)
+               [Unity.Transforms.LocalTransform] - 12430017993500518788
+          Entity(234:3)
+               [Unity.Transforms.LocalTransform] - 974288152087155139
+
+          Entity(241:1)
+               [Unity.Transforms.LocalTransform] - 5259039994702030141
+          Entity(245:3)
+               [Unity.Transforms.LocalTransform] - 7797336202314529138
+          Entity(247:3)
+
+               [Unity.Transforms.LocalTransform] - 7545386929211308186
+          Entity(249:1)
+               [Unity.Transforms.LocalTransform] - 10011697630222886911
+          Entity(251:3)
+               [Unity.Transforms.LocalTransform] - 16774757758282827350
+
+          Entity(255:3)
+               [Unity.Transforms.LocalTransform] - 3092668904527619216
+          Entity(257:1)
+               [Unity.Transforms.LocalTransform] - 710341294550447475
+          Entity(259:3)
+
+               [Unity.Transforms.LocalTransform] - 2972693060192752096
+          Entity(261:1)
+               [Unity.Transforms.LocalTransform] - 7917312046649396258
+          Entity(263:3)
+               [Unity.Transforms.LocalTransform] - 782326801151367747
+
+          Entity(265:3)
+               [Unity.Transforms.LocalTransform] - 7785338617881042426
+          Entity(267:1)
+               [Unity.Transforms.LocalTransform] - 14608386668108416425
+          Entity(269:1)
+
+               [Unity.Transforms.LocalTransform] - 16762760173849340638
+          Entity(271:3)
+               [Unity.Transforms.LocalTransform] - 3116664073394592640
+          Entity(273:1)
+               [Unity.Transforms.LocalTransform] - 3176651995562026200
+
+          Entity(275:1)
+               [Unity.Transforms.LocalTransform] - 14656377005842363273
+          Entity(277:3)
+               [Unity.Transforms.LocalTransform] - 12178068720397297836
+          Entity(279:3)
+
+               [Unity.Transforms.LocalTransform] - 710341294550447475
+          Entity(281:1)
+               [Unity.Transforms.LocalTransform] - 17014709446952561590
+          Entity(283:3)
+               [Unity.Transforms.LocalTransform] - 10035692799089860335
+
+          Entity(285:1)
+               [Unity.Transforms.LocalTransform] - 14836340772344663953
+          Entity(287:1)
+               [Unity.Transforms.LocalTransform] - 16822748096016774198
+          Entity(289:1)
+
+               [Unity.Transforms.LocalTransform] - 7761343449014069002
+          Entity(291:1)
+               [Unity.Transforms.LocalTransform] - 3092668904527619216
+          Entity(293:3)
+               [Unity.Transforms.LocalTransform] - 3080671320094132504
+
+          Entity(295:1)
+               [Unity.Transforms.LocalTransform] - 12418020409067032076
+          Entity(297:3)
+               [Unity.Transforms.LocalTransform] - 10167666227858214167
+          Entity(301:3)
+
+               [Unity.Transforms.LocalTransform] - 10155668643424727455
+          Entity(303:1)
+               [Unity.Transforms.LocalTransform] - 12154073551530324412
+          Entity(305:3)
+               [Unity.Transforms.LocalTransform] - 9975704876922426775
+
+          Entity(307:1)
+               [Unity.Transforms.LocalTransform] - 3080671320094132504
+          Entity(309:3)
+               [Unity.Transforms.LocalTransform] - 5486994098938277669
+          Entity(311:1)
+
+               [Unity.Transforms.LocalTransform] - 7581379682511768322
+          Entity(313:1)
+               [Unity.Transforms.LocalTransform] - 698343710116960763
+          Entity(315:1)
+               [Unity.Transforms.LocalTransform] - 5247042410268543429
+
+          Entity(317:1)
+               [Unity.Transforms.LocalTransform] - 986285736520641851
+          Entity(319:1)
+               [Unity.Transforms.LocalTransform] - 770329216717881035
+          Entity(321:1)
+
+               [Unity.Transforms.LocalTransform] - 17014709446952561590
+          Entity(323:1)
+               [Unity.Transforms.LocalTransform] - 14728362512443283545
+          Entity(325:1)
+               [Unity.Transforms.LocalTransform] - 7857324124481962698
+
+          Entity(327:1)
+               [Unity.Transforms.LocalTransform] - 950292983220181715
+          Entity(329:1)
+               [Unity.Transforms.LocalTransform] - 3248637502162946472
+          Entity(331:1)
+
+               [Unity.Transforms.LocalTransform] - 674348541249987339
+          Entity(333:1)
+               [Unity.Transforms.LocalTransform] - 14656377005842363273
+          Entity(335:1)
+               [Unity.Transforms.LocalTransform] - 16966719109218614742
+
+          Entity(337:1)
+               [Unity.Transforms.LocalTransform] - 14668374590275849985
+          Entity(339:1)
+               [Unity.Transforms.LocalTransform] - 16786755342716314062
+          Entity(341:1)
+
+               [Unity.Transforms.LocalTransform] - 12286046980298678244
+          Entity(343:1)
+               [Unity.Transforms.LocalTransform] - 626358203516040491
+          Entity(345:1)
+               [Unity.Transforms.LocalTransform] - 9855729032587559655
+
+          Entity(347:1)
+               [Unity.Transforms.LocalTransform] - 7629370020245715170
+          Entity(349:3)
+               [Unity.Transforms.LocalTransform] - 12274049395865191532
+          Entity(351:1)
+
+               [Unity.Transforms.LocalTransform] - 14548398745940982865
+          Entity(355:1)
+               [Unity.Transforms.LocalTransform] - 9891721785888019791
+          Entity(357:1)
+               [Unity.Transforms.LocalTransform] - 16870738433750721046
+
+          Entity(359:1)
+               [Unity.Transforms.LocalTransform] - 9963707292488940063
+          Entity(361:1)
+               [Unity.Transforms.LocalTransform] - 14644379421408876561
+          Entity(363:1)
+
+               [Unity.Transforms.LocalTransform] - 7737348280147095578
+          Entity(365:1)
+               [Unity.Transforms.LocalTransform] - 12502003500101439060
+          Entity(367:1)
+               [Unity.Transforms.LocalTransform] - 12202063889264271260
+
+          Entity(369:1)
+               [Unity.Transforms.LocalTransform] - 3308625424330380032
+          Entity(371:1)
+               [Unity.Transforms.LocalTransform] - 12466010746800978924
+          Entity(373:1)
+
+               [Unity.Transforms.LocalTransform] - 17074697369119995150
+          Entity(375:1)
+               [Unity.Transforms.LocalTransform] - 3068673735660645792
+          Entity(377:1)
+               [Unity.Transforms.LocalTransform] - 5582974774406171365
+
+          Entity(379:1)
+               [Unity.Transforms.LocalTransform] - 2960695475759265384
+          Entity(381:1)
+               [Unity.Transforms.LocalTransform] - 986285736520641851
+          Entity(383:1)
+
+               [Unity.Transforms.LocalTransform] - 7701355526846635442
+          Entity(385:1)
+               [Unity.Transforms.LocalTransform] - 3260635086596433184
+          Entity(387:1)
+               [Unity.Transforms.LocalTransform] - 7701355526846635442
+
+          Entity(389:1)
+               [Unity.Transforms.LocalTransform] - 7857324124481962698
+          Entity(391:1)
+               [Unity.Transforms.LocalTransform] - 7629370020245715170
+          Entity(393:1)
+
+               [Unity.Transforms.LocalTransform] - 16954721524785128030
+          Entity(395:1)
+               [Unity.Transforms.LocalTransform] - 794324385584854459
+          Entity(397:1)
+               [Unity.Transforms.LocalTransform] - 16858740849317234334
+
+          Entity(399:1)
+               [Unity.Transforms.LocalTransform] - 2996688229059725520
+          Entity(401:1)
+               [Unity.Transforms.LocalTransform] - 14764355265743743681
+          Entity(403:1)
+
+               [Unity.Transforms.LocalTransform] - 3008685813493212232
+          Entity(405:1)
+               [Unity.Transforms.LocalTransform] - 14824343187911177241
+          Entity(407:1)
+               [Unity.Transforms.LocalTransform] - 16870738433750721046
+
+          Entity(409:1)
+               [Unity.Transforms.LocalTransform] - 7605374851378741746
+          Entity(411:1)
+               [Unity.Transforms.LocalTransform] - 14656377005842363273
+          Entity(413:1)
+
+               [Unity.Transforms.LocalTransform] - 14632381836975389849
+          Entity(415:1)
+               [Unity.Transforms.LocalTransform] - 2948697891325778672
+          Entity(417:1)
+               [Unity.Transforms.LocalTransform] - 3260635086596433184
+

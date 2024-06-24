@@ -11,6 +11,7 @@ namespace PongGame
         [SerializeField] private TextMeshProUGUI scoreRight;
         [SerializeField] private TextMeshProUGUI gameStatusText;
         [SerializeField] private TextMeshProUGUI gameResultText;
+        [SerializeField] private GameObject desyncMessage;
         
         public static UISingleton Instance { get; private set; }
         
@@ -26,6 +27,12 @@ namespace PongGame
             } 
             
             gameResultText.gameObject.SetActive(false);
+            desyncMessage.SetActive(false);
+        }
+        
+        public void SetDesyncMessageEnabled(bool enable)
+        {
+            desyncMessage.SetActive(enable);
         }
 
         public bool IsLeftPlayerWinning()
