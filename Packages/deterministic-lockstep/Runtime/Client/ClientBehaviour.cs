@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
@@ -205,6 +206,7 @@ namespace DeterministicLockstep
                     var determinismSystemGroup = World.DefaultGameObjectInjectionWorld
                         .GetOrCreateSystemManaged<DeterministicSimulationSystemGroup>();
                     determinismSystemGroup.Enabled = false;
+                    if(World.Name == "ClientWorld") DeterministicLogger.Instance.LogHashesToFile(rpcPlayerDesynchronizationInfo.NonDeterministicTick);
                     break;
                 case RpcID.LoadGame:
                     var loadGameRPC = new RpcLoadGame();

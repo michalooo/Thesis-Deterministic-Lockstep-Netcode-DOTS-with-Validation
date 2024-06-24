@@ -186,7 +186,6 @@ namespace DeterministicLockstep
                 
                 if (isTimeToSendNextTick) // We should  try to send the next tick
                 {
-                    // DeterministicLogger.Instance.LogHash("Tick " + deterministicTime.ValueRO.currentClientTickToSend);
                     if (deterministicTime.ValueRO.currentClientTickToSend <=
                         deterministicTime.ValueRO
                             .forcedInputLatencyDelay) // If current Tick to send is less or equal to tickAhead then upgrade it and do nothing about the presentation update (it should mean we are processing those first ticks)
@@ -300,6 +299,8 @@ namespace DeterministicLockstep
             // assumption that we are talking only about unmanaged systems
             var systems = group.GetAllSystems();
             var determinismCheckSystem = group.World.GetExistingSystem<DeterminismCheckSystem>();
+            var _deterministicTimeQuery = group.EntityManager.CreateEntityQuery(typeof(DeterministicTime));
+            var deterministicTime = _deterministicTimeQuery.GetSingletonRW<DeterministicTime>();
         
             for (int i = 0; i < systems.Length; i++)
             {
@@ -308,13 +309,15 @@ namespace DeterministicLockstep
                 {
                     if (i < systems.Length - 3)
                     {
-                        // DeterministicLogger.Instance.LogHash("     " + i);
+                        deterministicTime = _deterministicTimeQuery.GetSingletonRW<DeterministicTime>();
+                        if(World.Name == "ClientWorld") DeterministicLogger.Instance.AddToHashDictionary((ulong) deterministicTime.ValueRO.currentClientTickToSend, "     " + i);
                         system.Update(World.Unmanaged);
                         determinismCheckSystem.Update(World.Unmanaged);
                     }
                     else
                     {
-                        // if(i<systems.Length-2) DeterministicLogger.Instance.LogHash("     " + i);
+                        deterministicTime = _deterministicTimeQuery.GetSingletonRW<DeterministicTime>();
+                        if(World.Name == "ClientWorld" && i<systems.Length-2) DeterministicLogger.Instance.AddToHashDictionary((ulong) deterministicTime.ValueRO.currentClientTickToSend, "     " + i);
                         system.Update(World.Unmanaged);
                     }
                 }

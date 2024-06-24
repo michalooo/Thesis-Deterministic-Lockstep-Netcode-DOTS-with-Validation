@@ -77,12 +77,14 @@ namespace DeterministicLockstep
     public struct RpcPlayerDesynchronizationMessage : INetcodeRPC
     {
         public RpcID GetID => RpcID.PlayerDesynchronized;
+        public ulong NonDeterministicTick { get; set; }
 
         public void Serialize(NetworkDriver mDriver, NetworkConnection connection, NetworkPipeline reliableSimulationPipeline)
         {
             mDriver.BeginSend(reliableSimulationPipeline, connection, out var writer);
 
             writer.WriteByte((byte)GetID);
+            writer.WriteULong(NonDeterministicTick);
 
             if (writer.HasFailedWrites)
             {
@@ -96,6 +98,7 @@ namespace DeterministicLockstep
         public void Deserialize(ref DataStreamReader reader)
         {
             reader.ReadByte(); // ID
+            NonDeterministicTick = reader.ReadULong();
         }
     }
     

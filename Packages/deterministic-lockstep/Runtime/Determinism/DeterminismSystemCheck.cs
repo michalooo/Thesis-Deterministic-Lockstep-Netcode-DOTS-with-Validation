@@ -19,6 +19,7 @@ namespace DeterministicLockstep
         private EntityQuery _mQuery;
         private DynamicBuffer<DeterministicComponent> listOfDeterministicTypes;
         private bool isQueryCreated;
+        private EntityQuery _deterministicTimeQuery;
         
 
         public void OnCreate(ref SystemState state)
@@ -29,6 +30,7 @@ namespace DeterministicLockstep
 
             _resultsArray = new NativeList<ulong>(128, Allocator.Persistent); // probably need to refine this number
             isQueryCreated = false;
+            _deterministicTimeQuery = state.EntityManager.CreateEntityQuery(typeof(DeterministicTime));
         }
 
         public void OnUpdate(ref SystemState state)
@@ -97,18 +99,23 @@ namespace DeterministicLockstep
             keys.Sort();
             var keyIndex = -1;
             var keyVersion = -1;
+            var hashTick = _deterministicTimeQuery.GetSingletonRW<DeterministicTime>().ValueRO.currentClientTickToSend;
             foreach (var key in keys)
             {
                 if (keyIndex != key.Index || keyVersion != key.Version)
                 {
                     keyIndex = key.Index;
                     keyVersion = key.Version;
-                    // DeterministicLogger.Instance.LogHash($"          Entity({key.Index}:{key.Version})");
-                    // var values = logMap.GetValuesForKey(key);
-                    // foreach (var value in values)
-                    // {
-                    //     DeterministicLogger.Instance.LogHash($"               [{value.Key}] - {value.Value}");
-                    // }
+                    if (state.World.Name == "ClientWorld")
+                    {
+                        DeterministicLogger.Instance.AddToHashDictionary((ulong) hashTick, $"          Entity({key.Index}:{key.Version})");
+           
+                        var values = logMap.GetValuesForKey(key);
+                        foreach (var value in values)
+                        {
+                            DeterministicLogger.Instance.AddToHashDictionary((ulong) hashTick, $"               [{value.Key}] - {value.Value}");
+                        }
+                    }
                 }
             }
             

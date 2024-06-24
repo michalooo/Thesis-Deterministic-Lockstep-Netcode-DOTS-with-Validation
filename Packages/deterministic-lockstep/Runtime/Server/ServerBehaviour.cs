@@ -68,6 +68,7 @@ namespace DeterministicLockstep
         private int _lastTickReceivedFromClient;
 
         private bool _allPingsReceived;
+        private bool desynchronized;
 
         protected override void OnCreate()
         {
@@ -77,6 +78,7 @@ namespace DeterministicLockstep
                 deterministicServerWorkingMode = DeterministicServerWorkingMode.None
             });
             _allPingsReceived = false;
+            desynchronized = false;
         }
 
         protected override void OnUpdate()
@@ -485,13 +487,13 @@ namespace DeterministicLockstep
         private void SendRPCWithPlayersDesynchronizationInfo()
         {
             Debug.LogError("Desynchronized");
-            LogInputsToFile();
-            var rpc = new RpcPlayerDesynchronizationMessage { };
+            var rpc = new RpcPlayerDesynchronizationMessage { NonDeterministicTick = (ulong) _lastTickReceivedFromClient};
 
             foreach (var connection in _connectedPlayers.Where(connection => connection.IsCreated))
             {
                 rpc.Serialize(_mDriver, connection, _emptyPipeline);
             }
+            DeterministicLogger.Instance.LogInputsToFile((ulong)_lastTickReceivedFromClient, _everyTickInputBuffer);
         }
 
         /// <summary>
@@ -607,7 +609,10 @@ namespace DeterministicLockstep
         /// </summary>
         private void CheckIfAllDataReceivedAndSendToClients()
         {
-            var desynchronized = false;
+            if (desynchronized)
+            {
+                return;
+            }
             
             if (_everyTickInputBuffer[(ulong) _lastTickReceivedFromClient].Length == GetActiveConnectionCount() &&
                 _everyTickHashBuffer[(ulong) _lastTickReceivedFromClient].Length ==
@@ -758,37 +763,6 @@ namespace DeterministicLockstep
                     Debug.Log("Game ended successfully");
                     Disconnect();
                 }
-            }
-        }
-
-        private void LogInputsToFile()
-        {
-            DeterministicLogger.Instance.CreateInputLogger();
-            var logBuilder = new System.Text.StringBuilder();
-            const int maxBatchSize = 500; // without this division I was getting errors regarding the batch size
-            foreach (var tickEntry in _everyTickInputBuffer)
-            {
-                ulong tick = tickEntry.Key;
-                NativeList<RpcBroadcastPlayerTickDataToServer> inputDataList = tickEntry.Value;
-
-                logBuilder.AppendLine("Tick " + tick);
-                for (int i = 0; i < inputDataList.Length; i++)
-                {
-                    var inputData = inputDataList[i];
-                    logBuilder.AppendLine("     PlayerID: " + inputData.PlayerNetworkID + " Inputs: " + inputData.PongGameInputs.verticalInput);
-                        
-                    if (logBuilder.Length >= maxBatchSize)
-                    {
-                        // Log the current batch
-                        DeterministicLogger.Instance.LogInput(logBuilder.ToString());
-                        // Clear the log builder for the next batch
-                        logBuilder.Clear();
-                    }
-                }
-            }
-            if (logBuilder.Length > 0)
-            {
-                DeterministicLogger.Instance.LogInput(logBuilder.ToString());
             }
         }
     }
