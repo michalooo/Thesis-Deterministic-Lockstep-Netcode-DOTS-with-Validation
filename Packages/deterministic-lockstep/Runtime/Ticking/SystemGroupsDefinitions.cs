@@ -186,7 +186,7 @@ namespace DeterministicLockstep
                 
                 if (isTimeToSendNextTick) // We should  try to send the next tick
                 {
-                    DeterministicLogger.Instance.LogHash("Tick " + deterministicTime.ValueRO.currentClientTickToSend);
+                    // DeterministicLogger.Instance.LogHash("Tick " + deterministicTime.ValueRO.currentClientTickToSend);
                     if (deterministicTime.ValueRO.currentClientTickToSend <=
                         deterministicTime.ValueRO
                             .forcedInputLatencyDelay) // If current Tick to send is less or equal to tickAhead then upgrade it and do nothing about the presentation update (it should mean we are processing those first ticks)
@@ -308,13 +308,13 @@ namespace DeterministicLockstep
                 {
                     if (i < systems.Length - 3)
                     {
-                        DeterministicLogger.Instance.LogHash("     " + i);
+                        // DeterministicLogger.Instance.LogHash("     " + i);
                         system.Update(World.Unmanaged);
                         determinismCheckSystem.Update(World.Unmanaged);
                     }
                     else
                     {
-                        if(i<systems.Length-2) DeterministicLogger.Instance.LogHash("     " + i);
+                        // if(i<systems.Length-2) DeterministicLogger.Instance.LogHash("     " + i);
                         system.Update(World.Unmanaged);
                     }
                 }

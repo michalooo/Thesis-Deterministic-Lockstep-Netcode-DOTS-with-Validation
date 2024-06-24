@@ -3,9 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Entities.UniversalDelegates;
-using Unity.Logging;
-using Unity.Logging.Sinks;
 using Unity.Networking.Transport;
 using UnityEngine;
 using Random = System.Random;
@@ -488,6 +485,7 @@ namespace DeterministicLockstep
         private void SendRPCWithPlayersDesynchronizationInfo()
         {
             Debug.LogError("Desynchronized");
+            LogInputsToFile();
             var rpc = new RpcPlayerDesynchronizationMessage { };
 
             foreach (var connection in _connectedPlayers.Where(connection => connection.IsCreated))
@@ -679,12 +677,6 @@ namespace DeterministicLockstep
                     }
                 }
                 
-            
-                DeterministicLogger.Instance.LogInput("Tick " + _lastTickReceivedFromClient);
-                for(int i=0; i<inputs.Length; i++)
-                {
-                    DeterministicLogger.Instance.LogInput("PlayerID: " + networkIDs[i] + " Inputs: " + inputs[i].verticalInput);
-                }
                 if (!desynchronized)
                 {
                     string allHashes = "";
@@ -721,13 +713,13 @@ namespace DeterministicLockstep
                 inputs.Dispose();
             
                 // Remove this tick from the buffer, since we're done processing it
-                _everyTickInputBuffer.Remove((ulong) _lastTickReceivedFromClient);
+                // _everyTickInputBuffer.Remove((ulong) _lastTickReceivedFromClient);
                 _everyTickHashBuffer.Remove((ulong) _lastTickReceivedFromClient);
                 _lastTickReceivedFromClient++;
             }
             else if (_everyTickInputBuffer[(ulong) _lastTickReceivedFromClient].Length > GetActiveConnectionCount())
             {
-                // Debug.LogError("Too many player inputs saved in one tick");
+                Debug.LogError("Too many player inputs saved in one tick");
             }
         }
         
@@ -742,7 +734,6 @@ namespace DeterministicLockstep
             endGameHashes.Add(rpc);
             
             // check if all received
-            // Disconnect();
             if (endGameHashes.Length == GetActiveConnectionCount())
             {
                 // // desync or disconnect
@@ -767,6 +758,37 @@ namespace DeterministicLockstep
                     Debug.Log("Game ended successfully");
                     Disconnect();
                 }
+            }
+        }
+
+        private void LogInputsToFile()
+        {
+            DeterministicLogger.Instance.CreateInputLogger();
+            var logBuilder = new System.Text.StringBuilder();
+            const int maxBatchSize = 500; // without this division I was getting errors regarding the batch size
+            foreach (var tickEntry in _everyTickInputBuffer)
+            {
+                ulong tick = tickEntry.Key;
+                NativeList<RpcBroadcastPlayerTickDataToServer> inputDataList = tickEntry.Value;
+
+                logBuilder.AppendLine("Tick " + tick);
+                for (int i = 0; i < inputDataList.Length; i++)
+                {
+                    var inputData = inputDataList[i];
+                    logBuilder.AppendLine("     PlayerID: " + inputData.PlayerNetworkID + " Inputs: " + inputData.PongGameInputs.verticalInput);
+                        
+                    if (logBuilder.Length >= maxBatchSize)
+                    {
+                        // Log the current batch
+                        DeterministicLogger.Instance.LogInput(logBuilder.ToString());
+                        // Clear the log builder for the next batch
+                        logBuilder.Clear();
+                    }
+                }
+            }
+            if (logBuilder.Length > 0)
+            {
+                DeterministicLogger.Instance.LogInput(logBuilder.ToString());
             }
         }
     }

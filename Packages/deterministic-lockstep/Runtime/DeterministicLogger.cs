@@ -23,7 +23,10 @@ namespace DeterministicLockstep
             { 
                 Instance = this; 
             } 
-            
+        }
+
+        public void CreateDeterminismLogger()
+        {
             var determinismLoggerFileName = "NonDeterminismLogs/_DeterminismLogs_" + DateTime.Now.Year + "_" + DateTime.Now.Month + "_" +
                                             DateTime.Now.Day + "_" + DateTime.Now.Hour + "_" + DateTime.Now.Minute + "_" + DateTime.Now.Second + ".log";
             determinismLogger = new Logger(new LoggerConfig()
@@ -31,17 +34,18 @@ namespace DeterministicLockstep
                 .OutputTemplate("{Message}")
                 .WriteTo.File(determinismLoggerFileName, minLevel: LogLevel.Verbose)
                 .WriteTo.StdOut(outputTemplate: "{Message}"));
-            
-            
+        }
+
+        public void CreateInputLogger()
+        {
             var inputLoggerFileName = "NonDeterminismLogs/_ServerInputRecording_" + DateTime.Now.Year + "-" + DateTime.Now.Month + "-" +
-                                DateTime.Now.Day + "____" + DateTime.Now.Hour + "-" + DateTime.Now.Minute + "-" + DateTime.Now.Second + ".log";
+                                      DateTime.Now.Day + "____" + DateTime.Now.Hour + "-" + DateTime.Now.Minute + "-" + DateTime.Now.Second + ".log";
             inputLogger = new Logger(new LoggerConfig()
                 .MinimumLevel.Debug()
                 .OutputTemplate("{Message}")
                 .WriteTo.File(inputLoggerFileName, minLevel: LogLevel.Verbose)
                 .WriteTo.StdOut(outputTemplate: "{Message}"));
         }
-
        
         public void LogInput(string message)
         {

@@ -103,12 +103,12 @@ namespace DeterministicLockstep
                 {
                     keyIndex = key.Index;
                     keyVersion = key.Version;
-                    DeterministicLogger.Instance.LogHash($"          Entity({key.Index}:{key.Version})");
-                    var values = logMap.GetValuesForKey(key);
-                    foreach (var value in values)
-                    {
-                        DeterministicLogger.Instance.LogHash($"               [{value.Key}] - {value.Value}");
-                    }
+                    // DeterministicLogger.Instance.LogHash($"          Entity({key.Index}:{key.Version})");
+                    // var values = logMap.GetValuesForKey(key);
+                    // foreach (var value in values)
+                    // {
+                    //     DeterministicLogger.Instance.LogHash($"               [{value.Key}] - {value.Value}");
+                    // }
                 }
             }
             
