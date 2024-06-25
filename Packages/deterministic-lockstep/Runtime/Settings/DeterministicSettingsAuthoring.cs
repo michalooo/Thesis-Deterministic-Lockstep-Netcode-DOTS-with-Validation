@@ -19,6 +19,7 @@ namespace DeterministicLockstep
         public int allowedConnectionsPerGame;
         public int simulationTickRate;
         public DeterminismHashCalculationOption hashCalculationOption;
+        public bool isReplayFromFile;
 
         public bool isInGame;
         public bool isSimulationCatchingUp; // need to be set

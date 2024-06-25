@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Logging;
@@ -11,28 +12,28 @@ using Unity.Entities.Serialization;
 
 namespace DeterministicLockstep
 {
-    public class DeterministicLogger : MonoBehaviour 
-    { 
+    public class DeterministicLogger : MonoBehaviour
+    {
         public static DeterministicLogger Instance { get; private set; }
         private Logger determinismLogger;
         private Logger inputLogger;
         const int maxBatchSize = 200; // without this division I was getting errors regarding the batch size
         private bool isInputWritten = false;
         private bool isHashWritten = false;
-        
+
         private Dictionary<ulong, List<string>> _tickHashBuffer;
-        
-        private void Awake() 
-        { 
-            if (Instance != null && Instance != this) 
-            { 
-                Destroy(this); 
-            } 
-            else 
-            { 
-                Instance = this; 
-            } 
-            
+
+        private void Awake()
+        {
+            if (Instance != null && Instance != this)
+            {
+                Destroy(this);
+            }
+            else
+            {
+                Instance = this;
+            }
+
             _tickHashBuffer = new Dictionary<ulong, List<string>>();
             CreateInputLogger();
             CreateDeterminismLogger();
@@ -80,8 +81,10 @@ namespace DeterministicLockstep
 
         public void CreateDeterminismLogger()
         {
-            var determinismLoggerFileName = "NonDeterminismLogs/_DeterminismLogs_" + DateTime.Now.Year + "_" + DateTime.Now.Month + "_" +
-                                            DateTime.Now.Day + "_" + DateTime.Now.Hour + "_" + DateTime.Now.Minute + "_" + DateTime.Now.Second + ".log";
+            var determinismLoggerFileName = "NonDeterminismLogs/_DeterminismLogs_" + DateTime.Now.Year + "_" +
+                                            DateTime.Now.Month + "_" +
+                                            DateTime.Now.Day + "_" + DateTime.Now.Hour + "_" + DateTime.Now.Minute +
+                                            "_" + DateTime.Now.Second + ".log";
             determinismLogger = new Logger(new LoggerConfig()
                 .MinimumLevel.Debug()
                 .OutputTemplate("{Message}")
@@ -91,114 +94,126 @@ namespace DeterministicLockstep
 
         public void CreateInputLogger()
         {
-            var inputLoggerFileName = "NonDeterminismLogs/_ServerInputRecording_" + DateTime.Now.Year + "-" + DateTime.Now.Month + "-" +
-                                      DateTime.Now.Day + "____" + DateTime.Now.Hour + "-" + DateTime.Now.Minute + "-" + DateTime.Now.Second + ".log";
+            var inputLoggerFileName = "NonDeterminismLogs/_ServerInputRecording_" + DateTime.Now.Year + "-" +
+                                      DateTime.Now.Month + "-" +
+                                      DateTime.Now.Day + "____" + DateTime.Now.Hour + "-" + DateTime.Now.Minute + "-" +
+                                      DateTime.Now.Second + ".log";
             inputLogger = new Logger(new LoggerConfig()
                 .MinimumLevel.Debug()
                 .OutputTemplate("{Message}")
                 .WriteTo.File(inputLoggerFileName, minLevel: LogLevel.Verbose)
                 .WriteTo.StdOut(outputTemplate: "{Message}"));
         }
-       
+
         public void LogInput(string message)
         {
             Log.Logger = inputLogger;
             Log.Info(message);
             Log.FlushAll();
         }
-        
+
         public void LogHash(string message)
         {
             Log.Logger = determinismLogger;
-            Log.Info(message); 
+            Log.Info(message);
             Log.FlushAll();
         }
-        
-        public void LogInputsToFile(ulong nonDeterministicTick, Dictionary<ulong, NativeList<RpcBroadcastPlayerTickDataToServer>> _everyTickInputBuffer)
-        {
-            if(isInputWritten) return;
-    
-            isInputWritten = true;
-            var allTicksData = new List<SerializableTickData>();
 
-            foreach (var tickEntry in _everyTickInputBuffer)
+        public void LogInputsToFile(NativeList<RpcBroadcastTickDataToClients> _serverDataToClients)
+        {
+            if (isInputWritten) return;
+            isInputWritten = true;
+
+            foreach (var rpc in _serverDataToClients)
             {
-                ulong tick = tickEntry.Key;
-                NativeList<RpcBroadcastPlayerTickDataToServer> inputDataList = tickEntry.Value;
-        
-                if (nonDeterministicTick < tick) continue;
-        
-                var inputs = new List<SerializablePlayerInputData>();
-        
-                for (int i = 0; i < inputDataList.Length; i++)
+                TempRpcBroadcastTickDataToClients tempRpc = new TempRpcBroadcastTickDataToClients();
+                tempRpc.NetworkIDs = new List<int>();
+                tempRpc.PlayersPongGameInputs = new List<PongInputs>();
+                tempRpc.SimulationTick = rpc.SimulationTick;
+                foreach (var networkID in rpc.NetworkIDs)
                 {
-                    var inputData = inputDataList[i];
-                    inputs.Add(new SerializablePlayerInputData(inputData.PlayerNetworkID, inputData.PongGameInputs.verticalInput));
+                    tempRpc.NetworkIDs.Add(networkID);
                 }
 
-                var jsonTick = new SerializableTickData(tick, inputs);
-                allTicksData.Add(jsonTick);
-                string testJsonOutput = JsonUtility.ToJson(jsonTick, true);
+                foreach (var pongInput in rpc.PlayersPongGameInputs)
+                {
+                    tempRpc.PlayersPongGameInputs.Add(pongInput);
+                }
+                
+                string testJsonOutput = JsonUtility.ToJson(tempRpc, true);
                 LogInput(testJsonOutput);
             }
-        }
-        
-        public List<SerializableTickData> ReadTicksFromFile(string filePath)
-        {
-            try
-            {
-                // Read all lines from the file
-                string allText = File.ReadAllText(filePath);
             
-                // Normalize newlines, split by '}' and remove empty entries
-                string[] jsonObjects = allText.Replace("}\n{", "},{").Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
-
-                // Wrap the individual JSON objects into a JSON array
-                string jsonArray = "[" + string.Join("", jsonObjects) + "]";
-
-                // Deserialize the JSON array to List<SerializableTickData>
-                var test = JsonUtility.FromJson<Wrapper>(jsonArray).Ticks;
-                return test;
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError("Failed to read or parse the file: " + ex.Message);
-                return new List<SerializableTickData>();
-            }
+            
         }
-        
+
         [Serializable]
-        private class Wrapper
+        public struct TempRpcBroadcastTickDataToClients
         {
-            public List<SerializableTickData> Ticks;
+            public List<PongInputs> PlayersPongGameInputs;
+            public int SimulationTick;
+            public List<int> NetworkIDs;
         }
-        
-        [System.Serializable]
-        public class SerializableTickData
-        {
-            public ulong Tick;
-            public List<SerializablePlayerInputData> Inputs;
 
-            public SerializableTickData(ulong tick, List<SerializablePlayerInputData> inputs)
+
+        public NativeList<RpcBroadcastTickDataToClients> ReadTicksFromFile()
+        {
+            var filePath = "NonDeterminismLogs/_ServerInputRecordingToReplay_.log";
+            var test = new List<TempRpcBroadcastTickDataToClients>();
+            
+            using (var sr = new StreamReader(filePath))
             {
-                Tick = tick;
-                Inputs = inputs;
+                StringBuilder jsonBuilder = new StringBuilder();
+                string line;
+                int counter = 0;
+                while ((line = sr.ReadLine()) != null)
+                {
+                    jsonBuilder.Append(line);
+                    counter++;
+                    // Check if the line ends with a JSON object close (simple case)
+                    if (counter == 15)
+                    {
+                        try
+                        {
+                            test.Add(JsonUtility.FromJson<TempRpcBroadcastTickDataToClients>(jsonBuilder.ToString()));
+                            jsonBuilder.Clear(); // Clear the builder for the next JSON object
+                            counter = 0;
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.LogError("Failed to parse JSON object: " + ex.Message);
+                            // Optionally continue to try to read next object
+                            jsonBuilder.Clear();
+                            counter = 0;
+                        }
+                    }
+                }
             }
-        }
-
-        [System.Serializable]
-        public class SerializablePlayerInputData
-        {
-            public int PlayerNetworkID;
-            public int VerticalInput;
-
-            public SerializablePlayerInputData(int playerNetworkID, int verticalInput)
+            
+            NativeList<RpcBroadcastTickDataToClients> rpcBroadcastTickDataToClients = new NativeList<RpcBroadcastTickDataToClients>(Allocator.Temp);
+            foreach (var rpc in test)
             {
-                PlayerNetworkID = playerNetworkID;
-                VerticalInput = verticalInput;
+                RpcBroadcastTickDataToClients rpcBroadcastTickData = new RpcBroadcastTickDataToClients();
+                rpcBroadcastTickData.SimulationTick = rpc.SimulationTick;
+                rpcBroadcastTickData.NetworkIDs = new NativeList<int>(rpc.NetworkIDs.Count, Allocator.Persistent);
+                rpcBroadcastTickData.PlayersPongGameInputs = new NativeList<PongInputs>(rpc.PlayersPongGameInputs.Count, Allocator.Persistent);
+                foreach (var networkID in rpc.NetworkIDs)
+                {
+                    rpcBroadcastTickData.NetworkIDs.Add(networkID);
+                }
+
+                foreach (var pongInput in rpc.PlayersPongGameInputs)
+                {
+                    rpcBroadcastTickData.PlayersPongGameInputs.Add(pongInput);
+                }
+                rpcBroadcastTickDataToClients.Add(rpcBroadcastTickData);
             }
+            
+            return rpcBroadcastTickDataToClients;
         }
-        
+
+
+
         public void LogHashesToFile(ulong nonDeterministicTick)
         {
             if (isHashWritten) return;

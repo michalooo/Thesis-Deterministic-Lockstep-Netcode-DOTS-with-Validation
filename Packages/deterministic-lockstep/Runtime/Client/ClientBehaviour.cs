@@ -23,6 +23,7 @@ namespace DeterministicLockstep
         
         private const float TimeToWaitBeforeEndingGame = 5.0f;
         private float timeWaitedAfterEndingTheGame = 0.0f;
+        private ulong nonDeterministicTick = 0;
 
         protected override void OnCreate()
         {
@@ -68,6 +69,15 @@ namespace DeterministicLockstep
                 _mConnection.IsCreated)
             {
                 Disconnect();
+            }
+
+            var determinismSystemGroup = World.DefaultGameObjectInjectionWorld
+                .GetOrCreateSystemManaged<DeterministicSimulationSystemGroup>();
+            if (SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode ==
+                DeterministicClientWorkingMode.Desync && determinismSystemGroup.Enabled)
+            {
+                determinismSystemGroup.Enabled = false;
+                DeterministicLogger.Instance.LogHashesToFile(nonDeterministicTick);
             }
 
             if (SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode ==
@@ -203,13 +213,10 @@ namespace DeterministicLockstep
                 case RpcID.PlayerDesynchronized:
                     var rpcPlayerDesynchronizationInfo = new RpcPlayerDesynchronizationMessage();
                     rpcPlayerDesynchronizationInfo.Deserialize(ref stream);
-                    var determinismSystemGroup = World.DefaultGameObjectInjectionWorld
-                        .GetOrCreateSystemManaged<DeterministicSimulationSystemGroup>();
-                    determinismSystemGroup.Enabled = false;
                     if (World.Name == "ClientWorld")
                     {
                         SystemAPI.GetSingletonRW<DeterministicClientComponent>().ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.Desync;
-                        DeterministicLogger.Instance.LogHashesToFile(rpcPlayerDesynchronizationInfo.NonDeterministicTick);
+                        nonDeterministicTick = rpcPlayerDesynchronizationInfo.NonDeterministicTick;
                     }
                     break;
                 case RpcID.LoadGame:

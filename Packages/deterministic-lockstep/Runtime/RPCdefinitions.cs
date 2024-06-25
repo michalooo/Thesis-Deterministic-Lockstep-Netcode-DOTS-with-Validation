@@ -327,8 +327,8 @@ namespace DeterministicLockstep
     public struct RpcBroadcastPlayerTickDataToServer : INetcodeRPC
     {
         public PongInputs PongGameInputs;
-        public int PlayerNetworkID { get; set; } // don't needed since server knows the connection ID?
-        public int FutureTick { get; set; }
+        public int PlayerNetworkID; // don't needed since server knows the connection ID?
+        public int FutureTick;
         public NativeList<ulong> HashesForFutureTick { get; set; } // empty, size(1) or size(systems) depending on the determinism check option
         // public TimeSpan ClientTimeStampUTC { get; set; }
         public RpcID GetID => RpcID.BroadcastPlayerTickDataToServer;
@@ -405,7 +405,7 @@ namespace DeterministicLockstep
         public int SimulationTick { get; set; } 
 
         public RpcID GetID => RpcID.BroadcastTickDataToClients;
-
+        
         public void Serialize(NetworkDriver mDriver, NetworkConnection connection,
             NetworkPipeline reliableSimulationPipeline)
         {

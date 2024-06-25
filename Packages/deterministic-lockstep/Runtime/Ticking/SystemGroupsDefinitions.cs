@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Core;
@@ -94,14 +95,17 @@ namespace DeterministicLockstep
         public struct DeterministicFixedStepRateManager : IRateManager
         {
             private EntityQuery _deterministicTimeQuery;
+            private EntityQuery _deterministicSettingsQuery;
             private EntityQuery _connectionQuery;
             private EntityQuery _inputDataQuery;
             private EntityQuery _deterministicClientQuery;
             private bool wasLogging;
+            private NativeList<RpcBroadcastTickDataToClients> dataToReplay;
 
             public DeterministicFixedStepRateManager(ComponentSystemGroup group) : this()
             {
                 _deterministicTimeQuery = group.EntityManager.CreateEntityQuery(typeof(DeterministicTime));
+                _deterministicSettingsQuery = group.EntityManager.CreateEntityQuery(typeof(DeterministicSettings));
                 _deterministicClientQuery = group.EntityManager.CreateEntityQuery(typeof(DeterministicClientComponent));
                 _connectionQuery =
                     group.EntityManager.CreateEntityQuery(
@@ -112,13 +116,46 @@ namespace DeterministicLockstep
 
             public bool ShouldGroupUpdate(ComponentSystemGroup group)
             {
-                var deterministicClient = _deterministicClientQuery.GetSingleton<DeterministicClientComponent>();
-                if (deterministicClient.deterministicClientWorkingMode != DeterministicClientWorkingMode.RunDeterministicSimulation)
+                var deterministicClient = _deterministicClientQuery.GetSingletonRW<DeterministicClientComponent>();
+                if (deterministicClient.ValueRO.deterministicClientWorkingMode != DeterministicClientWorkingMode.RunDeterministicSimulation)
                     return false;
                 
                 var deltaTime = (double) group.World.Time.DeltaTime;
                 var deterministicTime = _deterministicTimeQuery.GetSingletonRW<DeterministicTime>();
+                var deterministicSettings = _deterministicSettingsQuery.GetSingletonRW<DeterministicSettings>();
                 var localConnectionEntity = _connectionQuery.ToEntityArray(Allocator.Temp);
+
+                if (deterministicSettings.ValueRO.isReplayFromFile && !dataToReplay.IsCreated)
+                {
+                    dataToReplay = new NativeList<RpcBroadcastTickDataToClients>(Allocator.Persistent);
+                    var tempDataToReplay = DeterministicLogger.Instance.ReadTicksFromFile();
+
+                    for (int i = 0; i < tempDataToReplay.Length; i++)
+                    {
+                        NativeList<int> tempNetworkIDs = new NativeList<int>(tempDataToReplay[i].NetworkIDs.Length,
+                            Allocator.Persistent);
+                        NativeList<PongInputs> tempPongInputs = new NativeList<PongInputs>(tempDataToReplay[i].PlayersPongGameInputs.Length,
+                            Allocator.Persistent);
+
+                        RpcBroadcastTickDataToClients tempRpc = new RpcBroadcastTickDataToClients();
+                        
+                        for (int j = 0; j < tempDataToReplay[i].NetworkIDs.Length; j++)
+                        {
+                            tempNetworkIDs.Add(tempDataToReplay[i].NetworkIDs[j]);
+                        }
+                        
+                        for (int j = 0; j < tempDataToReplay[i].PlayersPongGameInputs.Length; j++)
+                        {
+                            tempPongInputs.Add(tempDataToReplay[i].PlayersPongGameInputs[j]);
+                        }
+                        
+                        tempRpc.NetworkIDs = tempNetworkIDs;
+                        tempRpc.PlayersPongGameInputs = tempPongInputs;
+                        tempRpc.SimulationTick = tempDataToReplay[i].SimulationTick;
+                        
+                        dataToReplay.Add(tempRpc);
+                    }
+                }
                 
                 // var currentLocalTime = DateTime.UtcNow.TimeOfDay;
                 // var howMuchTimePassedSinceReceivingRPCAboutGameStart = currentLocalTime.TotalMilliseconds -
@@ -145,38 +182,40 @@ namespace DeterministicLockstep
                 
                 
                 var isTimeToSendNextTick = false;
-                if (deterministicTime.ValueRO.numTimesTickedThisFrame >=
-                    MaxTicksPerFrame) // If we already ticked maximum times this frame
-                {
-                    isTimeToSendNextTick = false;
-                    deterministicTime.ValueRW.timeLeftToSendNextTick += LocalDeltaTime;
-                }
-                else if (deterministicTime.ValueRO.timeLeftToSendNextTick > deltaTime) // If we should wait
-                {
-                    isTimeToSendNextTick = false;
-                    deterministicTime.ValueRW.timeLeftToSendNextTick -= deltaTime;
-                }
-                else if (deterministicTime.ValueRO.timeLeftToSendNextTick <= deltaTime) // either lower on + or on -
-                {
-                    if (deterministicTime.ValueRO.timeLeftToSendNextTick >= 0) // If lets say deltaTime=16 and time=12
+                
+                    if (deterministicTime.ValueRO.numTimesTickedThisFrame >=
+                        MaxTicksPerFrame) // If we already ticked maximum times this frame
                     {
-                        isTimeToSendNextTick = true;
+                        isTimeToSendNextTick = false;
+                        deterministicTime.ValueRW.timeLeftToSendNextTick += LocalDeltaTime;
+                    }
+                    else if (deterministicTime.ValueRO.timeLeftToSendNextTick > deltaTime) // If we should wait
+                    {
+                        isTimeToSendNextTick = false;
                         deterministicTime.ValueRW.timeLeftToSendNextTick -= deltaTime;
                     }
-                    else // in this case time < 0 which means that for example deltaTime was 60 and time was 10 (so now we are -50)
+                    else if (deterministicTime.ValueRO.timeLeftToSendNextTick <= deltaTime) // either lower on + or on -
                     {
-                        if (deterministicTime.ValueRW.timeLeftToSendNextTick + deltaTime > 0) // if time=-14 and delta=16 it means that the result should be 2
-                        {
-                            isTimeToSendNextTick = false;
-                            deterministicTime.ValueRW.timeLeftToSendNextTick += deltaTime;
-                        }
-                        else // tick otherwise
+                        if (deterministicTime.ValueRO.timeLeftToSendNextTick >= 0) // If lets say deltaTime=16 and time=12
                         {
                             isTimeToSendNextTick = true;
-                            deterministicTime.ValueRW.timeLeftToSendNextTick +=  deltaTime;
+                            deterministicTime.ValueRW.timeLeftToSendNextTick -= deltaTime;
+                        }
+                        else // in this case time < 0 which means that for example deltaTime was 60 and time was 10 (so now we are -50)
+                        {
+                            if (deterministicTime.ValueRW.timeLeftToSendNextTick + deltaTime > 0) // if time=-14 and delta=16 it means that the result should be 2
+                            {
+                                isTimeToSendNextTick = false;
+                                deterministicTime.ValueRW.timeLeftToSendNextTick += deltaTime;
+                            }
+                            else // tick otherwise
+                            {
+                                isTimeToSendNextTick = true;
+                                deterministicTime.ValueRW.timeLeftToSendNextTick +=  deltaTime;
+                            }
                         }
                     }
-                }
+                
 
                 // Debug.LogError("Should group update: " + isTimeToSendNextTick + ", tick: " +
                 // deterministicTime.ValueRO.currentClientTickToSend);
@@ -205,30 +244,56 @@ namespace DeterministicLockstep
                         return true;
                     }
                     
-                    
-                    var hasInputsForThisTick = deterministicTime.ValueRO.storedIncomingTicksFromServer.Count > 0;
-
-                    if (hasInputsForThisTick)
+                    if(dataToReplay.IsCreated && dataToReplay.Length > 0)
                     {
-                        // If we found on we can increment both ticks (current presentation tick and tick we will send to server)
+                        var rpc = dataToReplay[0];
+                        dataToReplay.RemoveAt(0);
+                        
                         deterministicTime.ValueRW.currentSimulationTick++;
                         deterministicTime.ValueRW.currentClientTickToSend++;
-
-                        // first update the component data before we will remove the info from the array to make space for more
-                        UpdateComponentsData(deterministicTime.ValueRW.storedIncomingTicksFromServer.Dequeue(),
-                            group); // it will remove it so no reason for dispose method for arrays?
-
+                        
+                        UpdateComponentsData(rpc, group);
+                      
                         group.EntityManager.SetComponentEnabled<PlayerInputDataToUse>(localConnectionEntity[0],
                             true);
-
                         deterministicTime.ValueRW.deterministicLockstepElapsedTime += deltaTime;
                         deterministicTime.ValueRW.numTimesTickedThisFrame++;
+                        
                         group.World.PushTime(
                             new TimeData(deterministicTime.ValueRO.deterministicLockstepElapsedTime,
                                 LocalDeltaTime));
-
+                        if(dataToReplay.Length == 0)
+                        {
+                            deterministicClient.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.Desync;
+                        }
                         return true;
                     }
+                    else
+                    {
+                        if (deterministicTime.ValueRO.storedIncomingTicksFromServer.Count > 0)
+                        {
+                            // If we found on we can increment both ticks (current presentation tick and tick we will send to server)
+                            deterministicTime.ValueRW.currentSimulationTick++;
+                            deterministicTime.ValueRW.currentClientTickToSend++;
+
+                            // first update the component data before we will remove the info from the array to make space for more
+                            UpdateComponentsData(deterministicTime.ValueRW.storedIncomingTicksFromServer.Dequeue(),
+                                group); // it will remove it so no reason for dispose method for arrays?
+
+                            group.EntityManager.SetComponentEnabled<PlayerInputDataToUse>(localConnectionEntity[0],
+                                true);
+
+                            deterministicTime.ValueRW.deterministicLockstepElapsedTime += deltaTime;
+                            deterministicTime.ValueRW.numTimesTickedThisFrame++;
+                            group.World.PushTime(
+                                new TimeData(deterministicTime.ValueRO.deterministicLockstepElapsedTime,
+                                    LocalDeltaTime));
+
+                            return true;
+                        }
+                    }
+
+                    
 
                     //check if we already pushed time this frame
                     for (int i = 0; i < deterministicTime.ValueRO.numTimesTickedThisFrame; i++)

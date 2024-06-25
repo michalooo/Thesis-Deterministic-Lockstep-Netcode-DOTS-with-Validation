@@ -46,6 +46,8 @@ namespace DeterministicLockstep
         /// List of player inputs for each tick
         /// </summary>
         private Dictionary<ulong, NativeList<RpcBroadcastPlayerTickDataToServer>> _everyTickInputBuffer; // we are storing inputs for each tick but in reality we only need to store previousConfirmed, previousPredicted, currentPredicted and currentConfirmed (interpolation purposes)
+
+        private NativeList<RpcBroadcastTickDataToClients> _serverDataToClients;
         
         /// <summary>
         /// List of hashes for each tick
@@ -179,6 +181,7 @@ namespace DeterministicLockstep
             playersPings.Dispose();
             averagePingPerPlayer.Dispose();
             _everyTickInputBuffer.Clear();
+            _serverDataToClients.Dispose();
             _everyTickHashBuffer.Clear();
             endGameHashes.Dispose();
         }
@@ -202,6 +205,7 @@ namespace DeterministicLockstep
             _mNetworkIDs = new NativeList<int>(Allocator.Persistent);
 
             _everyTickInputBuffer = new Dictionary<ulong, NativeList<RpcBroadcastPlayerTickDataToServer>>();
+            _serverDataToClients = new NativeList<RpcBroadcastTickDataToClients>(Allocator.Persistent);
             _everyTickHashBuffer = new Dictionary<ulong, NativeList<NativeList<ulong>>>();
             endGameHashes = new NativeList<RpcGameEnded>(Allocator.Persistent);
             
@@ -468,13 +472,29 @@ namespace DeterministicLockstep
         /// <param name="playerInputs">List of client inputs</param>
         private void SendRPCWithPlayersInputUpdate(NativeList<int> networkIDs, NativeList<PongInputs> playerInputs)
         {
+            // Clone networkIDs
+            NativeList<int> clonedNetworkIDs = new NativeList<int>(Allocator.Persistent);
+            foreach (var id in networkIDs)
+            {
+                clonedNetworkIDs.Add(id);
+            }
+
+            // Clone playerInputs
+            NativeList<PongInputs> clonedPlayerInputs = new NativeList<PongInputs>(Allocator.Persistent);
+            foreach (var input in playerInputs)
+            {
+                clonedPlayerInputs.Add(input); // Ensure PongInputs is a struct for this to correctly copy by value
+            }
+            
             var rpc = new RpcBroadcastTickDataToClients
             {
-                NetworkIDs = networkIDs,
-                PlayersPongGameInputs = playerInputs,
+                NetworkIDs = clonedNetworkIDs,
+                PlayersPongGameInputs = clonedPlayerInputs,
                 SimulationTick = _lastTickReceivedFromClient
             };
-
+            _serverDataToClients.Add(rpc);
+            
+            
             foreach (var connectedPlayer in _connectedPlayers.Where(connectedPlayer => connectedPlayer.IsCreated))
             {
                 rpc.Serialize(_mDriver, connectedPlayer, _reliablePipeline);
@@ -484,6 +504,26 @@ namespace DeterministicLockstep
         /// <summary>
         /// Function used to send RPC to clients with information about desynchronization.
         /// </summary>
+        private void SendRPCWithPlayersDesynchronizationInfo(NativeList<int> networkIDs, NativeList<PongInputs> playerInputs)
+        {
+            var rpcToLog = new RpcBroadcastTickDataToClients
+            {
+                NetworkIDs = networkIDs,
+                PlayersPongGameInputs = playerInputs,
+                SimulationTick = _lastTickReceivedFromClient
+            };
+            _serverDataToClients.Add(rpcToLog);
+            
+            Debug.LogError("Desynchronized");
+            var rpc = new RpcPlayerDesynchronizationMessage { NonDeterministicTick = (ulong) _lastTickReceivedFromClient};
+
+            foreach (var connection in _connectedPlayers.Where(connection => connection.IsCreated))
+            {
+                rpc.Serialize(_mDriver, connection, _emptyPipeline);
+            }
+            DeterministicLogger.Instance.LogInputsToFile(_serverDataToClients);
+        }
+        
         private void SendRPCWithPlayersDesynchronizationInfo()
         {
             Debug.LogError("Desynchronized");
@@ -493,7 +533,7 @@ namespace DeterministicLockstep
             {
                 rpc.Serialize(_mDriver, connection, _emptyPipeline);
             }
-            DeterministicLogger.Instance.LogInputsToFile((ulong)_lastTickReceivedFromClient, _everyTickInputBuffer);
+            DeterministicLogger.Instance.LogInputsToFile(_serverDataToClients);
         }
 
         /// <summary>
@@ -711,7 +751,7 @@ namespace DeterministicLockstep
                 }
                 else
                 {
-                    SendRPCWithPlayersDesynchronizationInfo();
+                    SendRPCWithPlayersDesynchronizationInfo(networkIDs, inputs);
                 }
             
                 networkIDs.Dispose();

@@ -14,6 +14,7 @@ namespace PongGame
         private const string LOCAL_SERVER_ADDRESS = "127.0.0.1";
         // Host option
         public Toggle IsLocalMultiplayerSimulation;
+        public Toggle IsReplayFromFile;
         public InputField GamePort;
         public InputField FrameRate;
         public InputField ForcedInputLatency;
@@ -66,8 +67,8 @@ namespace PongGame
                 hashCalculationOption = (DeterminismHashCalculationOption) hashOption.value,
                 ticksAhead = int.Parse(ForcedInputLatency.text),
                 simulationTickRate = int.Parse(FrameRate.text),
-                allowedConnectionsPerGame = 2
-            
+                allowedConnectionsPerGame = 2,
+                isReplayFromFile = IsReplayFromFile.isOn
             });
             
             clientEntityManager.CreateSingleton(new DeterministicSettings
@@ -77,7 +78,8 @@ namespace PongGame
                 hashCalculationOption = (DeterminismHashCalculationOption) hashOption.value,
                 ticksAhead = int.Parse(ForcedInputLatency.text),
                 simulationTickRate = int.Parse(FrameRate.text),
-                allowedConnectionsPerGame = 2
+                allowedConnectionsPerGame = 2,
+                isReplayFromFile = IsReplayFromFile.isOn
             });
             
             if (IsLocalMultiplayerSimulation.isOn)
@@ -91,7 +93,8 @@ namespace PongGame
                     hashCalculationOption = (DeterminismHashCalculationOption) hashOption.value,
                     ticksAhead = int.Parse(ForcedInputLatency.text),
                     simulationTickRate = int.Parse(FrameRate.text),
-                    allowedConnectionsPerGame = 2
+                    allowedConnectionsPerGame = 2,
+                    isReplayFromFile = IsReplayFromFile.isOn
                 });
             }
             
@@ -108,7 +111,8 @@ namespace PongGame
             clientEntityManager.CreateSingleton(new DeterministicSettings
             {
                 _serverAddress = HostAddress.text,
-                _serverPort = int.Parse(GamePort.text)
+                _serverPort = int.Parse(GamePort.text),
+                isReplayFromFile = IsReplayFromFile.isOn
             });
             
             SceneManager.LoadScene("PongGame");
