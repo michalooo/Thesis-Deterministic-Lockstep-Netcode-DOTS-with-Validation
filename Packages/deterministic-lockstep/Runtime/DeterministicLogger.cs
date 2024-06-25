@@ -18,10 +18,12 @@ namespace DeterministicLockstep
         private Logger determinismLogger;
         private Logger inputLogger;
         private Logger settingsLogger;
+        private Logger systemInfoLogger;
         const int maxBatchSize = 200; // without this division I was getting errors regarding the batch size
         private bool isInputWritten = false;
         private bool isHashWritten = false;
         private bool isSettingsWritten = false;
+        private bool isSystemInfoWritten = false;
 
         private Dictionary<ulong, List<string>> _tickHashBuffer;
 
@@ -40,6 +42,7 @@ namespace DeterministicLockstep
             CreateInputLogger();
             CreateDeterminismLogger();
             CreateSettingsLogger();
+            CreateSystemInfoLogger();
         }
 
         public Dictionary<ulong, List<string>> GetHashDictionary()
@@ -94,6 +97,19 @@ namespace DeterministicLockstep
                 .WriteTo.File(determinismLoggerFileName, minLevel: LogLevel.Verbose)
                 .WriteTo.StdOut(outputTemplate: "{Message}"));
         }
+        
+        public void CreateSystemInfoLogger()
+        {
+            var determinismLoggerFileName = "NonDeterminismLogs/" + DateTime.Now.Year + "_" +
+                                            DateTime.Now.Month + "_" +
+                                            DateTime.Now.Day + "_" + DateTime.Now.Hour + "_" + DateTime.Now.Minute +
+                                            "_" + DateTime.Now.Second + "/_SystemInfo_.txt";
+            systemInfoLogger = new Logger(new LoggerConfig()
+                .MinimumLevel.Debug()
+                .OutputTemplate("{Message}")
+                .WriteTo.File(determinismLoggerFileName, minLevel: LogLevel.Verbose)
+                .WriteTo.StdOut(outputTemplate: "{Message}"));
+        }
 
         public void CreateInputLogger()
         {
@@ -128,6 +144,17 @@ namespace DeterministicLockstep
             Log.FlushAll();
         }
         
+        public void LogSystemInfo()
+        {
+            Log.Logger = systemInfoLogger;
+            Log.Info("Operating System: " + SystemInfo.operatingSystem);
+            Log.Info("Processor: " + SystemInfo.processorType + " with " + SystemInfo.processorCount + " cores");
+            Log.Info("GPU: " + SystemInfo.graphicsDeviceName + ", VRAM: " + SystemInfo.graphicsMemorySize + " MB");
+            Log.Info("RAM: " + SystemInfo.systemMemorySize + " MB");
+            Log.Info("Screen Resolution: " + Screen.currentResolution.width + "x" + Screen.currentResolution.height);
+            Log.FlushAll();
+        }
+        
 
         public void LogInput(string message)
         {
@@ -150,6 +177,7 @@ namespace DeterministicLockstep
 
             string testJsonOutput = JsonUtility.ToJson(settings, true);
             LogSettings(testJsonOutput);
+            LogSystemInfo();
         }
 
         public void LogInputsToFile(NativeList<RpcBroadcastTickDataToClients> _serverDataToClients)
