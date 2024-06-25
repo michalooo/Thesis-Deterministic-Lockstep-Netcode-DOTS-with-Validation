@@ -77,7 +77,12 @@ namespace DeterministicLockstep
                 DeterministicClientWorkingMode.Desync && determinismSystemGroup.Enabled)
             {
                 determinismSystemGroup.Enabled = false;
+                if (SystemAPI.GetSingletonRW<DeterministicSettings>().ValueRO.isReplayFromFile)
+                {
+                    nonDeterministicTick = (ulong) SystemAPI.GetSingletonRW<DeterministicSettings>().ValueRO.nonDeterministicTickDuringReplay;
+                }
                 DeterministicLogger.Instance.LogHashesToFile(nonDeterministicTick);
+                DeterministicLogger.Instance.LogSettingsToFile(SystemAPI.GetSingletonRW<DeterministicSettings>().ValueRO);
             }
 
             if (SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode ==
@@ -338,13 +343,13 @@ namespace DeterministicLockstep
 
             var client = SystemAPI.GetSingletonRW<DeterministicClientComponent>();
             client.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.RunDeterministicSimulation;
-            client.ValueRW.randomSeed = rpc.SeedForPlayerRandomActions;
             
             var settings = SystemAPI.GetSingletonRW<DeterministicSettings>();
             settings.ValueRW.simulationTickRate = rpc.TickRate;
             settings.ValueRW.ticksAhead = rpc.TicksOfForcedInputLatency;
             settings.ValueRW.hashCalculationOption = (DeterminismHashCalculationOption) rpc.DeterminismHashCalculationOption;
             settings.ValueRW.isInGame = true;
+            settings.ValueRW.randomSeed = rpc.SeedForPlayerRandomActions;
             
             // foreach (var connectionReference in SystemAPI
             //              .Query<RefRO<NetworkConnectionReference>>()

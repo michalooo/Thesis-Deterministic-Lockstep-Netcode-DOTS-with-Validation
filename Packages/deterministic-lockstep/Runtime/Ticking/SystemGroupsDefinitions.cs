@@ -155,6 +155,8 @@ namespace DeterministicLockstep
                         
                         dataToReplay.Add(tempRpc);
                     }
+                    
+                    deterministicSettings.ValueRW.nonDeterministicTickDuringReplay = dataToReplay.Length;
                 }
                 
                 // var currentLocalTime = DateTime.UtcNow.TimeOfDay;

@@ -17,9 +17,11 @@ namespace DeterministicLockstep
         public static DeterministicLogger Instance { get; private set; }
         private Logger determinismLogger;
         private Logger inputLogger;
+        private Logger settingsLogger;
         const int maxBatchSize = 200; // without this division I was getting errors regarding the batch size
         private bool isInputWritten = false;
         private bool isHashWritten = false;
+        private bool isSettingsWritten = false;
 
         private Dictionary<ulong, List<string>> _tickHashBuffer;
 
@@ -37,6 +39,7 @@ namespace DeterministicLockstep
             _tickHashBuffer = new Dictionary<ulong, List<string>>();
             CreateInputLogger();
             CreateDeterminismLogger();
+            CreateSettingsLogger();
         }
 
         public Dictionary<ulong, List<string>> GetHashDictionary()
@@ -47,7 +50,7 @@ namespace DeterministicLockstep
         public void AddToHashDictionary(ulong tick, string message)
         {
             // Check if the dictionary contains more than 9 keys
-            if (_tickHashBuffer.Count > 9)
+            if (_tickHashBuffer.Count > 18)
             {
                 // Find the lowest key
                 ulong lowestKey = ulong.MaxValue;
@@ -81,10 +84,10 @@ namespace DeterministicLockstep
 
         public void CreateDeterminismLogger()
         {
-            var determinismLoggerFileName = "NonDeterminismLogs/_DeterminismLogs_" + DateTime.Now.Year + "_" +
+            var determinismLoggerFileName = "NonDeterminismLogs/" + DateTime.Now.Year + "_" +
                                             DateTime.Now.Month + "_" +
                                             DateTime.Now.Day + "_" + DateTime.Now.Hour + "_" + DateTime.Now.Minute +
-                                            "_" + DateTime.Now.Second + ".log";
+                                            "_" + DateTime.Now.Second + "/_DeterminismLogs_.txt";
             determinismLogger = new Logger(new LoggerConfig()
                 .MinimumLevel.Debug()
                 .OutputTemplate("{Message}")
@@ -94,16 +97,37 @@ namespace DeterministicLockstep
 
         public void CreateInputLogger()
         {
-            var inputLoggerFileName = "NonDeterminismLogs/_ServerInputRecording_" + DateTime.Now.Year + "-" +
-                                      DateTime.Now.Month + "-" +
-                                      DateTime.Now.Day + "____" + DateTime.Now.Hour + "-" + DateTime.Now.Minute + "-" +
-                                      DateTime.Now.Second + ".log";
+            var inputLoggerFileName = "NonDeterminismLogs/" + DateTime.Now.Year + "_" +
+                                      DateTime.Now.Month + "_" +
+                                      DateTime.Now.Day + "_" + DateTime.Now.Hour + "_" + DateTime.Now.Minute +
+                                      "_" + DateTime.Now.Second + "/_ServerInputRecording_.txt";
             inputLogger = new Logger(new LoggerConfig()
                 .MinimumLevel.Debug()
                 .OutputTemplate("{Message}")
                 .WriteTo.File(inputLoggerFileName, minLevel: LogLevel.Verbose)
                 .WriteTo.StdOut(outputTemplate: "{Message}"));
         }
+        
+        public void CreateSettingsLogger()
+        {
+            var inputLoggerFileName = "NonDeterminismLogs/" + DateTime.Now.Year + "_" +
+                                      DateTime.Now.Month + "_" +
+                                      DateTime.Now.Day + "_" + DateTime.Now.Hour + "_" + DateTime.Now.Minute +
+                                      "_" + DateTime.Now.Second + "/_ClientGameSettings_.txt";
+            settingsLogger = new Logger(new LoggerConfig()
+                .MinimumLevel.Debug()
+                .OutputTemplate("{Message}")
+                .WriteTo.File(inputLoggerFileName, minLevel: LogLevel.Verbose)
+                .WriteTo.StdOut(outputTemplate: "{Message}"));
+        }
+        
+        public void LogSettings(string message)
+        {
+            Log.Logger = settingsLogger;
+            Log.Info(message);
+            Log.FlushAll();
+        }
+        
 
         public void LogInput(string message)
         {
@@ -117,6 +141,15 @@ namespace DeterministicLockstep
             Log.Logger = determinismLogger;
             Log.Info(message);
             Log.FlushAll();
+        }
+        
+        public void LogSettingsToFile(DeterministicSettings settings)
+        {
+            if (isSettingsWritten) return;
+            isSettingsWritten = true;
+
+            string testJsonOutput = JsonUtility.ToJson(settings, true);
+            LogSettings(testJsonOutput);
         }
 
         public void LogInputsToFile(NativeList<RpcBroadcastTickDataToClients> _serverDataToClients)
@@ -143,8 +176,6 @@ namespace DeterministicLockstep
                 string testJsonOutput = JsonUtility.ToJson(tempRpc, true);
                 LogInput(testJsonOutput);
             }
-            
-            
         }
 
         [Serializable]
@@ -158,7 +189,7 @@ namespace DeterministicLockstep
 
         public NativeList<RpcBroadcastTickDataToClients> ReadTicksFromFile()
         {
-            var filePath = "NonDeterminismLogs/_ServerInputRecordingToReplay_.log";
+            var filePath = "NonDeterminismLogs/_ServerInputRecordingToReplay_.txt";
             var test = new List<TempRpcBroadcastTickDataToClients>();
             
             using (var sr = new StreamReader(filePath))
@@ -218,9 +249,8 @@ namespace DeterministicLockstep
         {
             if (isHashWritten) return;
             
-            Debug.Log(isHashWritten);
             isHashWritten = true;
-            var logBuilder = new System.Text.StringBuilder();
+            var logBuilder = new StringBuilder();
             foreach (var (tick, inputDataList) in GetHashDictionary())
             {
                 if(nonDeterministicTick == tick)

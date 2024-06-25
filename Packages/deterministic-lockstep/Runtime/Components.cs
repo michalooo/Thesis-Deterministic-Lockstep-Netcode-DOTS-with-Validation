@@ -161,7 +161,6 @@ namespace DeterministicLockstep
     /// </summary>
     public struct DeterministicClientComponent : IComponentData
     {
-        public uint randomSeed;
         public int clientNetworkId;
         public DeterministicClientWorkingMode deterministicClientWorkingMode;
     }

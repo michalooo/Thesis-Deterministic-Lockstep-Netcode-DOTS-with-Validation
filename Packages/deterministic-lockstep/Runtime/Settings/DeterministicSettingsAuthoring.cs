@@ -1,4 +1,5 @@
-﻿using Unity.Collections;
+﻿using System;
+using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
 
@@ -13,6 +14,7 @@ namespace DeterministicLockstep
         None
     }
     
+    [Serializable]
     public struct DeterministicSettings : IComponentData
     {
         public int ticksAhead;
@@ -20,13 +22,15 @@ namespace DeterministicLockstep
         public int simulationTickRate;
         public DeterminismHashCalculationOption hashCalculationOption;
         public bool isReplayFromFile;
+        public int nonDeterministicTickDuringReplay;
+        public uint randomSeed;
 
         public bool isInGame;
         public bool isSimulationCatchingUp; // need to be set
         public bool isGameFinished;
-        
-        public FixedString32Bytes _serverAddress { get; set; }
-        public int _serverPort { get; set; }
+
+        public FixedString32Bytes _serverAddress;
+        public int _serverPort;
     }
     
     public class DeterministicSettingsAuthoring : MonoBehaviour // Will it work both on Client and Server?
