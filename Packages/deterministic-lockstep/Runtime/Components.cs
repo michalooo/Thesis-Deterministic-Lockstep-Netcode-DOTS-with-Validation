@@ -168,6 +168,7 @@ namespace DeterministicLockstep
     /// <summary>
     /// Predefined struct for managing player inputs in the sample Pong game
     /// </summary>
+    [Serializable]
     public struct PongInputs: IComponentData
     {
         public int verticalInput;

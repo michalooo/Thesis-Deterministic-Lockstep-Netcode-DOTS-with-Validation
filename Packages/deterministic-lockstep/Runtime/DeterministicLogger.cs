@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Logging;
 using Unity.Logging.Sinks;
 using UnityEngine;
 using Logger = Unity.Logging.Logger;
+using Unity.Entities.Serialization;
 
 namespace DeterministicLockstep
 {
@@ -114,35 +116,86 @@ namespace DeterministicLockstep
         
         public void LogInputsToFile(ulong nonDeterministicTick, Dictionary<ulong, NativeList<RpcBroadcastPlayerTickDataToServer>> _everyTickInputBuffer)
         {
-           if(isInputWritten) return;
-           
-           isInputWritten = true;
-            var logBuilder = new System.Text.StringBuilder();
+            if(isInputWritten) return;
+    
+            isInputWritten = true;
+            var allTicksData = new List<SerializableTickData>();
+
             foreach (var tickEntry in _everyTickInputBuffer)
             {
                 ulong tick = tickEntry.Key;
                 NativeList<RpcBroadcastPlayerTickDataToServer> inputDataList = tickEntry.Value;
-            
-                if (nonDeterministicTick < tick) return;
-                
-                logBuilder.AppendLine("Tick " + tick);
+        
+                if (nonDeterministicTick < tick) continue;
+        
+                var inputs = new List<SerializablePlayerInputData>();
+        
                 for (int i = 0; i < inputDataList.Length; i++)
                 {
                     var inputData = inputDataList[i];
-                    logBuilder.AppendLine("     PlayerID: " + inputData.PlayerNetworkID + " Inputs: " + inputData.PongGameInputs.verticalInput);
-                        
-                    if (logBuilder.Length >= maxBatchSize)
-                    {
-                        // Log the current batch
-                        LogInput(logBuilder.ToString());
-                        // Clear the log builder for the next batch
-                        logBuilder.Clear();
-                    }
+                    inputs.Add(new SerializablePlayerInputData(inputData.PlayerNetworkID, inputData.PongGameInputs.verticalInput));
                 }
+
+                var jsonTick = new SerializableTickData(tick, inputs);
+                allTicksData.Add(jsonTick);
+                string testJsonOutput = JsonUtility.ToJson(jsonTick, true);
+                LogInput(testJsonOutput);
             }
-            if (logBuilder.Length > 0)
+        }
+        
+        public List<SerializableTickData> ReadTicksFromFile(string filePath)
+        {
+            try
             {
-                LogInput(logBuilder.ToString());
+                // Read all lines from the file
+                string allText = File.ReadAllText(filePath);
+            
+                // Normalize newlines, split by '}' and remove empty entries
+                string[] jsonObjects = allText.Replace("}\n{", "},{").Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
+
+                // Wrap the individual JSON objects into a JSON array
+                string jsonArray = "[" + string.Join("", jsonObjects) + "]";
+
+                // Deserialize the JSON array to List<SerializableTickData>
+                var test = JsonUtility.FromJson<Wrapper>(jsonArray).Ticks;
+                return test;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError("Failed to read or parse the file: " + ex.Message);
+                return new List<SerializableTickData>();
+            }
+        }
+        
+        [Serializable]
+        private class Wrapper
+        {
+            public List<SerializableTickData> Ticks;
+        }
+        
+        [System.Serializable]
+        public class SerializableTickData
+        {
+            public ulong Tick;
+            public List<SerializablePlayerInputData> Inputs;
+
+            public SerializableTickData(ulong tick, List<SerializablePlayerInputData> inputs)
+            {
+                Tick = tick;
+                Inputs = inputs;
+            }
+        }
+
+        [System.Serializable]
+        public class SerializablePlayerInputData
+        {
+            public int PlayerNetworkID;
+            public int VerticalInput;
+
+            public SerializablePlayerInputData(int playerNetworkID, int verticalInput)
+            {
+                PlayerNetworkID = playerNetworkID;
+                VerticalInput = verticalInput;
             }
         }
         

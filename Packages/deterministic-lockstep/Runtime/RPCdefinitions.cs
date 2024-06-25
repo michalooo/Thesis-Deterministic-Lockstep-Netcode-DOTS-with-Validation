@@ -323,6 +323,7 @@ namespace DeterministicLockstep
     /// Struct that is being send by the clients to the server at the end of each tick. It contains info about all player inputs
     /// </summary>
     [BurstCompile]
+    [Serializable]
     public struct RpcBroadcastPlayerTickDataToServer : INetcodeRPC
     {
         public PongInputs PongGameInputs;
