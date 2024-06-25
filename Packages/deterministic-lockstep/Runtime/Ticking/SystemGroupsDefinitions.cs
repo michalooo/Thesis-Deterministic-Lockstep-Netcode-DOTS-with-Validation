@@ -129,6 +129,16 @@ namespace DeterministicLockstep
                 {
                     dataToReplay = new NativeList<RpcBroadcastTickDataToClients>(Allocator.Persistent);
                     var tempDataToReplay = DeterministicLogger.Instance.ReadTicksFromFile();
+                    var tempDeterministicSettings = DeterministicLogger.Instance.ReadSettingsFromFile();
+                    
+                    deterministicSettings.ValueRW.ticksAhead = tempDeterministicSettings.ticksAhead;
+                    deterministicSettings.ValueRW.allowedConnectionsPerGame = tempDeterministicSettings.allowedConnectionsPerGame;
+                    deterministicSettings.ValueRW.simulationTickRate = tempDeterministicSettings.simulationTickRate;
+                    deterministicSettings.ValueRW.hashCalculationOption = tempDeterministicSettings.hashCalculationOption;
+                    deterministicSettings.ValueRW.isReplayFromFile = true;
+                    deterministicSettings.ValueRW.randomSeed = tempDeterministicSettings.randomSeed;
+                    deterministicSettings.ValueRW._serverAddress = tempDeterministicSettings._serverAddress;
+                    deterministicSettings.ValueRW._serverPort = tempDeterministicSettings._serverPort;
 
                     for (int i = 0; i < tempDataToReplay.Length; i++)
                     {

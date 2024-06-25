@@ -27,7 +27,7 @@ namespace DeterministicLockstep
 
         public bool isInGame;
         public bool isSimulationCatchingUp; // need to be set
-        public bool isGameFinished;
+        public bool isGameFinished; // DIVIDE THOSE
 
         public FixedString32Bytes _serverAddress;
         public int _serverPort;

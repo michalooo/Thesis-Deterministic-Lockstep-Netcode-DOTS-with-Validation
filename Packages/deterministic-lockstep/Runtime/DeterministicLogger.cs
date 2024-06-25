@@ -270,6 +270,25 @@ namespace DeterministicLockstep
             
             return rpcBroadcastTickDataToClients;
         }
+        
+        public DeterministicSettings ReadSettingsFromFile()
+        {
+            var filePath = "NonDeterminismLogs/_ClientGameSettingsToReplay_.txt";
+            var settings = new DeterministicSettings();
+            try
+            {
+                // Read the entire file content at once
+                string json = File.ReadAllText(filePath);
+                settings = JsonUtility.FromJson<DeterministicSettings>(json);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError("Failed to read from file or parse JSON: " + ex.Message);
+            }
+
+            return settings;
+        }
+
 
 
 

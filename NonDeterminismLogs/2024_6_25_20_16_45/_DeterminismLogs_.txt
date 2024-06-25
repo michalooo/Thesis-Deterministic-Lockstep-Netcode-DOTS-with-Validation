@@ -1,0 +1,899 @@
+Tick 205
+          Entity(239:5)
+               Component [PongGame.Velocity] - Hash value 12322039733599138380
+               Component [Unity.Transforms.LocalTransform] - Hash value 12430017993500518788
+
+                    Position float3(6.093186f, -3.377506f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(240:1)
+               Component [Unity.Transforms.LocalTransform] - Hash value 5379015839036897261
+
+                    Position float3(-11.63665f, 0.9047439f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 1
+          Entity(241:1)
+               Component [Unity.Transforms.LocalTransform] - Hash value 7905314462215909546
+
+                    Position float3(11.63665f, -6.000001f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 1
+          Entity(245:5)
+               Component [PongGame.Velocity] - Hash value 16834745680450260910
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 5415008592337357397
+                    Position float3(-0.8183842f, 0.9089076f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(246:7)
+               Component [PongGame.Velocity] - Hash value 14728362512443283545
+               Component [Unity.Transforms.LocalTransform] - Hash value 12214061473697757972
+
+                    Position float3(-2.047726f, -4.391365f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(247:5)
+               Component [PongGame.Velocity] - Hash value 16774757758282827350
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 5427006176770844109
+                    Position float3(7.784344f, 3.460632f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(251:1)
+               Component [PongGame.Velocity] - Hash value 3200647164428999624
+               Component [Unity.Transforms.LocalTransform] - Hash value 5283035163569003565
+
+                    Position float3(2.186094f, 6.497181f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(253:5)
+               Component [PongGame.Velocity] - Hash value 12334037318032625092
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 5451001345637817533
+                    Position float3(7.170078f, 5.665554f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(255:3)
+               Component [PongGame.Velocity] - Hash value 3224642333295973048
+               Component [Unity.Transforms.LocalTransform] - Hash value 16942723940351641318
+
+                    Position float3(-1.311604f, 2.574168f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(257:3)
+               Component [PongGame.Velocity] - Hash value 5355020670169923837
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 710341294550447475
+                    Position float3(-5.611194f, 0.654833f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(259:5)
+               Component [PongGame.Velocity] - Hash value 14752357681310256969
+               Component [Unity.Transforms.LocalTransform] - Hash value 12346034902466111804
+
+                    Position float3(-2.247824f, 0.3963523f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(261:3)
+               Component [PongGame.Velocity] - Hash value 9939712123621966639
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 14668374590275849985
+                    Position float3(-7.669107f, 3.289294f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(263:3)
+               Component [PongGame.Velocity] - Hash value 9951709708055453351
+               Component [Unity.Transforms.LocalTransform] - Hash value 890305061052748155
+
+                    Position float3(-11.70372f, -2.505054f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(265:5)
+               Component [PongGame.Velocity] - Hash value 3080671320094132504
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 7641367604679201882
+                    Position float3(0.7197818f, -1.875097f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(267:3)
+               Component [PongGame.Velocity] - Hash value 14596389083674929713
+               Component [Unity.Transforms.LocalTransform] - Hash value 12286046980298678244
+
+                    Position float3(12.59631f, 3.669332f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(269:3)
+               Component [PongGame.Velocity] - Hash value 14824343187911177241
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 794324385584854459
+                    Position float3(-9.070967f, 4.345619f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(271:3)
+               Component [PongGame.Velocity] - Hash value 7545386929211308186
+               Component [Unity.Transforms.LocalTransform] - Hash value 3308625424330380032
+
+                    Position float3(4.450335f, -3.206139f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(273:5)
+               Component [PongGame.Velocity] - Hash value 5379015839036897261
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 7629370020245715170
+                    Position float3(-4.841663f, -1.388324f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(275:1)
+               Component [PongGame.Velocity] - Hash value 12466010746800978924
+               Component [Unity.Transforms.LocalTransform] - Hash value 17134685291287428710
+
+                    Position float3(12.11112f, -1.962517f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(277:1)
+               Component [PongGame.Velocity] - Hash value 3152656826695052776
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 9963707292488940063
+                    Position float3(-2.147128f, -0.2735038f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(279:5)
+               Component [PongGame.Velocity] - Hash value 16894733602617694470
+               Component [Unity.Transforms.LocalTransform] - Hash value 16930726355918154606
+
+                    Position float3(-2.994365f, -5.362904f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(281:3)
+               Component [PongGame.Velocity] - Hash value 986285736520641851
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 12322039733599138380
+                    Position float3(-11.01627f, 4.009595f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(283:3)
+               Component [PongGame.Velocity] - Hash value 5439003761204330821
+               Component [Unity.Transforms.LocalTransform] - Hash value 3200647164428999624
+
+                    Position float3(-8.957868f, 4.415451f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(285:5)
+               Component [PongGame.Velocity] - Hash value 7833328955614989274
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 5343023085736437125
+                    Position float3(-3.642002f, -4.189646f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(287:5)
+               Component [PongGame.Velocity] - Hash value 7809333786748015850
+               Component [Unity.Transforms.LocalTransform] - Hash value 914300229919721579
+
+                    Position float3(3.420967f, -5.693449f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(289:3)
+               Component [PongGame.Velocity] - Hash value 722338878983934187
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 12226059058131244684
+                    Position float3(4.705433f, -3.009547f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(291:5)
+               Component [PongGame.Velocity] - Hash value 16834745680450260910
+               Component [Unity.Transforms.LocalTransform] - Hash value 9975704876922426775
+
+                    Position float3(3.793061f, 5.417054f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(293:3)
+               Component [PongGame.Velocity] - Hash value 16942723940351641318
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 7677360357979662018
+                    Position float3(-4.910465f, -3.957961f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(295:3)
+               Component [PongGame.Velocity] - Hash value 14752357681310256969
+               Component [Unity.Transforms.LocalTransform] - Hash value 14596389083674929713
+
+                    Position float3(-2.119172f, 6.478959f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(297:1)
+               Component [PongGame.Velocity] - Hash value 5498991683371764381
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 12286046980298678244
+                    Position float3(-10.52747f, 3.804982f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(301:5)
+               Component [PongGame.Velocity] - Hash value 16798752927149800774
+               Component [Unity.Transforms.LocalTransform] - Hash value 14824343187911177241
+
+                    Position float3(-6.88027f, -4.468099f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(303:3)
+               Component [PongGame.Velocity] - Hash value 17014709446952561590
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 12466010746800978924
+                    Position float3(-9.103036f, 1.279349f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(305:3)
+               Component [PongGame.Velocity] - Hash value 3008685813493212232
+               Component [Unity.Transforms.LocalTransform] - Hash value 10131673474557754031
+
+                    Position float3(-11.28127f, -3.625323f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(307:1)
+               Component [PongGame.Velocity] - Hash value 3176651995562026200
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 17074697369119995150
+                    Position float3(10.41407f, 3.10971f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(309:3)
+               Component [PongGame.Velocity] - Hash value 14788350434610717105
+               Component [Unity.Transforms.LocalTransform] - Hash value 10119675890124267319
+
+                    Position float3(6.492112f, 5.845525f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(311:5)
+               Component [PongGame.Velocity] - Hash value 902302645486234867
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 7737348280147095578
+                    Position float3(5.039596f, -1.637464f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(313:3)
+               Component [PongGame.Velocity] - Hash value 16762760173849340638
+               Component [Unity.Transforms.LocalTransform] - Hash value 9891721785888019791
+
+                    Position float3(-10.58471f, 1.866371f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(315:5)
+               Component [PongGame.Velocity] - Hash value 7869321708915449410
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 17098692537986968574
+                    Position float3(-4.214506f, -2.240892f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(317:3)
+               Component [PongGame.Velocity] - Hash value 7593377266945255034
+               Component [Unity.Transforms.LocalTransform] - Hash value 5307030332435976989
+
+                    Position float3(10.72263f, 4.787112f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(319:3)
+               Component [PongGame.Velocity] - Hash value 770329216717881035
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 12226059058131244684
+                    Position float3(6.681141f, -2.300501f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(321:5)
+               Component [PongGame.Velocity] - Hash value 5355020670169923837
+               Component [Unity.Transforms.LocalTransform] - Hash value 14656377005842363273
+
+                    Position float3(-4.520185f, 2.204642f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(323:3)
+               Component [PongGame.Velocity] - Hash value 9843731448154072943
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 5451001345637817533
+                    Position float3(-4.844273f, -4.361801f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(325:1)
+               Component [PongGame.Velocity] - Hash value 5319027916869463701
+               Component [Unity.Transforms.LocalTransform] - Hash value 12226059058131244684
+
+                    Position float3(-3.400141f, -4.687979f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(327:1)
+               Component [PongGame.Velocity] - Hash value 9987702461355913487
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 794324385584854459
+                    Position float3(-8.201094f, 2.506925f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(329:3)
+               Component [PongGame.Velocity] - Hash value 5391013423470383973
+               Component [Unity.Transforms.LocalTransform] - Hash value 3284630255463406608
+
+                    Position float3(10.24053f, 6.36114f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(331:1)
+               Component [PongGame.Velocity] - Hash value 3056676151227159080
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 14728362512443283545
+                    Position float3(-9.128033f, -3.375305f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(333:3)
+               Component [PongGame.Velocity] - Hash value 3200647164428999624
+               Component [Unity.Transforms.LocalTransform] - Hash value 7689357942413148730
+
+                    Position float3(-2.642502f, -5.935154f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(335:1)
+               Component [PongGame.Velocity] - Hash value 866309892185774731
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 5510989267805251093
+                    Position float3(-10.30234f, 6.190835f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(337:3)
+               Component [PongGame.Velocity] - Hash value 10011697630222886911
+               Component [Unity.Transforms.LocalTransform] - Hash value 16966719109218614742
+
+                    Position float3(9.695846f, -2.417445f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(339:1)
+               Component [PongGame.Velocity] - Hash value 962290567653668427
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 5367018254603410549
+                    Position float3(11.87048f, -3.181324f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(341:1)
+               Component [PongGame.Velocity] - Hash value 14644379421408876561
+               Component [Unity.Transforms.LocalTransform] - Hash value 9927714539188479927
+
+                    Position float3(-7.472154f, -2.185966f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(343:5)
+               Component [PongGame.Velocity] - Hash value 12525998668968412484
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 5427006176770844109
+                    Position float3(-7.592205f, 0.9322059f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(345:3)
+               Component [PongGame.Velocity] - Hash value 3128661657828079352
+               Component [Unity.Transforms.LocalTransform] - Hash value 12430017993500518788
+
+                    Position float3(9.042817f, 2.764667f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(347:3)
+               Component [PongGame.Velocity] - Hash value 12418020409067032076
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 890305061052748155
+                    Position float3(-7.162528f, 4.480668f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(349:5)
+               Component [PongGame.Velocity] - Hash value 14548398745940982865
+               Component [Unity.Transforms.LocalTransform] - Hash value 16954721524785128030
+
+                    Position float3(-1.290477f, 0.3457824f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(351:3)
+               Component [PongGame.Velocity] - Hash value 5331025501302950413
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 758331632284394323
+                    Position float3(-5.463443f, 6.28497f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(353:3)
+               Component [PongGame.Velocity] - Hash value 10095680721257293895
+               Component [Unity.Transforms.LocalTransform] - Hash value 5462998930071304245
+
+                    Position float3(-5.865753f, 5.775243f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(355:3)
+               Component [PongGame.Velocity] - Hash value 9879724201454533079
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 7569382098078281610
+                    Position float3(3.467884f, 2.9099f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(357:3)
+               Component [PongGame.Velocity] - Hash value 7593377266945255034
+               Component [Unity.Transforms.LocalTransform] - Hash value 14728362512443283545
+
+                    Position float3(6.337332f, 2.286788f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(359:1)
+               Component [PongGame.Velocity] - Hash value 7737348280147095578
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 5331025501302950413
+                    Position float3(9.250877f, 5.229795f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(361:3)
+               Component [PongGame.Velocity] - Hash value 10179663812291700879
+               Component [Unity.Transforms.LocalTransform] - Hash value 10119675890124267319
+
+                    Position float3(9.284517f, -3.751185f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(363:1)
+               Component [PongGame.Velocity] - Hash value 7761343449014069002
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 5510989267805251093
+                    Position float3(9.667328f, 1.194367f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(365:3)
+               Component [PongGame.Velocity] - Hash value 17086694953553481862
+               Component [Unity.Transforms.LocalTransform] - Hash value 3008685813493212232
+
+                    Position float3(12.67869f, 0.8958783f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(367:3)
+               Component [PongGame.Velocity] - Hash value 12346034902466111804
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 7593377266945255034
+                    Position float3(-5.273803f, 4.120347f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(369:5)
+               Component [PongGame.Velocity] - Hash value 16978716693652101454
+               Component [Unity.Transforms.LocalTransform] - Hash value 3248637502162946472
+
+                    Position float3(-2.517581f, -1.06865f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(371:3)
+               Component [PongGame.Velocity] - Hash value 14728362512443283545
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 14584391499241443001
+                    Position float3(7.130926f, 5.373542f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(373:3)
+               Component [PongGame.Velocity] - Hash value 3224642333295973048
+               Component [Unity.Transforms.LocalTransform] - Hash value 10167666227858214167
+
+                    Position float3(10.65381f, -4.304418f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(375:5)
+               Component [PongGame.Velocity] - Hash value 17050702200253021726
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 12454013162367492212
+                    Position float3(-1.24692f, 1.595985f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(377:3)
+               Component [PongGame.Velocity] - Hash value 14620384252541903137
+               Component [Unity.Transforms.LocalTransform] - Hash value 10155668643424727455
+
+                    Position float3(2.171084f, 2.988239f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(379:3)
+               Component [PongGame.Velocity] - Hash value 5558979605539197941
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 14596389083674929713
+                    Position float3(-8.011112f, -7.00354E-07f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(381:1)
+               Component [PongGame.Velocity] - Hash value 7665362773546175306
+               Component [Unity.Transforms.LocalTransform] - Hash value 17134685291287428710
+
+                    Position float3(-11.51517f, 0.4713171f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(383:1)
+               Component [PongGame.Velocity] - Hash value 10131673474557754031
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 5534984436672224517
+                    Position float3(7.257088f, 0.5209393f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(385:3)
+               Component [PongGame.Velocity] - Hash value 7617372435812228458
+               Component [Unity.Transforms.LocalTransform] - Hash value 12322039733599138380
+
+                    Position float3(-1.913991f, -1.495373f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(387:1)
+               Component [PongGame.Velocity] - Hash value 3116664073394592640
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 7701355526846635442
+                    Position float3(-11.16692f, 5.046978f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(389:1)
+               Component [PongGame.Velocity] - Hash value 9843731448154072943
+               Component [Unity.Transforms.LocalTransform] - Hash value 12322039733599138380
+
+                    Position float3(9.562417f, 1.610526f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(391:1)
+               Component [PongGame.Velocity] - Hash value 7857324124481962698
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 12406022824633545364
+                    Position float3(3.497402f, 2.818202f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(393:3)
+               Component [PongGame.Velocity] - Hash value 12286046980298678244
+               Component [Unity.Transforms.LocalTransform] - Hash value 5451001345637817533
+
+                    Position float3(4.114414f, 1.179789f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(395:1)
+               Component [PongGame.Velocity] - Hash value 7869321708915449410
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 794324385584854459
+                    Position float3(6.830649f, -2.191698f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(397:1)
+               Component [PongGame.Velocity] - Hash value 7833328955614989274
+               Component [Unity.Transforms.LocalTransform] - Hash value 12202063889264271260
+
+                    Position float3(11.98705f, -4.612608f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(399:1)
+               Component [PongGame.Velocity] - Hash value 770329216717881035
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 998283320954128563
+                    Position float3(11.37406f, -2.217434f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(401:3)
+               Component [PongGame.Velocity] - Hash value 7653365189112688594
+               Component [Unity.Transforms.LocalTransform] - Hash value 3224642333295973048
+
+                    Position float3(4.685561f, -1.109664f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(403:3)
+               Component [PongGame.Velocity] - Hash value 7917312046649396258
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 7881319293348936122
+                    Position float3(-3.522842f, -1.794978f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(405:3)
+               Component [PongGame.Velocity] - Hash value 3224642333295973048
+               Component [Unity.Transforms.LocalTransform] - Hash value 7845326540048475986
+
+                    Position float3(-6.436779f, -2.216358f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(407:1)
+               Component [PongGame.Velocity] - Hash value 2996688229059725520
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 2936700306892291960
+                    Position float3(5.630354f, 0.2550822f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(409:3)
+               Component [PongGame.Velocity] - Hash value 2936700306892291960
+               Component [Unity.Transforms.LocalTransform] - Hash value 14680372174709336697
+
+                    Position float3(0.2447597f, 0.2282421f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(411:3)
+               Component [PongGame.Velocity] - Hash value 12394025240200058652
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 16930726355918154606
+                    Position float3(7.814901f, -1.519064f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(413:1)
+               Component [PongGame.Velocity] - Hash value 2984690644626238808
+               Component [Unity.Transforms.LocalTransform] - Hash value 2960695475759265384
+
+                    Position float3(-10.54048f, 5.242005f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(415:1)
+               Component [PongGame.Velocity] - Hash value 7701355526846635442
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 10167666227858214167
+                    Position float3(-10.0752f, 3.060584f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(417:3)
+               Component [PongGame.Velocity] - Hash value 9975704876922426775
+               Component [Unity.Transforms.LocalTransform] - Hash value 7557384513644794898
+
+                    Position float3(6.50877f, 2.114826f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(419:1)
+               Component [PongGame.Velocity] - Hash value 3212644748862486336
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 9939712123621966639
+                    Position float3(5.488233f, 0.7704234f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(421:1)
+               Component [PongGame.Velocity] - Hash value 16978716693652101454
+               Component [Unity.Transforms.LocalTransform] - Hash value 14776352850177230393
+
+                    Position float3(6.638678f, -3.692603f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(423:1)
+               Component [PongGame.Velocity] - Hash value 12238056642564731396
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 3164654411128539488
+                    Position float3(-9.268132f, -0.6390963f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(427:1)
+               Component [PongGame.Velocity] - Hash value 7677360357979662018
+               Component [Unity.Transforms.LocalTransform] - Hash value 3140659242261566064
+
+                    Position float3(-7.751994f, -4.246501f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(429:1)
+               Component [PongGame.Velocity] - Hash value 16858740849317234334
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 10179663812291700879
+                    Position float3(8.269831f, -6.337678f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(431:1)
+               Component [PongGame.Velocity] - Hash value 14476413239340062593
+               Component [Unity.Transforms.LocalTransform] - Hash value 16846743264883747622
+
+                    Position float3(-12.48801f, 5.823262f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(433:1)
+               Component [PongGame.Velocity] - Hash value 5343023085736437125
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 12430017993500518788
+                    Position float3(-7.371628f, 1.76658f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(435:1)
+               Component [PongGame.Velocity] - Hash value 14692369759142823409
+               Component [Unity.Transforms.LocalTransform] - Hash value 12154073551530324412
+
+                    Position float3(-6.770367f, -4.840412f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(437:1)
+               Component [PongGame.Velocity] - Hash value 3020683397926698944
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 938295398786695003
+                    Position float3(7.877204f, -3.182597f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(439:1)
+               Component [PongGame.Velocity] - Hash value 10095680721257293895
+               Component [Unity.Transforms.LocalTransform] - Hash value 3260635086596433184
+
+                    Position float3(-9.64771f, 1.29025f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(441:1)
+               Component [PongGame.Velocity] - Hash value 9927714539188479927
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 16846743264883747622
+                    Position float3(10.99216f, -2.336455f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(443:1)
+               Component [PongGame.Velocity] - Hash value 3032680982360185656
+               Component [Unity.Transforms.LocalTransform] - Hash value 626358203516040491
+
+                    Position float3(-7.754745f, 6.583391f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(445:1)
+               Component [PongGame.Velocity] - Hash value 12334037318032625092
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 16822748096016774198
+                    Position float3(-9.327868f, 5.177872f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(447:1)
+               Component [PongGame.Velocity] - Hash value 16906731187051181182
+               Component [Unity.Transforms.LocalTransform] - Hash value 5522986852238737805
+
+                    Position float3(-8.765404f, -2.695796f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(449:1)
+               Component [PongGame.Velocity] - Hash value 12370030071333085228
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 3044678566793672368
+                    Position float3(6.706858f, 4.696192f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(451:1)
+               Component [PongGame.Velocity] - Hash value 14536401161507496153
+               Component [Unity.Transforms.LocalTransform] - Hash value 16978716693652101454
+
+                    Position float3(5.048742f, -5.048743f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(453:1)
+               Component [PongGame.Velocity] - Hash value 14620384252541903137
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 5403011007903870685
+                    Position float3(12.80192f, -1.571878f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(455:1)
+               Component [PongGame.Velocity] - Hash value 17086694953553481862
+               Component [Unity.Transforms.LocalTransform] - Hash value 10131673474557754031
+
+                    Position float3(-11.73074f, 6.502456f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(457:1)
+               Component [PongGame.Velocity] - Hash value 10083683136823807183
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 3092668904527619216
+                    Position float3(5.907435f, 0.5168337f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(459:1)
+               Component [PongGame.Velocity] - Hash value 14572393914807956289
+               Component [Unity.Transforms.LocalTransform] - Hash value 5510989267805251093
+
+                    Position float3(5.774704f, 5.774704f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(461:1)
+               Component [PongGame.Velocity] - Hash value 3020683397926698944
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 16822748096016774198
+                    Position float3(-1.687315f, -4.395609f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(463:1)
+               Component [PongGame.Velocity] - Hash value 14788350434610717105
+               Component [Unity.Transforms.LocalTransform] - Hash value 2984690644626238808
+
+                    Position float3(3.013549f, -6.462579f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(465:1)
+               Component [PongGame.Velocity] - Hash value 14620384252541903137
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 16870738433750721046
+                    Position float3(-1.707537f, -0.7248062f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(467:1)
+               Component [PongGame.Velocity] - Hash value 10059687967956833759
+               Component [Unity.Transforms.LocalTransform] - Hash value 12334037318032625092
+
+                    Position float3(1.928028f, -2.380916f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(469:1)
+               Component [PongGame.Velocity] - Hash value 3068673735660645792
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 12262051811431704820
+                    Position float3(-2.498509f, -0.0436116f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(471:1)
+               Component [PongGame.Velocity] - Hash value 12214061473697757972
+               Component [Unity.Transforms.LocalTransform] - Hash value 14608386668108416425
+
+                    Position float3(1.702842f, -0.1190742f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(473:1)
+               Component [PongGame.Velocity] - Hash value 3056676151227159080
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 14776352850177230393
+                    Position float3(1.010347f, -0.9097204f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(475:1)
+               Component [PongGame.Velocity] - Hash value 12490005915667952348
+               Component [Unity.Transforms.LocalTransform] - Hash value 842314723318801307
+
+                    Position float3(1.120859f, 0.7560289f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(477:1)
+               Component [PongGame.Velocity] - Hash value 770329216717881035
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 7725350695713608866
+                    Position float3(0.3915608f, 0.5011749f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+          Entity(479:1)
+               Component [PongGame.Velocity] - Hash value 734336463417420899
+               Component [Unity.Transforms.LocalTransform] - Hash value 7737348280147095578
+
+                    Position float3(0.2193389f, -0.4703738f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+                    Scale 0.2
+          Entity(481:1)
+               Component [PongGame.Velocity] - Hash value 5534984436672224517
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 12202063889264271260
+                    Position float3(0.1835975f, 0.1383506f, 13f)
+                    Rotation quaternion(0f, 0f, 0f, 1f)
+
+                    Scale 0.2
+
