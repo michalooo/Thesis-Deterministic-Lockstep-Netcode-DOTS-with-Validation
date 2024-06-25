@@ -2,7 +2,7 @@
     "ticksAhead": 9,
     "allowedConnectionsPerGame": 2,
     "simulationTickRate": 60,
-    "hashCalculationOption": 0,
+    "hashCalculationOption": 1,
     "isReplayFromFile": true,
     "nonDeterministicTickDuringReplay": 205,
     "randomSeed": 1282252928,

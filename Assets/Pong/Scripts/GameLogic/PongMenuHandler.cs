@@ -110,9 +110,13 @@ namespace PongGame
             
             clientEntityManager.CreateSingleton(new DeterministicSettings
             {
-                _serverAddress = HostAddress.text,
                 _serverPort = int.Parse(GamePort.text),
-                isReplayFromFile = IsReplayFromFile.isOn
+                hashCalculationOption = (DeterminismHashCalculationOption) hashOption.value,
+                ticksAhead = int.Parse(ForcedInputLatency.text),
+                simulationTickRate = int.Parse(FrameRate.text),
+                allowedConnectionsPerGame = 2,
+                isReplayFromFile = IsReplayFromFile.isOn,
+                _serverAddress = HostAddress.text,
             });
             
             SceneManager.LoadScene("PongGame");

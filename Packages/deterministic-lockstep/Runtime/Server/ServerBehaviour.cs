@@ -707,10 +707,14 @@ namespace DeterministicLockstep
                                 }
                             }
                             //
-                            Debug.LogError("DESYNCHRONIZATION HAPPENED! HASHES ARE NOT EQUAL! " + "Ticks: " +
-                                           _lastTickReceivedFromClient + " Hashes: " + firstPlayerHash + " and " +
-                                           currentPlayerHash + " System number: " + systemHash + ". All hashes: " + allHashes);
-                            desynchronized = true;
+                            if (!SystemAPI.GetSingletonRW<DeterministicSettings>().ValueRO.isReplayFromFile)
+                            {
+                                Debug.LogError("DESYNCHRONIZATION HAPPENED! HASHES ARE NOT EQUAL! " + "Ticks: " +
+                                               _lastTickReceivedFromClient + " Hashes: " + firstPlayerHash + " and " +
+                                               currentPlayerHash + " System number: " + systemHash + ". All hashes: " + allHashes);
+                                desynchronized = true;
+                            }
+                            
                             break;
                         }
                     }
@@ -749,7 +753,7 @@ namespace DeterministicLockstep
                     // Send the RPC to all connections
                     SendRPCWithPlayersInputUpdate(networkIDs, inputs);
                 }
-                else
+                else if(!SystemAPI.GetSingletonRW<DeterministicSettings>().ValueRO.isReplayFromFile)
                 {
                     SendRPCWithPlayersDesynchronizationInfo(networkIDs, inputs);
                 }

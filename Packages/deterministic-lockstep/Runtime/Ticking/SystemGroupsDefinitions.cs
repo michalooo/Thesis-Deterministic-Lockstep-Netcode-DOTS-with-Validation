@@ -134,7 +134,6 @@ namespace DeterministicLockstep
                     deterministicSettings.ValueRW.ticksAhead = tempDeterministicSettings.ticksAhead;
                     deterministicSettings.ValueRW.allowedConnectionsPerGame = tempDeterministicSettings.allowedConnectionsPerGame;
                     deterministicSettings.ValueRW.simulationTickRate = tempDeterministicSettings.simulationTickRate;
-                    deterministicSettings.ValueRW.hashCalculationOption = tempDeterministicSettings.hashCalculationOption;
                     deterministicSettings.ValueRW.isReplayFromFile = true;
                     deterministicSettings.ValueRW.randomSeed = tempDeterministicSettings.randomSeed;
                     deterministicSettings.ValueRW._serverAddress = tempDeterministicSettings._serverAddress;

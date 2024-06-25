@@ -1,0 +1,15 @@
+{
+    "PlayersPongGameInputs": [
+        {
+            "verticalInput": 0
+        },
+        {
+            "verticalInput": 0
+        }
+    ],
+    "SimulationTick": 1,
+    "NetworkIDs": [
+        0,
+        1
+    ]
+}
