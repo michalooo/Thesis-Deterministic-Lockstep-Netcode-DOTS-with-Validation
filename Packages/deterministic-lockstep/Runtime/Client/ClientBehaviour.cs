@@ -81,7 +81,8 @@ namespace DeterministicLockstep
                 {
                     nonDeterministicTick = (ulong) SystemAPI.GetSingletonRW<DeterministicSettings>().ValueRO.nonDeterministicTickDuringReplay;
                 }
-                DeterministicLogger.Instance.LogHashesToFile(nonDeterministicTick);
+                DeterministicLogger.Instance.LogHostHashesToFile(nonDeterministicTick);
+                DeterministicLogger.Instance.LogClientHashesToFile(nonDeterministicTick);
                 DeterministicLogger.Instance.LogSettingsToFile(SystemAPI.GetSingletonRW<DeterministicSettings>().ValueRO);
             }
 

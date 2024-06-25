@@ -56,9 +56,21 @@ namespace DeterministicLockstep
                                 var typeInfo = TypeManager.GetTypeInfo(dynamicComponentTypeHandle.TypeIndex);
                                 var rawByteData = chunk.GetDynamicComponentDataArrayReinterpret<byte>(ref dynamicComponentTypeHandle, typeInfo.TypeSize);
                                 
-                                hash = TypeHash.CombineFNV1A64(hash, rawByteData[i]);
+                                // Calculate the start index for the current entity's data slice
+                                int startIndex = i * typeInfo.TypeSize;
+                                // Calculate the end index
+                                int endIndex = startIndex + typeInfo.TypeSize;
+                                var localHash = (ulong) 0;
 
-                                var log = new KeyValuePair<TypeIndex, ulong>(dynamicComponentTypeHandle.TypeIndex, TypeHash.FNV1A64(rawByteData[i]));
+                                // Extract the bytes for this entity
+                                for (int byteIndex = startIndex; byteIndex < endIndex; byteIndex++)
+                                {
+                                    localHash = TypeHash.CombineFNV1A64(localHash, rawByteData[byteIndex]);
+                                    hash = TypeHash.CombineFNV1A64(hash, rawByteData[byteIndex]);
+                                }
+
+                                // Optionally store the logging data
+                                var log = new KeyValuePair<TypeIndex, ulong>(dynamicComponentTypeHandle.TypeIndex, localHash); // Example, adjust as needed
                                 logMap.Add(entity, log);
                             }
                         }
@@ -78,9 +90,21 @@ namespace DeterministicLockstep
                             var typeInfo = TypeManager.GetTypeInfo(dynamicComponentTypeHandle.TypeIndex);
                             var rawByteData = chunk.GetDynamicComponentDataArrayReinterpret<byte>(ref dynamicComponentTypeHandle, typeInfo.TypeSize);
                                 
-                            hash = TypeHash.CombineFNV1A64(hash, rawByteData[i]);
+                            // Calculate the start index for the current entity's data slice
+                            int startIndex = i * typeInfo.TypeSize;
+                            // Calculate the end index
+                            int endIndex = startIndex + typeInfo.TypeSize;
+                            var localHash = (ulong) 0;
 
-                            var log = new KeyValuePair<TypeIndex, ulong>(dynamicComponentTypeHandle.TypeIndex, TypeHash.FNV1A64(rawByteData[i]));
+                            // Extract the bytes for this entity
+                            for (int byteIndex = startIndex; byteIndex < endIndex; byteIndex++)
+                            {
+                                localHash = TypeHash.CombineFNV1A64(localHash, rawByteData[byteIndex]);
+                                hash = TypeHash.CombineFNV1A64(hash, rawByteData[byteIndex]);
+                            }
+
+                            // Optionally store the logging data
+                            var log = new KeyValuePair<TypeIndex, ulong>(dynamicComponentTypeHandle.TypeIndex, localHash); // Example, adjust as needed
                             logMap.Add(entity, log);
                         }
                     }

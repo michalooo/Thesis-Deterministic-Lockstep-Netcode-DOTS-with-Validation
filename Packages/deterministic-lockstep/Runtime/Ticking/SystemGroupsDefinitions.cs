@@ -378,7 +378,8 @@ namespace DeterministicLockstep
             var _deterministicTimeQuery = group.EntityManager.CreateEntityQuery(typeof(DeterministicTime));
             var deterministicTime = _deterministicTimeQuery.GetSingletonRW<DeterministicTime>();
         
-            if(World.Name == "ClientWorld") DeterministicLogger.Instance.AddToHashDictionary((ulong) deterministicTime.ValueRO.currentClientTickToSend, "     System index in DeterministicSystemGroup:" + 0);
+            if(World.Name == "ClientWorld") DeterministicLogger.Instance.AddToHostHashDictionary((ulong) deterministicTime.ValueRO.currentClientTickToSend, "     System index in DeterministicSystemGroup:" + 0);
+            else if(World.Name == "ClientWorld1") DeterministicLogger.Instance.AddToClientHashDictionary((ulong) deterministicTime.ValueRO.currentClientTickToSend, "     System index in DeterministicSystemGroup:" + 0);
             determinismCheckSystem.Update(World.Unmanaged); // To check if a system that is not in this group caused desync
             for (int i = 0; i < systems.Length; i++)
             {
@@ -387,14 +388,16 @@ namespace DeterministicLockstep
                 {
                     if (i < systems.Length - 3)
                     {
-                        if(World.Name == "ClientWorld") DeterministicLogger.Instance.AddToHashDictionary((ulong) deterministicTime.ValueRO.currentClientTickToSend, "     System index in DeterministicSystemGroup:" + (i+1));
+                        if(World.Name == "ClientWorld") DeterministicLogger.Instance.AddToHostHashDictionary((ulong) deterministicTime.ValueRO.currentClientTickToSend, "     System index in DeterministicSystemGroup:" + (i+1));
+                        if(World.Name == "ClientWorld1") DeterministicLogger.Instance.AddToClientHashDictionary((ulong) deterministicTime.ValueRO.currentClientTickToSend, "     System index in DeterministicSystemGroup:" + (i+1));
                         system.Update(World.Unmanaged);
                         determinismCheckSystem.Update(World.Unmanaged);
                     }
                     else
                     {
                         deterministicTime = _deterministicTimeQuery.GetSingletonRW<DeterministicTime>();
-                        if(World.Name == "ClientWorld" && i<systems.Length-2) DeterministicLogger.Instance.AddToHashDictionary((ulong) deterministicTime.ValueRO.currentClientTickToSend, "     System index in DeterministicSystemGroup:" + (i+1));
+                        if(World.Name == "ClientWorld" && i<systems.Length-2) DeterministicLogger.Instance.AddToHostHashDictionary((ulong) deterministicTime.ValueRO.currentClientTickToSend, "     System index in DeterministicSystemGroup:" + (i+1));
+                        if(World.Name == "ClientWorld1" && i<systems.Length-2) DeterministicLogger.Instance.AddToClientHashDictionary((ulong) deterministicTime.ValueRO.currentClientTickToSend, "     System index in DeterministicSystemGroup:" + (i+1));
                         system.Update(World.Unmanaged);
                     }
                 }

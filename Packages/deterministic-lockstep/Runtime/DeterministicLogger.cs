@@ -15,17 +15,20 @@ namespace DeterministicLockstep
     public class DeterministicLogger : MonoBehaviour
     {
         public static DeterministicLogger Instance { get; private set; }
-        private Logger determinismLogger;
+        private Logger determinismHostLogger;
+        private Logger determinismClientLogger;
         private Logger inputLogger;
         private Logger settingsLogger;
         private Logger systemInfoLogger;
         const int maxBatchSize = 200; // without this division I was getting errors regarding the batch size
         private bool isInputWritten = false;
-        private bool isHashWritten = false;
+        private bool isHostHashWritten = false;
+        private bool isClientHashWritten = false;
         private bool isSettingsWritten = false;
         private bool isSystemInfoWritten = false;
 
         private Dictionary<ulong, List<string>> _tickHashBuffer;
+        private Dictionary<ulong, List<string>> _tickHashBuffer2;
 
         private void Awake()
         {
@@ -39,18 +42,16 @@ namespace DeterministicLockstep
             }
 
             _tickHashBuffer = new Dictionary<ulong, List<string>>();
+            _tickHashBuffer2 = new Dictionary<ulong, List<string>>();
+            
             CreateInputLogger();
-            CreateDeterminismLogger();
+            CreateDeterminismHostLogger();
+            CreateDeterminismClientLogger();
             CreateSettingsLogger();
             CreateSystemInfoLogger();
         }
 
-        public Dictionary<ulong, List<string>> GetHashDictionary()
-        {
-            return _tickHashBuffer;
-        }
-
-        public void AddToHashDictionary(ulong tick, string message)
+        public void AddToHostHashDictionary(ulong tick, string message)
         {
             // Check if the dictionary contains more than 9 keys
             if (_tickHashBuffer.Count > 18)
@@ -83,15 +84,62 @@ namespace DeterministicLockstep
                 _tickHashBuffer[tick].Add(message);
             }
         }
+        
+        public void AddToClientHashDictionary(ulong tick, string message)
+        {
+            // Check if the dictionary contains more than 9 keys
+            if (_tickHashBuffer2.Count > 18)
+            {
+                // Find the lowest key
+                ulong lowestKey = ulong.MaxValue;
+                foreach (var key in _tickHashBuffer2.Keys)
+                {
+                    if (key < lowestKey)
+                    {
+                        lowestKey = key;
+                    }
+                }
+
+                // Remove the lowest key
+                if (lowestKey != ulong.MaxValue)
+                {
+                    _tickHashBuffer2.Remove(lowestKey);
+                }
+            }
+
+            // Add the new message to the dictionary
+            if (_tickHashBuffer2.ContainsKey(tick))
+            {
+                _tickHashBuffer2[tick].Add(message);
+            }
+            else
+            {
+                _tickHashBuffer2.Add(tick, new List<string>());
+                _tickHashBuffer2[tick].Add(message);
+            }
+        }
 
 
-        public void CreateDeterminismLogger()
+        public void CreateDeterminismHostLogger()
         {
             var determinismLoggerFileName = "NonDeterminismLogs/" + DateTime.Now.Year + "_" +
                                             DateTime.Now.Month + "_" +
                                             DateTime.Now.Day + "_" + DateTime.Now.Hour + "_" + DateTime.Now.Minute +
-                                            "_" + DateTime.Now.Second + "/_DeterminismLogs_.txt";
-            determinismLogger = new Logger(new LoggerConfig()
+                                            "_" + DateTime.Now.Second + "/_DeterminismHostLogs_.txt";
+            determinismHostLogger = new Logger(new LoggerConfig()
+                .MinimumLevel.Debug()
+                .OutputTemplate("{Message}")
+                .WriteTo.File(determinismLoggerFileName, minLevel: LogLevel.Verbose)
+                .WriteTo.StdOut(outputTemplate: "{Message}"));
+        }
+        
+        public void CreateDeterminismClientLogger()
+        {
+            var determinismLoggerFileName = "NonDeterminismLogs/" + DateTime.Now.Year + "_" +
+                                            DateTime.Now.Month + "_" +
+                                            DateTime.Now.Day + "_" + DateTime.Now.Hour + "_" + DateTime.Now.Minute +
+                                            "_" + DateTime.Now.Second + "/_DeterminismClientLogs_.txt";
+            determinismClientLogger = new Logger(new LoggerConfig()
                 .MinimumLevel.Debug()
                 .OutputTemplate("{Message}")
                 .WriteTo.File(determinismLoggerFileName, minLevel: LogLevel.Verbose)
@@ -163,9 +211,16 @@ namespace DeterministicLockstep
             Log.FlushAll();
         }
 
-        public void LogHash(string message)
+        public void LogHostHash(string message)
         {
-            Log.Logger = determinismLogger;
+            Log.Logger = determinismHostLogger;
+            Log.Info(message);
+            Log.FlushAll();
+        }
+        
+        public void LogClientHash(string message)
+        {
+            Log.Logger = determinismClientLogger;
             Log.Info(message);
             Log.FlushAll();
         }
@@ -292,13 +347,13 @@ namespace DeterministicLockstep
 
 
 
-        public void LogHashesToFile(ulong nonDeterministicTick)
+        public void LogHostHashesToFile(ulong nonDeterministicTick)
         {
-            if (isHashWritten) return;
+            if (isHostHashWritten) return;
             
-            isHashWritten = true;
+            isHostHashWritten = true;
             var logBuilder = new StringBuilder();
-            foreach (var (tick, inputDataList) in GetHashDictionary())
+            foreach (var (tick, inputDataList) in _tickHashBuffer)
             {
                 if(nonDeterministicTick == tick)
                 {
@@ -310,7 +365,7 @@ namespace DeterministicLockstep
                         if (logBuilder.Length >= maxBatchSize)
                         {
                             // Log the current batch
-                            LogHash(logBuilder.ToString());
+                            LogHostHash(logBuilder.ToString());
                             // Clear the log builder for the next batch
                             logBuilder.Clear();
                         }
@@ -319,7 +374,38 @@ namespace DeterministicLockstep
             }
             if (logBuilder.Length > 0)
             {
-                LogHash(logBuilder.ToString());
+                LogHostHash(logBuilder.ToString());
+            }
+        }
+        
+        public void LogClientHashesToFile(ulong nonDeterministicTick)
+        {
+            if (isClientHashWritten) return;
+            
+            isClientHashWritten = true;
+            var logBuilder = new StringBuilder();
+            foreach (var (tick, inputDataList) in _tickHashBuffer2)
+            {
+                if(nonDeterministicTick == tick)
+                {
+                    logBuilder.AppendLine("Tick " + tick);
+                    for (int i = 0; i < inputDataList.Count; i++)
+                    {
+                        logBuilder.AppendLine(inputDataList[i]);
+                        
+                        if (logBuilder.Length >= maxBatchSize)
+                        {
+                            // Log the current batch
+                            LogClientHash(logBuilder.ToString());
+                            // Clear the log builder for the next batch
+                            logBuilder.Clear();
+                        }
+                    }
+                }
+            }
+            if (logBuilder.Length > 0)
+            {
+                LogClientHash(logBuilder.ToString());
             }
         }
     }

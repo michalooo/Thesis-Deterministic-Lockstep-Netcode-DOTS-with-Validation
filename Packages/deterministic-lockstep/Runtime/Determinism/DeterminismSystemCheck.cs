@@ -109,7 +109,7 @@ namespace DeterministicLockstep
                     keyVersion = key.Version;
                     if (state.World.Name == "ClientWorld")
                     {
-                        DeterministicLogger.Instance.AddToHashDictionary((ulong) hashTick, $"          Entity({key.Index}:{key.Version})");
+                        DeterministicLogger.Instance.AddToHostHashDictionary((ulong) hashTick, $"          Entity({key.Index}:{key.Version})");
            
                         var values = logMap.GetValuesForKey(key);
                         foreach (var value in values)
@@ -117,14 +117,36 @@ namespace DeterministicLockstep
                             if (value.Key == TypeManager.GetTypeIndex<LocalTransform>())
                             {
                                 LocalTransform localTransform = state.EntityManager.GetComponentData<LocalTransform>(key);
-                                DeterministicLogger.Instance.AddToHashDictionary((ulong) hashTick, $"               Component [{value.Key}] - Hash value {value.Value}");
-                                DeterministicLogger.Instance.AddToHashDictionary((ulong) hashTick, $"                    Position {localTransform.Position}");
-                                DeterministicLogger.Instance.AddToHashDictionary((ulong) hashTick, $"                    Rotation {localTransform.Rotation}");
-                                DeterministicLogger.Instance.AddToHashDictionary((ulong) hashTick, $"                    Scale {localTransform.Scale}");
+                                DeterministicLogger.Instance.AddToHostHashDictionary((ulong) hashTick, $"               Component [{value.Key}] - Hash value {value.Value}");
+                                DeterministicLogger.Instance.AddToHostHashDictionary((ulong) hashTick, $"                    Position {localTransform.Position}");
+                                DeterministicLogger.Instance.AddToHostHashDictionary((ulong) hashTick, $"                    Rotation {localTransform.Rotation}");
+                                DeterministicLogger.Instance.AddToHostHashDictionary((ulong) hashTick, $"                    Scale {localTransform.Scale}");
                             }
                             else
                             {
-                                DeterministicLogger.Instance.AddToHashDictionary((ulong) hashTick, $"               Component [{value.Key}] - Hash value {value.Value}");
+                                DeterministicLogger.Instance.AddToHostHashDictionary((ulong) hashTick, $"               Component [{value.Key}] - Hash value {value.Value}");
+                            }
+                            
+                        }
+                    }
+                    else if (state.World.Name == "ClientWorld1")
+                    {
+                        DeterministicLogger.Instance.AddToClientHashDictionary((ulong) hashTick, $"          Entity({key.Index}:{key.Version})");
+           
+                        var values = logMap.GetValuesForKey(key);
+                        foreach (var value in values)
+                        {
+                            if (value.Key == TypeManager.GetTypeIndex<LocalTransform>())
+                            {
+                                LocalTransform localTransform = state.EntityManager.GetComponentData<LocalTransform>(key);
+                                DeterministicLogger.Instance.AddToClientHashDictionary((ulong) hashTick, $"               Component [{value.Key}] - Hash value {value.Value}");
+                                DeterministicLogger.Instance.AddToClientHashDictionary((ulong) hashTick, $"                    Position {localTransform.Position}");
+                                DeterministicLogger.Instance.AddToClientHashDictionary((ulong) hashTick, $"                    Rotation {localTransform.Rotation}");
+                                DeterministicLogger.Instance.AddToClientHashDictionary((ulong) hashTick, $"                    Scale {localTransform.Scale}");
+                            }
+                            else
+                            {
+                                DeterministicLogger.Instance.AddToClientHashDictionary((ulong) hashTick, $"               Component [{value.Key}] - Hash value {value.Value}");
                             }
                             
                         }
