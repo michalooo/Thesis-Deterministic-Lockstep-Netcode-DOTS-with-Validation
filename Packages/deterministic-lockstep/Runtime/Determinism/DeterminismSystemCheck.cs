@@ -5,6 +5,7 @@ using Unity.Entities;
 using Unity.Logging;
 using Unity.Mathematics;
 using Unity.Transforms;
+using UnityEngine;
 
 namespace DeterministicLockstep
 {
@@ -109,7 +110,9 @@ namespace DeterministicLockstep
                     keyVersion = key.Version;
                     if (state.World.Name == "ClientWorld")
                     {
-                        DeterministicLogger.Instance.AddToHostHashDictionary((ulong) hashTick, $"          Entity({key.Index}:{key.Version})");
+                        state.EntityManager.GetName(key, out FixedString64Bytes nameFs);
+                        Debug.Log(nameFs);
+                        DeterministicLogger.Instance.AddToHostHashDictionary((ulong) hashTick, $"          Entity({key.Index}:{key.Version}) - " + nameFs.ToString());
            
                         var values = logMap.GetValuesForKey(key);
                         foreach (var value in values)
@@ -131,7 +134,8 @@ namespace DeterministicLockstep
                     }
                     else if (state.World.Name == "ClientWorld1")
                     {
-                        DeterministicLogger.Instance.AddToClientHashDictionary((ulong) hashTick, $"          Entity({key.Index}:{key.Version})");
+                        state.EntityManager.GetName(key, out FixedString64Bytes nameFs);
+                        DeterministicLogger.Instance.AddToHostHashDictionary((ulong) hashTick, $"          Entity({key.Index}:{key.Version}) - " + nameFs);
            
                         var values = logMap.GetValuesForKey(key);
                         foreach (var value in values)

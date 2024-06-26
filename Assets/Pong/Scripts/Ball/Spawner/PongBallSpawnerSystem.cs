@@ -52,6 +52,7 @@ namespace PongGame
                 Scale = 0.2f,
                 Rotation = quaternion.identity
             });
+            EntityManager.SetName(ball, "Ball");
                     
             // Generate a random angle in degrees
             var directionChoice = random.Next(0, 2);

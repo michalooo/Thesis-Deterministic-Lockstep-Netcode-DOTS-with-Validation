@@ -272,7 +272,7 @@ namespace DeterministicLockstep
 
         public NativeList<RpcBroadcastTickDataToClients> ReadTicksFromFile()
         {
-            var filePath = "NonDeterminismLogs/_ServerInputRecordingToReplay_.txt";
+            var filePath = "NonDeterminismLogs/_ServerInputRecording_.txt";
             var test = new List<TempRpcBroadcastTickDataToClients>();
             
             using (var sr = new StreamReader(filePath))
@@ -328,7 +328,7 @@ namespace DeterministicLockstep
         
         public DeterministicSettings ReadSettingsFromFile()
         {
-            var filePath = "NonDeterminismLogs/_ClientGameSettingsToReplay_.txt";
+            var filePath = "NonDeterminismLogs/_ClientGameSettings_.txt";
             var settings = new DeterministicSettings();
             try
             {

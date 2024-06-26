@@ -50,6 +50,7 @@ namespace PongGame
                         Scale = 1f,
                         Rotation = quaternion.identity
                     });
+                    EntityManager.SetName(player, "Player");
                 }
                 else
                 {
@@ -63,6 +64,7 @@ namespace PongGame
                         Scale = 1f,
                         Rotation = quaternion.identity
                     });
+                    EntityManager.SetName(player, "Player");
                 }
                 
                 ghostOwners[i] = new GhostOwner() { connectionNetworkId = ghostOwners[i].connectionNetworkId, connectionCommandsTargetEntity = player};
