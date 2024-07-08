@@ -1,41 +1,31 @@
 using System;
-using System.Collections.Generic;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Core;
 using Unity.Entities;
-using Unity.Logging;
-using Unity.Logging.Sinks;
 using Unity.Transforms;
 using UnityEngine;
 namespace DeterministicLockstep
 {
     /// <summary>
-    /// System group that contains all of user defined systems which are not affecting state of the game.
+    /// System group that contains deterministic simulation systems.
+    /// All the systems that are affecting the game state should be added to this group.
+    /// It's responsible for performing necessary determinism checks on those systems and running them in set frame rate.
     /// </summary>
     [BurstCompile]
-    [UpdateAfter(typeof(ConnectionHandleSystemGroup))]
-    public partial class UserSystemGroup : ComponentSystemGroup
-    {
-    }
-
-    /// <summary>
-    /// System group that contains connection handle systems.
-    /// </summary>
-    [BurstCompile]
-    public partial class ConnectionHandleSystemGroup : ComponentSystemGroup
-    {
-    }
-
-    /// <summary>
-    /// System group that contains deterministic simulation systems. Systems that are using it are PlayerUpdateSystem, DeterminismSystemCheck, and PlayerInputGatherAndSendSystem.
-    /// </summary>
-    [BurstCompile]
-    [UpdateAfter(typeof(UserSystemGroup))]
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     public partial class DeterministicSimulationSystemGroup : ComponentSystemGroup
     {
-        private static float LocalDeltaTime = 1.0f/60.0f;
+        /// <summary>
+        /// DeltaTime used when simulation is catching up due to the time it took to process last frame.
+        /// This is a fixed value which will be applied to the simulation until it finishes catching up.
+        /// Default value is 1/60 of a second which reflects 60FPS pace.
+        /// </summary>
+        private static float localDeltaTime = 1.0f/60.0f;
+        
+        /// <summary>
+        /// Value of how many ticks per frame the simulation can process when catching up.
+        /// </summary>
         private const int MaxTicksPerFrame = 10;
 
         protected override void OnCreate()
@@ -54,7 +44,7 @@ namespace DeterministicLockstep
                 Type = ComponentType.ReadOnly<DeterministicSettings>(),
             });
             
-            EntityManager.CreateSingleton(new DeterministicTime()
+            EntityManager.CreateSingleton(new DeterministicSimulationTime
             {
                 storedIncomingTicksFromServer = new NativeQueue<RpcBroadcastTickDataToClients>(Allocator.Persistent),
                 hashesForTheCurrentTick = new NativeList<ulong>(Allocator.Persistent),
@@ -64,17 +54,15 @@ namespace DeterministicLockstep
 
         protected override void OnDestroy()
         {
-            if (!SystemAPI.TryGetSingletonRW<DeterministicTime>(out var deterministicTime))
-            {
-                deterministicTime.ValueRW.storedIncomingTicksFromServer.Dispose();
-                deterministicTime.ValueRW.hashesForTheCurrentTick.Dispose();
-            }
+            if (!SystemAPI.TryGetSingletonRW<DeterministicSimulationTime>(out var deterministicTime)) return;
+            deterministicTime.ValueRW.storedIncomingTicksFromServer.Dispose();
+            deterministicTime.ValueRW.hashesForTheCurrentTick.Dispose();
         }
 
         protected override void OnUpdate()
         {
             
-            LocalDeltaTime = 1.0f/(float)SystemAPI.GetSingleton<DeterministicTime>().GameTickRate;
+            localDeltaTime = 1.0f/SystemAPI.GetSingleton<DeterministicSimulationTime>().GameTickRate;
             
             if (SystemAPI.GetSingleton<DeterministicSettings>().hashCalculationOption ==
                 DeterminismHashCalculationOption.WhitelistHashPerSystem ||
@@ -92,173 +80,108 @@ namespace DeterministicLockstep
             }
         }
 
+        /// <summary>
+        /// IRateManager implementation which allows for fixed step simulation.
+        /// </summary>
         public struct DeterministicFixedStepRateManager : IRateManager
         {
-            private EntityQuery _deterministicTimeQuery;
-            private EntityQuery _deterministicSettingsQuery;
-            private EntityQuery _connectionQuery;
-            private EntityQuery _inputDataQuery;
-            private EntityQuery _deterministicClientQuery;
+            private EntityQuery deterministicTimeQuery;
+            private EntityQuery deterministicSettingsQuery;
+            private EntityQuery connectionQuery;
+            private EntityQuery inputDataQuery;
+            private EntityQuery deterministicClientQuery;
             private bool wasLogging;
-            private NativeList<RpcBroadcastTickDataToClients> dataToReplay;
+            private NativeList<RpcBroadcastTickDataToClients> dataToReplayFromTheFile;
+            public float Timestep { get; set; }
 
             public DeterministicFixedStepRateManager(ComponentSystemGroup group) : this()
             {
-                _deterministicTimeQuery = group.EntityManager.CreateEntityQuery(typeof(DeterministicTime));
-                _deterministicSettingsQuery = group.EntityManager.CreateEntityQuery(typeof(DeterministicSettings));
-                _deterministicClientQuery = group.EntityManager.CreateEntityQuery(typeof(DeterministicClientComponent));
-                _connectionQuery =
+                deterministicTimeQuery = group.EntityManager.CreateEntityQuery(typeof(DeterministicSimulationTime));
+                deterministicSettingsQuery = group.EntityManager.CreateEntityQuery(typeof(DeterministicSettings));
+                deterministicClientQuery = group.EntityManager.CreateEntityQuery(typeof(DeterministicClientComponent));
+                connectionQuery =
                     group.EntityManager.CreateEntityQuery(
-                        typeof(GhostOwnerIsLocal)); // This component will only be created when RPC to start game was send
-                _inputDataQuery = group.EntityManager.CreateEntityQuery(typeof(GhostOwner));
+                        typeof(GhostOwnerIsLocal));
+                inputDataQuery = group.EntityManager.CreateEntityQuery(typeof(GhostOwner));
                 wasLogging = false;
             }
 
             public bool ShouldGroupUpdate(ComponentSystemGroup group)
             {
-                var deterministicClient = _deterministicClientQuery.GetSingletonRW<DeterministicClientComponent>();
+                var deterministicClient = deterministicClientQuery.GetSingletonRW<DeterministicClientComponent>();
                 if (deterministicClient.ValueRO.deterministicClientWorkingMode != DeterministicClientWorkingMode.RunDeterministicSimulation)
                     return false;
                 
                 var deltaTime = (double) group.World.Time.DeltaTime;
-                var deterministicTime = _deterministicTimeQuery.GetSingletonRW<DeterministicTime>();
-                var deterministicSettings = _deterministicSettingsQuery.GetSingletonRW<DeterministicSettings>();
-                var localConnectionEntity = _connectionQuery.ToEntityArray(Allocator.Temp);
+                var deterministicTime = deterministicTimeQuery.GetSingletonRW<DeterministicSimulationTime>();
+                var deterministicSettings = deterministicSettingsQuery.GetSingletonRW<DeterministicSettings>();
+                var localConnectionEntity = connectionQuery.ToEntityArray(Allocator.Temp);
 
-                if (deterministicSettings.ValueRO.isReplayFromFile && !dataToReplay.IsCreated)
+                if (deterministicSettings.ValueRO.isReplayFromFile && !dataToReplayFromTheFile.IsCreated)
                 {
-                    dataToReplay = new NativeList<RpcBroadcastTickDataToClients>(Allocator.Persistent);
-                    var tempDataToReplay = DeterministicLogger.Instance.ReadTicksFromFile();
-                    var tempDeterministicSettings = DeterministicLogger.Instance.ReadSettingsFromFile();
+                    dataToReplayFromTheFile = DeterministicLogger.Instance.ReadServerInputRecordingFromTheFile();
+                    var deterministicSettingsFromTheFile = DeterministicLogger.Instance.ReadSettingsFromFile();
                     
-                    deterministicSettings.ValueRW.ticksAhead = tempDeterministicSettings.ticksAhead;
-                    deterministicSettings.ValueRW.allowedConnectionsPerGame = tempDeterministicSettings.allowedConnectionsPerGame;
-                    deterministicSettings.ValueRW.simulationTickRate = tempDeterministicSettings.simulationTickRate;
+                    deterministicSettings.ValueRW.ticksOfForcedInputLatency = deterministicSettingsFromTheFile.ticksOfForcedInputLatency;
+                    deterministicSettings.ValueRW.allowedConnectionsPerGame = deterministicSettingsFromTheFile.allowedConnectionsPerGame;
+                    deterministicSettings.ValueRW.simulationTickRate = deterministicSettingsFromTheFile.simulationTickRate;
                     deterministicSettings.ValueRW.isReplayFromFile = true;
-                    deterministicSettings.ValueRW.randomSeed = tempDeterministicSettings.randomSeed;
-                    deterministicSettings.ValueRW._serverAddress = tempDeterministicSettings._serverAddress;
-                    deterministicSettings.ValueRW._serverPort = tempDeterministicSettings._serverPort;
-
-                    for (int i = 0; i < tempDataToReplay.Length; i++)
-                    {
-                        NativeList<int> tempNetworkIDs = new NativeList<int>(tempDataToReplay[i].NetworkIDs.Length,
-                            Allocator.Persistent);
-                        NativeList<PongInputs> tempPongInputs = new NativeList<PongInputs>(tempDataToReplay[i].PlayersPongGameInputs.Length,
-                            Allocator.Persistent);
-
-                        RpcBroadcastTickDataToClients tempRpc = new RpcBroadcastTickDataToClients();
-                        
-                        for (int j = 0; j < tempDataToReplay[i].NetworkIDs.Length; j++)
-                        {
-                            tempNetworkIDs.Add(tempDataToReplay[i].NetworkIDs[j]);
-                        }
-                        
-                        for (int j = 0; j < tempDataToReplay[i].PlayersPongGameInputs.Length; j++)
-                        {
-                            tempPongInputs.Add(tempDataToReplay[i].PlayersPongGameInputs[j]);
-                        }
-                        
-                        tempRpc.NetworkIDs = tempNetworkIDs;
-                        tempRpc.PlayersPongGameInputs = tempPongInputs;
-                        tempRpc.SimulationTick = tempDataToReplay[i].SimulationTick;
-                        
-                        dataToReplay.Add(tempRpc);
-                    }
+                    deterministicSettings.ValueRW.randomSeed = deterministicSettingsFromTheFile.randomSeed;
+                    deterministicSettings.ValueRW._serverAddress = deterministicSettingsFromTheFile._serverAddress;
+                    deterministicSettings.ValueRW._serverPort = deterministicSettingsFromTheFile._serverPort;
                     
-                    deterministicSettings.ValueRW.nonDeterministicTickDuringReplay = dataToReplay.Length;
+                    deterministicSettings.ValueRW.nonDeterministicTickDuringReplay = dataToReplayFromTheFile.Length;
                 }
-                
-                // var currentLocalTime = DateTime.UtcNow.TimeOfDay;
-                // var howMuchTimePassedSinceReceivingRPCAboutGameStart = currentLocalTime.TotalMilliseconds -
-                //                             deterministicTime.ValueRO.localTimestampAtTheMomentOfSynchronizationUTC.TotalMilliseconds;
-                // var predictedCurrentServerTime = deterministicTime.ValueRO.serverTimestampUTC.TotalMilliseconds + howMuchTimePassedSinceReceivingRPCAboutGameStart;
-                // var predictedServerTimeWhenSimulationShouldStart = deterministicTime.ValueRO.serverTimestampUTC.TotalMilliseconds - deterministicTime.ValueRO.playerAveragePing*10 + deterministicTime.ValueRO.timeToPostponeStartofSimulationInMiliseconds;
-                
-                // need to wait for the delay to start at the same moment as other clients
-                // if (predictedCurrentServerTime < predictedServerTimeWhenSimulationShouldStart)
-                // {
-                //     // Debug.LogError("Before: " + elapsedLocalMilliseconds + " " + deterministicTime.ValueRO.timeToPostponeStartofSimulationInMiliseconds);
-                //     return false;
-                // }
-                // else if (!wasLogging)
-                // {
-                //     wasLogging = true;
-                //     // Debug.LogError("Server time when sending on client: " + deterministicTime.ValueRO.serverTimestampUTC);
-                //     // Debug.LogError("Time to wait on client: " + deterministicTime.ValueRO.timeToPostponeStartofSimulationInMiliseconds);
-                //     // Debug.LogError("Predicted server time when game should start: " + TimeSpan.FromMilliseconds(deterministicTime.ValueRO.serverTimestampUTC.TotalMilliseconds + deterministicTime.ValueRO.timeToPostponeStartofSimulationInMiliseconds));
-                //     // Debug.LogError("After: " + elapsedLocalMilliseconds + " " + deterministicTime.ValueRO.timeToPostponeStartofSimulationInMiliseconds);
-                // }
-                
-                // Debug.LogError("Delta time: " + deltaTime + ", how many times ticked this frame: " + deterministicTime.ValueRO.numTimesTickedThisFrame + ", time left to send next tick: " + deterministicTime.ValueRO.timeLeftToSendNextTick + ", tick: " +deterministicTime.ValueRO.currentClientTickToSend);
-                
                 
                 var isTimeToSendNextTick = false;
                 
-                    if (deterministicTime.ValueRO.numTimesTickedThisFrame >=
-                        MaxTicksPerFrame) // If we already ticked maximum times this frame
+                if (deterministicTime.ValueRO.numTimesTickedThisFrame >= MaxTicksPerFrame) // If we already ticked maximum times this frame
+                {
+                    deterministicTime.ValueRW.timeLeftToSendNextTick += localDeltaTime;
+                }
+                else if (deterministicTime.ValueRO.timeLeftToSendNextTick > deltaTime) // If we should wait because of the time left to send next tick
+                {
+                    deterministicTime.ValueRW.timeLeftToSendNextTick -= deltaTime;
+                }
+                else if (deterministicTime.ValueRO.timeLeftToSendNextTick <= deltaTime) // If simulation should run
+                {
+                    if (deterministicTime.ValueRO.timeLeftToSendNextTick >= 0) // If lets say deltaTime=16 and timeToWait=12. It means that we should tick and the time left to send next tick should be 4
                     {
-                        isTimeToSendNextTick = false;
-                        deterministicTime.ValueRW.timeLeftToSendNextTick += LocalDeltaTime;
-                    }
-                    else if (deterministicTime.ValueRO.timeLeftToSendNextTick > deltaTime) // If we should wait
-                    {
-                        isTimeToSendNextTick = false;
+                        isTimeToSendNextTick = true;
                         deterministicTime.ValueRW.timeLeftToSendNextTick -= deltaTime;
                     }
-                    else if (deterministicTime.ValueRO.timeLeftToSendNextTick <= deltaTime) // either lower on + or on -
+                    else // in this case time < 0 which means that for example deltaTime was 60 and time was 10 (so now we are -50) and simulation needs to catch up
                     {
-                        if (deterministicTime.ValueRO.timeLeftToSendNextTick >= 0) // If lets say deltaTime=16 and time=12
+                        if (deterministicTime.ValueRW.timeLeftToSendNextTick + deltaTime > 0) // if time=-14 and delta=16 it means that simulation should tick once and the result should be 2
+                        {
+                            deterministicTime.ValueRW.timeLeftToSendNextTick += deltaTime;
+                        }
+                        else // If timeToWait will still be on - after this tick
                         {
                             isTimeToSendNextTick = true;
-                            deterministicTime.ValueRW.timeLeftToSendNextTick -= deltaTime;
-                        }
-                        else // in this case time < 0 which means that for example deltaTime was 60 and time was 10 (so now we are -50)
-                        {
-                            if (deterministicTime.ValueRW.timeLeftToSendNextTick + deltaTime > 0) // if time=-14 and delta=16 it means that the result should be 2
-                            {
-                                isTimeToSendNextTick = false;
-                                deterministicTime.ValueRW.timeLeftToSendNextTick += deltaTime;
-                            }
-                            else // tick otherwise
-                            {
-                                isTimeToSendNextTick = true;
-                                deterministicTime.ValueRW.timeLeftToSendNextTick +=  deltaTime;
-                            }
+                            deterministicTime.ValueRW.timeLeftToSendNextTick +=  deltaTime;
                         }
                     }
-                
-
-                // Debug.LogError("Should group update: " + isTimeToSendNextTick + ", tick: " +
-                // deterministicTime.ValueRO.currentClientTickToSend);
-                
-                //-----------------------------------
+                }
                 
                 
-                if (isTimeToSendNextTick) // We should  try to send the next tick
+                if (isTimeToSendNextTick)
                 {
                     if (deterministicTime.ValueRO.currentClientTickToSend <=
                         deterministicTime.ValueRO
-                            .forcedInputLatencyDelay) // If current Tick to send is less or equal to tickAhead then upgrade it and do nothing about the presentation update (it should mean we are processing those first ticks)
+                            .forcedInputLatencyDelay) 
                     {
                         deterministicTime.ValueRW.currentClientTickToSend++;
-
-                        deterministicTime.ValueRW.deterministicLockstepElapsedTime += deltaTime;
+                        
                         deterministicTime.ValueRW.numTimesTickedThisFrame++;
-                        group.World.PushTime(
-                            new TimeData(deterministicTime.ValueRO.deterministicLockstepElapsedTime,
-                                LocalDeltaTime));
-
-                        // Debug.LogError("Current tick to send: " + deterministicTime.ValueRO.currentClientTickToSend +
-                        //                " forced input latency delay: " +
-                        //                deterministicTime.ValueRO.forcedInputLatencyDelay);
-                        // Debug.Log("New time: " + deterministicTime.ValueRO.timeLeftToSendNextTick);
+                        group.World.PushTime(new TimeData(localDeltaTime, localDeltaTime));
                         return true;
                     }
                     
-                    if(dataToReplay.IsCreated && dataToReplay.Length > 0)
+                    if(dataToReplayFromTheFile.IsCreated && dataToReplayFromTheFile.Length > 0)
                     {
-                        var rpc = dataToReplay[0];
-                        dataToReplay.RemoveAt(0);
+                        var rpc = dataToReplayFromTheFile[0];
+                        dataToReplayFromTheFile.RemoveAt(0);
                         
                         deterministicTime.ValueRW.currentSimulationTick++;
                         deterministicTime.ValueRW.currentClientTickToSend++;
@@ -267,13 +190,12 @@ namespace DeterministicLockstep
                       
                         group.EntityManager.SetComponentEnabled<PlayerInputDataToUse>(localConnectionEntity[0],
                             true);
-                        deterministicTime.ValueRW.deterministicLockstepElapsedTime += deltaTime;
                         deterministicTime.ValueRW.numTimesTickedThisFrame++;
                         
                         group.World.PushTime(
-                            new TimeData(deterministicTime.ValueRO.deterministicLockstepElapsedTime,
-                                LocalDeltaTime));
-                        if(dataToReplay.Length == 0)
+                            new TimeData(localDeltaTime,
+                                localDeltaTime));
+                        if(dataToReplayFromTheFile.Length == 0)
                         {
                             deterministicClient.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.Desync;
                         }
@@ -293,12 +215,11 @@ namespace DeterministicLockstep
 
                             group.EntityManager.SetComponentEnabled<PlayerInputDataToUse>(localConnectionEntity[0],
                                 true);
-
-                            deterministicTime.ValueRW.deterministicLockstepElapsedTime += deltaTime;
+                            
                             deterministicTime.ValueRW.numTimesTickedThisFrame++;
                             group.World.PushTime(
-                                new TimeData(deterministicTime.ValueRO.deterministicLockstepElapsedTime,
-                                    LocalDeltaTime));
+                                new TimeData(localDeltaTime,
+                                    localDeltaTime));
 
                             return true;
                         }
@@ -311,10 +232,9 @@ namespace DeterministicLockstep
                     {
                         group.World.PopTime();
                     }
-
-                    // If the tick to present wasn't found we are stopping to wait for inputs which just mean that PlayerInputDataToSend and PlayerInputDataToUse won't be enabled and used by other systems
+                    
                     deterministicTime.ValueRW.timeLeftToSendNextTick =
-                        1f / deterministicTime.ValueRO.GameTickRate; // reset the time until next tick
+                        1f / deterministicTime.ValueRO.GameTickRate; 
                     deterministicTime.ValueRW.numTimesTickedThisFrame = 0;
                     return false;
                 }
@@ -329,20 +249,19 @@ namespace DeterministicLockstep
                 return false;
             }
 
-            public float Timestep { get; set; }
-
             /// <summary>
-            /// Function responsible for updating the player components based on the given RPC. Needs to be implemented by the user
+            /// Function responsible for updating PlayerInputDataToUse components based on the given RPC.
+            /// The actual use of this data and its reflection in the game needs to be implemented by the user based on those components values.
             /// </summary>
             /// <param name="rpc">RPC with data for update</param>
             private void
                 UpdateComponentsData(RpcBroadcastTickDataToClients rpc,
-                    ComponentSystemGroup group) // When do I want to refresh the screen? When input from the server arrives or together with the tick??
+                    ComponentSystemGroup group)
             {
-                var networkIDs = rpc.NetworkIDs;
-                var inputs = rpc.PlayersPongGameInputs;
+                var networkIDs = rpc.NetworkIDsOfAllClients;
+                var inputs = rpc.GameInputsFromAllClients;
 
-                var connectionEntities = _inputDataQuery.ToEntityArray(Allocator.Temp);
+                var connectionEntities = inputDataQuery.ToEntityArray(Allocator.Temp);
 
                 foreach (var connectionEntity in connectionEntities)
                 {
@@ -352,7 +271,7 @@ namespace DeterministicLockstep
 
                     for (int j = 0; j < networkIDs.Length; j++)
                     {
-                        if (playerInputData.playerNetworkId == networkIDs[j])
+                        if (playerInputData.clientNetworkId == networkIDs[j])
                         {
                             idExists = true;
                             playerInputData.playerInputToApply = inputs[j];
@@ -370,40 +289,37 @@ namespace DeterministicLockstep
             }
         }
 
+        /// <summary>
+        /// Function responsible for updating all systems in the group.
+        /// This is required specifically for per system validation since hashing system needs to be inserted in between other systems in the group.
+        /// </summary>
+        /// <param name="group">ComponentSystemGroup on which manual update is performed</param>
         void UpdateAllGroupSystems(ComponentSystemGroup group)
         {
-            // assumption that we are talking only about unmanaged systems
-            var systems = group.GetAllSystems();
-            var determinismCheckSystem = group.World.GetExistingSystem<DeterminismCheckSystem>();
-            var _deterministicTimeQuery = group.EntityManager.CreateEntityQuery(typeof(DeterministicTime));
-            var deterministicTime = _deterministicTimeQuery.GetSingletonRW<DeterministicTime>();
+            var groupSystems = group.GetAllSystems();
+            var hashSystem = group.World.GetExistingSystem<StateHashForValidationSystem>();
+            var deterministicTimeQuery = group.EntityManager.CreateEntityQuery(typeof(DeterministicSimulationTime));
+            var deterministicTime = deterministicTimeQuery.GetSingleton<DeterministicSimulationTime>();
         
-            if(World.Name == "ClientWorld") DeterministicLogger.Instance.AddToHostHashDictionary((ulong) deterministicTime.ValueRO.currentClientTickToSend, "     System index in DeterministicSystemGroup:" + 0);
-            else if(World.Name == "ClientWorld1") DeterministicLogger.Instance.AddToClientHashDictionary((ulong) deterministicTime.ValueRO.currentClientTickToSend, "     System index in DeterministicSystemGroup:" + 0);
-            determinismCheckSystem.Update(World.Unmanaged); // To check if a system that is not in this group caused desync
-            for (int i = 0; i < systems.Length; i++)
+            DeterministicLogger.Instance.AddToClientHashDictionary(World.Name, (ulong) deterministicTime.currentClientTickToSend, "     System index in DeterministicSystemGroup:" + 0);
+            hashSystem.Update(World.Unmanaged); // This check can detect if a system from outside of this ComponentSystemGroup caused desync.
+            
+            for (int i = 0; i < groupSystems.Length; i++)
             {
-                var system = systems[i];
+                var system = groupSystems[i];
                 try
                 {
-                    if (i < systems.Length - 3)
+                    if (i == groupSystems.Length - 3) DeterministicLogger.Instance.AddToClientHashDictionary(World.Name, (ulong) deterministicTime.currentClientTickToSend, "     System index in DeterministicSystemGroup:" + (i+1)); // Hack to properly log all system numbers
+                    system.Update(World.Unmanaged);
+                    if (i < groupSystems.Length - 3) // -3 because we don't need to insert hashSystem in between last 2 systems which are hashSystem and InputSendSystem
                     {
-                        if(World.Name == "ClientWorld") DeterministicLogger.Instance.AddToHostHashDictionary((ulong) deterministicTime.ValueRO.currentClientTickToSend, "     System index in DeterministicSystemGroup:" + (i+1));
-                        if(World.Name == "ClientWorld1") DeterministicLogger.Instance.AddToClientHashDictionary((ulong) deterministicTime.ValueRO.currentClientTickToSend, "     System index in DeterministicSystemGroup:" + (i+1));
-                        system.Update(World.Unmanaged);
-                        determinismCheckSystem.Update(World.Unmanaged);
-                    }
-                    else
-                    {
-                        deterministicTime = _deterministicTimeQuery.GetSingletonRW<DeterministicTime>();
-                        if(World.Name == "ClientWorld" && i<systems.Length-2) DeterministicLogger.Instance.AddToHostHashDictionary((ulong) deterministicTime.ValueRO.currentClientTickToSend, "     System index in DeterministicSystemGroup:" + (i+1));
-                        if(World.Name == "ClientWorld1" && i<systems.Length-2) DeterministicLogger.Instance.AddToClientHashDictionary((ulong) deterministicTime.ValueRO.currentClientTickToSend, "     System index in DeterministicSystemGroup:" + (i+1));
-                        system.Update(World.Unmanaged);
+                        DeterministicLogger.Instance.AddToClientHashDictionary(World.Name, (ulong) deterministicTime.currentClientTickToSend, "     System index in DeterministicSystemGroup:" + (i+1));
+                        hashSystem.Update(World.Unmanaged);
                     }
                 }
                 catch (Exception e)
                 {
-                    Debug.LogException(e);
+                    throw new Exception(e.Message);
                 }
         
                 if (World.QuitUpdate)
@@ -412,6 +328,9 @@ namespace DeterministicLockstep
         }
     }
 
+    /// <summary>
+    /// System that is used to create system groups.
+    /// </summary>
     public partial struct SystemGroupsDefinitions : ISystem
     {
         public void OnCreate(ref SystemState state)
@@ -419,8 +338,6 @@ namespace DeterministicLockstep
             var world = World.DefaultGameObjectInjectionWorld;
 
             world.GetOrCreateSystem<DeterministicSimulationSystemGroup>();
-            world.GetOrCreateSystem<ConnectionHandleSystemGroup>();
-            world.GetOrCreateSystem<UserSystemGroup>();
         }
     }
 }

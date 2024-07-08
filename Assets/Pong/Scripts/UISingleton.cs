@@ -1,10 +1,11 @@
 using TMPro;
-using Unity.Collections;
-using Unity.Entities;
 using UnityEngine;
 
 namespace PongGame
 {
+    /// <summary>
+    /// Class that manages the UI elements of the game.
+    /// </summary>
     public class UISingleton : MonoBehaviour 
     {
         [SerializeField] private TextMeshProUGUI scoreLeft;
@@ -30,34 +31,39 @@ namespace PongGame
             desyncMessage.SetActive(false);
         }
         
+        /// <summary>
+        /// Function to set the desync message enabled or disabled.
+        /// </summary>
+        /// <param name="enable">Value to use in SetActive call</param>
         public void SetDesyncMessageEnabled(bool enable)
         {
             desyncMessage.SetActive(enable);
         }
 
+        /// <summary>
+        /// Function that answer if the left player is currently winning.
+        /// </summary>
+        /// <returns>Bool signalling if left player is winning</returns>
         public bool IsLeftPlayerWinning()
         {
             return int.Parse(scoreLeft.text) > int.Parse(scoreRight.text);
         }
-        
-        public bool IsRightPlayerWinning()
-        {
-            return int.Parse(scoreLeft.text) < int.Parse(scoreRight.text);
-        }
-        
-        public bool IsDraw()
-        {
-            return int.Parse(scoreLeft.text) == int.Parse(scoreRight.text);
-        }
 
+        /// <summary>
+        /// Function to get the total score of both players.
+        /// </summary>
+        /// <returns>Combined total score of both players</returns>
         public int GetTotalScore()
         {
             return int.Parse(scoreLeft.text) + int.Parse(scoreRight.text);
         }
 
-        public void SetGameResult(bool leftPlayerWon)
+        /// <summary>
+        /// Function to set the game result text.
+        /// </summary>
+        public void SetGameResult()
         {
-            if (leftPlayerWon)
+            if (IsLeftPlayerWinning())
             {
                 gameResultText.text = "Left player won!";
             }
@@ -68,16 +74,28 @@ namespace PongGame
             gameResultText.gameObject.SetActive(true);
         }
 
+        /// <summary>
+        /// Function to add score to the left player.
+        /// </summary>
+        /// <param name="score">Score to add</param>
         public void AddLeftScore(int score)
         {
             scoreLeft.text = (int.Parse(scoreLeft.text) + score).ToString();
         }
         
+        /// <summary>
+        /// Function to add score to the right player.
+        /// </summary>
+        /// <param name="score">Score to add</param>
         public void AddRightScore(int score)
         {
             scoreRight.text = (int.Parse(scoreRight.text) + score).ToString();
         }
         
+        /// <summary>
+        /// Function to set the game status text.
+        /// </summary>
+        /// <param name="enable">Value to use in SetActive call</param>
         public void SetWaitingTextEnabled(bool enable)
         {
             gameStatusText.gameObject.SetActive(enable);

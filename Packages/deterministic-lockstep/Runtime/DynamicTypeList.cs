@@ -6,9 +6,10 @@ using System.Runtime.InteropServices;
 namespace DeterministicLockstep
 {
     /// <summary>
-    /// This struct stores all component types we're reading from and writing to, in netcode serialization jobs.
+    /// This struct stores all component types we're checking when performing determinism validation.
     /// It only exists because of an IJob limitation where <see cref="DynamicComponentTypeHandle"/>'s MUST be defined as fields.
     /// I.e. Collections containing <see cref="DynamicComponentTypeHandle"/>'s are not valid.
+    /// This struct was directly copied from N4E code.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public struct DynamicTypeList

@@ -1,13 +1,16 @@
-﻿using Unity.Burst;
+﻿using System;
+using DeterministicLockstep;
+using Unity.Entities;
+using UnityEngine;
 
 namespace PongGame
 {
-    using DeterministicLockstep;
-    using Unity.Entities;
-    using UnityEngine;
-
+    /// <summary>
+    /// System that gathers input from the player and stores it in a singleton component representing current inputs of the player.
+    /// Those inputs are transformed from raw values like "w" into aproperiate values for the game input struct.
+    /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
-    [UpdateInGroup(typeof(UserSystemGroup))]
+    [UpdateBefore(typeof(DeterministicSimulationSystemGroup))]
     public partial struct InputGatherSystem : ISystem
     {
         public void OnCreate(ref SystemState state)
@@ -31,8 +34,7 @@ namespace PongGame
                 }
                 else
                 {
-                    Debug.LogError("Invalid world name!");
-                    return;
+                    throw new Exception("Invalid world name!");
                 }
                 
                 inputComponent.ValueRW.verticalInput = verticalInput;
@@ -40,7 +42,7 @@ namespace PongGame
             }
             else
             {
-                Debug.LogError("No input singleton present!");
+                throw new Exception("No input singleton present!");
             }
         }
     }

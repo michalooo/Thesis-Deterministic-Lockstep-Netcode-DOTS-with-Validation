@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using DeterministicLockstep;
 using TMPro;
 using Unity.Entities;
@@ -9,19 +8,42 @@ using UnityEngine.UI;
 
 namespace PongGame
 {
+    /// <summary>
+    /// Class responsible for handling the menu options for the Pong game.
+    /// </summary>
     public class PongMenuHandler : MonoBehaviour
     {
+        /// <summary>
+        /// Address of the local machine.
+        /// </summary>
         private const string LOCAL_SERVER_ADDRESS = "127.0.0.1";
-        // Host option
+        
+        // Host options
+        
+        [Tooltip("Toggle to enable local multiplayer simulation. If enabled, a second client will be created.")]
         public Toggle IsLocalMultiplayerSimulation;
+        
+        [Tooltip("Toggle to enable replay from file.")]
         public Toggle IsReplayFromFile;
+        
+        [Tooltip("Input field for the game port. This port will be used to host the game.")]
         public InputField GamePort;
+        
+        [Tooltip("Input field for the frame rate of the game. This will be used to set the simulation tick rate.")]
         public InputField FrameRate;
+        
+        [Tooltip("Input field for the forced input latency. This will be used to simulate network latency.")]
         public InputField ForcedInputLatency;
+        
+        [Tooltip("Input field for the hash calculation option. This will be used to set the hash calculation option.")]
         public TMP_Dropdown hashOption;
         
-        // Client option
+        // Client options
+        
+        [Tooltip("Input field for the host address. This address will be used to connect to the game.")]
         public InputField HostAddress;
+        
+        [Tooltip("Input field for the host port. This port will be used to connect to the game.")]
         public InputField HostPort;
         
        
@@ -39,7 +61,6 @@ namespace PongGame
             
             foreach (var world in worlds)
             {
-                // Debug.Log("Destroying world: " + world.Name);
                 world.Dispose();
             }
         }
@@ -65,7 +86,7 @@ namespace PongGame
                 _serverAddress = LOCAL_SERVER_ADDRESS,
                 _serverPort = int.Parse(GamePort.text),
                 hashCalculationOption = (DeterminismHashCalculationOption) hashOption.value,
-                ticksAhead = int.Parse(ForcedInputLatency.text),
+                ticksOfForcedInputLatency = int.Parse(ForcedInputLatency.text),
                 simulationTickRate = int.Parse(FrameRate.text),
                 allowedConnectionsPerGame = 2,
                 isReplayFromFile = IsReplayFromFile.isOn
@@ -76,7 +97,7 @@ namespace PongGame
                 _serverAddress = LOCAL_SERVER_ADDRESS,
                 _serverPort = int.Parse(GamePort.text),
                 hashCalculationOption = (DeterminismHashCalculationOption) hashOption.value,
-                ticksAhead = int.Parse(ForcedInputLatency.text),
+                ticksOfForcedInputLatency = int.Parse(ForcedInputLatency.text),
                 simulationTickRate = int.Parse(FrameRate.text),
                 allowedConnectionsPerGame = 2,
                 isReplayFromFile = IsReplayFromFile.isOn
@@ -91,7 +112,7 @@ namespace PongGame
                     _serverAddress = LOCAL_SERVER_ADDRESS,
                     _serverPort = int.Parse(GamePort.text),
                     hashCalculationOption = (DeterminismHashCalculationOption) hashOption.value,
-                    ticksAhead = int.Parse(ForcedInputLatency.text),
+                    ticksOfForcedInputLatency = int.Parse(ForcedInputLatency.text),
                     simulationTickRate = int.Parse(FrameRate.text),
                     allowedConnectionsPerGame = 2,
                     isReplayFromFile = IsReplayFromFile.isOn
@@ -112,7 +133,7 @@ namespace PongGame
             {
                 _serverPort = int.Parse(GamePort.text),
                 hashCalculationOption = (DeterminismHashCalculationOption) hashOption.value,
-                ticksAhead = int.Parse(ForcedInputLatency.text),
+                ticksOfForcedInputLatency = int.Parse(ForcedInputLatency.text),
                 simulationTickRate = int.Parse(FrameRate.text),
                 allowedConnectionsPerGame = 2,
                 isReplayFromFile = IsReplayFromFile.isOn,

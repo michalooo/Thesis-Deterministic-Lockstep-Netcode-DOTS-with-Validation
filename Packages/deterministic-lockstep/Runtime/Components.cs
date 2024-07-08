@@ -1,14 +1,12 @@
 ﻿using System;
-using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Networking.Transport;
-using UnityEngine;
 
 namespace DeterministicLockstep
 {
     /// <summary>
-    /// Enum storing different server states
+    /// Different possible server states used to control server behaviour.
     /// </summary>
     public enum DeterministicServerWorkingMode
     {
@@ -19,7 +17,7 @@ namespace DeterministicLockstep
     }
     
     /// <summary>
-    /// Enum storing different client states
+    /// Different possible client states used to control client behaviour.
     /// </summary>
     public enum DeterministicClientWorkingMode
     {
@@ -35,13 +33,23 @@ namespace DeterministicLockstep
     
     
     /// <summary>
-    /// Component used to store the player input data to use for user simulation
+    /// Component used to store the player input data to use for current simulation step.
     /// </summary>
     public struct PlayerInputDataToUse : IComponentData, IEnableableComponent
     {
-        public int playerNetworkId;
+        /// <summary>
+        /// ID of the player that the input data belongs to
+        /// </summary>
+        public int clientNetworkId;
+        
+        /// <summary>
+        /// Inputs to apply for the current simulation step for the player with the given ID
+        /// </summary>
         public PongInputs playerInputToApply;
         
+        /// <summary>
+        /// Indication if player was disconnected
+        /// </summary>
         public bool isPlayerDisconnected;
     }
 
@@ -56,23 +64,31 @@ namespace DeterministicLockstep
     }
 
     /// <summary>
-    /// Component used to store the networkID of the connection
+    /// Component used to store the networkID of the connection and reference to the entity that is the target of the commands.
     /// </summary>
     public struct GhostOwner : IComponentData
     {
+        /// <summary>
+        /// Network ID of the connection that owns the Entity on the scene.
+        /// </summary>
         public int connectionNetworkId;
+        
+        /// <summary>
+        /// Reference to the entity that is the target of the commands.
+        /// </summary>
         public Entity connectionCommandsTargetEntity;
     }
 
     /// <summary> 
-    /// An enableable tag component used to track if a ghost with an owner is owned by the local host or not.
+    /// An enableable tag component used to track if an entity is owned by the local client or not.
+    /// This component is usually added to different entities so it may cause desync if used in determinims validation.
     /// </summary>
     public struct GhostOwnerIsLocal : IComponentData, IEnableableComponent
     {
-    } // added to different entities so it may cause desync if comparing amount of components
+    } 
 
     /// <summary>
-    /// Component used to tag connections for which a player prefab was spawned
+    /// Tag component used to tag connections for which a player prefab was spawned
     /// </summary>
     public struct PlayerSpawned : IComponentData
     {
@@ -81,26 +97,8 @@ namespace DeterministicLockstep
     /// <summary>
     /// Component used to store all the time related variables
     /// </summary>
-    public struct DeterministicTime : IComponentData
+    public struct DeterministicSimulationTime : IComponentData
     {
-        /// <summary>
-        /// Synchronized clock with the server
-        /// </summary>
-        public TimeSpan serverTimestampUTC;
-        public TimeSpan localTimestampAtTheMomentOfSynchronizationUTC;
-        public double timeToPostponeStartofSimulationInMiliseconds;
-        public double playerAveragePing;
-        
-        /// <summary>
-        /// Variable storing the elapsed time which is used to control system groups
-        /// </summary>
-        public double deterministicLockstepElapsedTime; //seconds same as ElapsedTime
-
-        /// <summary>
-        /// Variable storing the time that has passed since the last frame
-        /// </summary>
-        public float realTime;
-
         /// <summary>
         /// Variable storing information of how many ticks we already processed for the current frame
         /// </summary>
@@ -122,7 +120,7 @@ namespace DeterministicLockstep
         public double timeLeftToSendNextTick;
 
         /// <summary>
-        /// variable that takes count of which tick is being visually processed on the client
+        /// variable that takes count of which tick is being processed on the client
         /// </summary>
         public int currentSimulationTick;
 
@@ -139,17 +137,19 @@ namespace DeterministicLockstep
         /// <summary>
         /// Queue of RPCs that are received from the server with all clients inputs for a given tick.
         /// </summary>
-        public NativeQueue<RpcBroadcastTickDataToClients> storedIncomingTicksFromServer; // be sure that there is no memory leak
+        public NativeQueue<RpcBroadcastTickDataToClients> storedIncomingTicksFromServer;
     }
 
+    /// <summary>
+    /// Buffer element of component type used to mark components for validation
+    /// </summary>
     public struct DeterministicComponent : IBufferElementData
     {
         public ComponentType Type;
     }
     
-    
     /// <summary>
-    /// Component used to mark server state
+    /// Component used to mark current server working mode.
     /// </summary>
     public struct DeterministicServerComponent : IComponentData
     {
@@ -157,7 +157,7 @@ namespace DeterministicLockstep
     }
     
     /// <summary>
-    /// Component used to mark client state
+    /// Component used to mark current client working mode.
     /// </summary>
     public struct DeterministicClientComponent : IComponentData
     {

@@ -9,6 +9,9 @@ using UnityEngine;
 
 namespace PongGame
 {
+    /// <summary>
+    /// System that moves the ball in the game world.
+    /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
     [UpdateAfter(typeof(BallBounceSystem))]
@@ -44,7 +47,7 @@ namespace PongGame
                 ECB = ecb.AsParallelWriter(),
                 ballVelocities = ballVelocities,
                 localTransform = ballTransform,
-                Entities = ballEntities,
+                ballEntitiesToMove = ballEntities,
                 worldPosition = worldPosition,
                 deltaTime = deltaTime
             };
@@ -60,12 +63,15 @@ namespace PongGame
         }
     }
     
+    /// <summary>
+    /// Job that moves the ball in the game world on per ball basis.
+    /// </summary>
     [BurstCompile]
     public struct BallMovementJob : IJobParallelFor
     {
         public EntityCommandBuffer.ParallelWriter ECB;
         
-        public NativeArray<Entity> Entities;
+        public NativeArray<Entity> ballEntitiesToMove;
         public NativeArray<LocalTransform> localTransform;
         public NativeArray<Velocity> ballVelocities;
         
@@ -77,13 +83,13 @@ namespace PongGame
         {
             LocalTransform transform = localTransform[index];
             Velocity velocity = ballVelocities[index];
-            Entity entity = Entities[index];
+            Entity entity = ballEntitiesToMove[index];
             interpolationSpeed = 0.2f;
             
             if (transform.Position.x < -worldPosition.x || transform.Position.x > worldPosition.x) return;
             
             var newPosition = transform.Position + deltaTime * velocity.value;
-            // Interpolate from the current position to the new position
+          
             var interpolatedPositionX = Mathf.Lerp(transform.Position.x, newPosition.x, interpolationSpeed * deltaTime);
             var interpolatedPositionY = Mathf.Lerp(transform.Position.y, newPosition.y, interpolationSpeed * deltaTime);
             var interpolatedPositionZ = Mathf.Lerp(transform.Position.z, newPosition.z, interpolationSpeed * deltaTime);

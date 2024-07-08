@@ -4,14 +4,14 @@ using UnityEngine;
 namespace DeterministicLockstep
 {
     /// <summary>
-    /// Tag component to mark an entity as part of the deterministic simulation checks.
+    /// Tag component to mark an entity as part of the determinism validation checks.
     /// </summary>
-    public struct EnsureDeterministicBehaviour : IComponentData
+    public struct CountEntityForWhitelistedDeterminismValidation : IComponentData
     {
     }
     
     /// <summary>
-    /// Behaviour to add the DeterministicSimulation component to an entity.
+    /// Behaviour which adds the EnsureDeterministicBehaviour component to an entity.
     /// </summary>
     public class DeterministicEntityAuthoring : MonoBehaviour
     {
@@ -21,7 +21,7 @@ namespace DeterministicLockstep
             public override void Bake(DeterministicEntityAuthoring authoring)
             {
                 var entity = GetEntity(TransformUsageFlags.Dynamic);
-                AddComponent<EnsureDeterministicBehaviour>(entity);
+                AddComponent<CountEntityForWhitelistedDeterminismValidation>(entity);
             }
         }
     }

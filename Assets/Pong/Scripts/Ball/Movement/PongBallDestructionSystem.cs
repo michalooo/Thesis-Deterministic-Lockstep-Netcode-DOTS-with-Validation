@@ -8,6 +8,9 @@ using UnityEngine;
 
 namespace PongGame
 {
+    /// <summary>
+    /// System that destroys the ball when it goes out of the screen and counts the points for the players.
+    /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
     public partial struct PongBallDestructionSystem : ISystem
@@ -40,7 +43,7 @@ namespace PongGame
             {
                 ECB = ecb.AsParallelWriter(),
                 localTransform = ballTransform,
-                Entities = ballEntities,
+                ballEntities = ballEntities,
                 worldPosition = worldPosition,
                 leftCounter = leftPointsQueue.AsParallelWriter(),
                 rightCounter = rightPointsQueue.AsParallelWriter()
@@ -60,7 +63,7 @@ namespace PongGame
             {
                 if (UISingleton.Instance.GetTotalScore() == GameSettings.Instance.GetTotalBallsToSpawn())
                 {
-                    UISingleton.Instance.SetGameResult(UISingleton.Instance.IsLeftPlayerWinning());
+                    UISingleton.Instance.SetGameResult();
                     var client = SystemAPI.GetSingletonRW<DeterministicClientComponent>();
                     client.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.GameFinished;
                 }
@@ -74,12 +77,16 @@ namespace PongGame
         }
     }
     
+    /// <summary>
+    /// Job that destroys the ball when it goes out of the screen and counts the points for the players.
+    /// This job runs on per ball basis.
+    /// </summary>
     [BurstCompile]
     public struct BallDestructionJob : IJobParallelFor
     {
         public EntityCommandBuffer.ParallelWriter ECB;
         
-        public NativeArray<Entity> Entities;
+        public NativeArray<Entity> ballEntities;
         public NativeArray<LocalTransform> localTransform;
 
         public Vector3 worldPosition;
@@ -89,7 +96,7 @@ namespace PongGame
         public void Execute(int index)
         {
             LocalTransform transform = localTransform[index];
-            Entity entity = Entities[index];
+            Entity entity = ballEntities[index];
 
             if (transform.Position.x < -worldPosition.x)
             {

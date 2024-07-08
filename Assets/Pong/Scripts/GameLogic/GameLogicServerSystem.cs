@@ -1,13 +1,14 @@
 ﻿using DeterministicLockstep;
 using Unity.Entities;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace PongGame
 {
+    /// <summary>
+    /// System responsible to modify server behaviour based on user input.
+    /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
-    [UpdateInGroup(typeof(UserSystemGroup))]
     public partial struct GameLogicServerSystem : ISystem
     {
         public void OnCreate(ref SystemState state)
@@ -18,11 +19,11 @@ namespace PongGame
         public void OnUpdate(ref SystemState state)
         {
             var server = SystemAPI.GetSingletonRW<DeterministicServerComponent>();
-            if (SceneManager.GetActiveScene().name == "PongGame" && Input.GetKey(KeyCode.Q)) //Simulation of disconnection 
+            if (SceneManager.GetActiveScene().name == "PongGame" && Input.GetKey(KeyCode.Q)) // Simulation of disconnection 
             {
                 server.ValueRW.deterministicServerWorkingMode = DeterministicServerWorkingMode.Disconnect;
             }
-            else if (SceneManager.GetActiveScene().name == "PongGame" && Input.GetKey(KeyCode.Space))
+            else if (SceneManager.GetActiveScene().name == "PongGame" && Input.GetKey(KeyCode.Space)) // Starting the simulation
             {
                 server.ValueRW.deterministicServerWorkingMode = DeterministicServerWorkingMode.RunDeterministicSimulation;
             }

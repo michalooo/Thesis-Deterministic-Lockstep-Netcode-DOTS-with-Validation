@@ -1,5 +1,4 @@
 ﻿using DeterministicLockstep;
-using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -9,28 +8,32 @@ using UnityEngine;
 namespace PongGame
 {
     /// <summary>
-    /// System responsible for updating all of players positions based on their input component (updated by the server) if they are spawned and if UpdatePlayerPosition component is enabled. After updating those positions this component will be disabled
+    /// System responsible for updating all of players positions based on their PlayerInputDataToUse component.
+    /// After updating those positions this component will be disabled signalling that those informations were applied
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
-    // [UpdateAfter(typeof(PongBallDestructionSystem))]
     public partial struct PlayerMovementSystem : ISystem
     {
+        /// <summary>
+        /// Query to get all of the players that are currently in the game
+        /// </summary>
         private EntityQuery playerQuery;
-        private const float minY = -6f;
-        private const float maxY = 6f;
+        
+        /// <summary>
+        /// Interpolation speed for the player movement
+        /// </summary>
         private const float interpolationSpeed = 0.2f;
 
         public void OnCreate(ref SystemState state)
         {
-            state.RequireForUpdate<PlayerInputDataToUse>(); // component from which data should be taken
+            state.RequireForUpdate<PlayerInputDataToUse>(); 
             state.RequireForUpdate<PongInputs>();
             playerQuery = state.GetEntityQuery(typeof(GhostOwner), typeof(PlayerInputDataToUse), typeof(PlayerSpawned));
         }
 
         public void OnUpdate(ref SystemState state)
         {
-    // Get the component data from the entities
             var ghostOwnerData = playerQuery.ToComponentDataArray<GhostOwner>(Allocator.Temp);
             var playerInputData = playerQuery.ToComponentDataArray<PlayerInputDataToUse>(Allocator.Temp);
             var connectionEntity = playerQuery.ToEntityArray(Allocator.Temp);
@@ -39,7 +42,7 @@ namespace PongGame
             {
                 if (playerInputData[i].isPlayerDisconnected)
                 {
-                    Debug.Log("Destroying entity with ID: " + playerInputData[i].playerNetworkId);
+                    Debug.Log("Destroying entity with ID: " + playerInputData[i].clientNetworkId);
                     state.EntityManager.DestroyEntity(ghostOwnerData[i].connectionCommandsTargetEntity);
                     state.EntityManager.DestroyEntity(connectionEntity[i]);
                 }
@@ -49,24 +52,17 @@ namespace PongGame
 
                     var targetTransform = SystemAPI.GetComponentRW<LocalTransform>(ghostOwnerData[i].connectionCommandsTargetEntity);
                     var targetPosition = targetTransform.ValueRO.Position;
-                    
+
                     var newPositionY = targetPosition.y + (state.World.Time.DeltaTime * verticalInput);
                     
-                    // TESTING DETERMINISM CHECKS
-                    if (Input.GetKey(KeyCode.R) && state.World.Name == "ClientWorld")
-                    {
-                        newPositionY = targetPosition.y + (state.World.Time.DeltaTime * verticalInput * 2f);
-                    }
-                    // END OF TESTING DETERMINISM CHECKS
-                    
                     // Check if the new position is within the bounds
-                    if (newPositionY < minY)
+                    if (newPositionY < GameSettings.Instance.BottomScreenPosition)
                     {
-                        newPositionY = minY;
+                        newPositionY = GameSettings.Instance.BottomScreenPosition;
                     }
-                    else if (newPositionY > maxY)
+                    else if (newPositionY > GameSettings.Instance.TopScreenPosition)
                     {
-                        newPositionY = maxY;
+                        newPositionY = GameSettings.Instance.TopScreenPosition;
                     }
                     
                     
@@ -81,7 +77,7 @@ namespace PongGame
                     });
 
                     state.EntityManager.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity[i],
-                        false); //should it be required?
+                        false);
                 }
             }
         }

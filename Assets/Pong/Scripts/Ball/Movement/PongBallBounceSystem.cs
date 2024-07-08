@@ -9,15 +9,15 @@ using UnityEngine;
 
 namespace PongGame
 {
+    /// <summary>
+    /// System that bounces the ball off the walls and the players.
+    /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
     [UpdateAfter(typeof(PongBallDestructionSystem))]
     [BurstCompile]
     public partial struct BallBounceSystem : ISystem
     {
-        private const float MinY = -6.5f;
-        private const float MaxY = 6.5f;
-        
         private EntityQuery ballsQuery;
         private EntityQuery playerQuery;
         private NativeArray<LocalTransform> ballTransform;
@@ -29,8 +29,7 @@ namespace PongGame
         {
             state.RequireForUpdate<PongBallSpawner>();
         }
-
-        [BurstCompile]
+        
         public void OnUpdate(ref SystemState state)
         {
             playerQuery = SystemAPI.QueryBuilder().WithAll<GhostOwner>().Build();
@@ -58,10 +57,10 @@ namespace PongGame
                 ECB = ecb.AsParallelWriter(),
                 ballVelocities = ballVelocities,
                 localTransform = ballTransform,
-                Entities = ballEntities,
+                ballEntities = ballEntities,
                 worldPosition = worldPosition,
-                minYPos = MinY,
-                maxYPos = MaxY,
+                minYPos = GameSettings.Instance.BottomScreenPosition,
+                maxYPos = GameSettings.Instance.TopScreenPosition,
                 players = playersTransforms,
             };
             
@@ -76,12 +75,15 @@ namespace PongGame
         }
     }
     
+    /// <summary>
+    /// Parallel job that bounces the ball off the walls and the players.
+    /// </summary>
     [BurstCompile]
     public struct BallBounceJob : IJobParallelFor
     {
         public EntityCommandBuffer.ParallelWriter ECB;
         
-        public NativeArray<Entity> Entities;
+        public NativeArray<Entity> ballEntities;
         public NativeArray<LocalTransform> localTransform;
         public NativeArray<Velocity> ballVelocities;
 
@@ -95,7 +97,7 @@ namespace PongGame
         {
             LocalTransform transform = localTransform[index];
             Velocity velocity = ballVelocities[index];
-            Entity entity = Entities[index];
+            Entity entity = ballEntities[index];
             
             const float playerBoundaryOffsetX = 0.1f;
             const float playerBoundaryOffsetY = 1f;

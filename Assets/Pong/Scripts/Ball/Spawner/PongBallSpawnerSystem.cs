@@ -8,23 +8,33 @@ using Random = System.Random;
 namespace PongGame
 {
     /// <summary>
-    /// System used to spawn the player prefab for the connections that are not spawned yet
+    /// System used to spawn balls in the game.
+    /// It will spawn one ball at a time with a random direction and speed.
+    /// The balls will be spawned in the middle of the screen every set amount of time.
     /// </summary>
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup), OrderFirst = true)]
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     public partial class PongBallSpawnerSystem : SystemBase
     {
+        /// <summary>
+        /// Seed for generating random numbers.
+        /// </summary>
         private uint randomSeedFromServer;
         private Random random;
 
-        private bool specialBoolforLocalClient;
+        /// <summary>
+        /// Hack of allowing the second local client to spawn the last ball.
+        /// The problem arises from the fact that both clients are sharing the same state so the actions are executed twice.
+        /// </summary>
+        private bool boolForSecondLocalClientForSpawningLastBall;
+        
         protected override void OnCreate()
         {
             RequireForUpdate<PongBallSpawner>();
             RequireForUpdate<PongInputs>();
-            RequireForUpdate<DeterministicTime>();
+            RequireForUpdate<DeterministicSimulationTime>();
             
-            specialBoolforLocalClient = false;
+            boolForSecondLocalClientForSpawningLastBall = false;
         }
 
         protected override void OnStartRunning()
@@ -36,23 +46,23 @@ namespace PongGame
         {
             if (GameSettings.Instance.GetTotalBallsSpawned() >= GameSettings.Instance.GetTotalBallsToSpawn())
             {
-                if (World.Name == "ClientWorld1" && !specialBoolforLocalClient)
+                if (World.Name == "ClientWorld1" && !boolForSecondLocalClientForSpawningLastBall)
                 {
-                    specialBoolforLocalClient = true;
+                    boolForSecondLocalClientForSpawningLastBall = true;
                 }
                 else return;
             }
             
-            var prefab = SystemAPI.GetSingleton<PongBallSpawner>().Ball;
+            var ballPrefab = SystemAPI.GetSingleton<PongBallSpawner>().Ball;
                 
-            var ball = EntityManager.Instantiate(prefab);
-            EntityManager.SetComponentData(ball, new LocalTransform
+            var ballEntity = EntityManager.Instantiate(ballPrefab);
+            EntityManager.SetComponentData(ballEntity, new LocalTransform
             {
                 Position = new float3(0, 0, 13),
                 Scale = 0.2f,
                 Rotation = quaternion.identity
             });
-            EntityManager.SetName(ball, "Ball");
+            EntityManager.SetName(ballEntity, "Ball");
                     
             // Generate a random angle in degrees
             var directionChoice = random.Next(0, 2);
@@ -81,7 +91,7 @@ namespace PongGame
             var speed = random.Next(GameSettings.Instance.GetMinBallSpeed(), GameSettings.Instance.GetMaxBallSpeed());
 
             // Set the velocity of the ball
-            EntityManager.SetComponentData(ball, new Velocity { value = direction * speed });
+            EntityManager.SetComponentData(ballEntity, new Velocity { value = direction * speed });
                     
             if (World.Name == "ClientWorld") // To prevent local simulation for counting points twice (from both worlds)
             {

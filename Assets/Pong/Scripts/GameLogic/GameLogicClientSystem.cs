@@ -1,14 +1,16 @@
 ﻿using DeterministicLockstep;
 using TMPro;
 using Unity.Entities;
-using Unity.Transforms;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace PongGame
 {
+    /// <summary>
+    /// System responsible to modify client behaviour based on user input.
+    /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
-    [UpdateInGroup(typeof(UserSystemGroup))]
+    [UpdateBefore(typeof(InputGatherSystem))]
     public partial class GameLogicClientSystem : SystemBase
     {
         private AsyncOperation gameAsyncLoad = null;

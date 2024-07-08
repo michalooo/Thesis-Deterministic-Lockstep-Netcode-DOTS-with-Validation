@@ -5,7 +5,7 @@ using UnityEngine;
 namespace PongGame
 {
     /// <summary>
-    /// A component used to store velocity value in float3 format.
+    /// A component used to store current ball velocity value in float3 format.
     /// </summary>
     public struct Velocity : IComponentData
     {

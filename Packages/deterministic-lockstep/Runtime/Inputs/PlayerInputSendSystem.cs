@@ -1,4 +1,3 @@
-using System;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
@@ -7,7 +6,9 @@ using UnityEngine;
 namespace DeterministicLockstep
 {
     /// <summary>
-    /// System that sends gathered player's input to the server. Inputs need to be gathered by the user.
+    /// System that sends gathered player's input to the server.
+    /// Inputs need to be manually gathered and set by the user in the input struct.
+    /// This system should run as the last in DeterministicSimulationSystemGroup
     /// </summary>
     [BurstCompile]
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup), OrderLast = true)]
@@ -16,20 +17,17 @@ namespace DeterministicLockstep
     {
         public void OnCreate(ref SystemState state)
         {
-            state.RequireForUpdate<DeterministicTime>();
+            state.RequireForUpdate<DeterministicSimulationTime>();
         }
-
-        // [BurstCompile]
+        
         public void OnUpdate(ref SystemState state)
         {
-            var deterministicTime = SystemAPI.GetSingleton<DeterministicTime>();
-            
+            var deterministicTime = SystemAPI.GetSingleton<DeterministicSimulationTime>();
             
             foreach (var (connectionReference, owner) in SystemAPI
                          .Query<RefRO<NetworkConnectionReference>, RefRO<GhostOwner>>()
                          .WithAll<GhostOwnerIsLocal>())
             {
-                // Debug.Log("Sending player input to server");
                 if (!SystemAPI.TryGetSingleton<PongInputs>(out var capsulesInputs))
                 {
                     Debug.LogError("Inputs are not singleton");
@@ -38,16 +36,14 @@ namespace DeterministicLockstep
                 
                 var rpc = new RpcBroadcastPlayerTickDataToServer
                 {
-                    PongGameInputs = capsulesInputs,
-                    PlayerNetworkID = owner.ValueRO.connectionNetworkId,
-                    FutureTick = deterministicTime.currentClientTickToSend,
-                    HashesForFutureTick = deterministicTime.hashesForTheCurrentTick,
-                    // ClientTimeStampUTC = DateTime.UtcNow.TimeOfDay,
+                    PlayerGameInput = capsulesInputs,
+                    ClientNetworkID = owner.ValueRO.connectionNetworkId,
+                    TickToApplyInputsOn = deterministicTime.currentClientTickToSend,
+                    HashesForTheTick = deterministicTime.hashesForTheCurrentTick,
                 };
 
                 rpc.Serialize(connectionReference.ValueRO.driverReference, connectionReference.ValueRO.connectionReference,
                     connectionReference.ValueRO.reliablePipelineReference);
-                
                 deterministicTime.hashesForTheCurrentTick.Dispose();
                 deterministicTime.hashesForTheCurrentTick = new NativeList<ulong>(Allocator.Persistent);
                 SystemAPI.SetSingleton(deterministicTime);

@@ -3,7 +3,6 @@ using Unity.Entities;
 using Unity.Transforms;
 using UnityEngine;
 using DeterministicLockstep;
-using Unity.Burst;
 using Unity.Mathematics;
 
 namespace PongGame
@@ -23,52 +22,33 @@ namespace PongGame
         
         protected override void OnUpdate()
         {
-            var prefab = SystemAPI.GetSingleton<PongPlayerSpawner>().Player;
-            var query = SystemAPI.QueryBuilder().WithNone<PlayerSpawned>().WithAll<GhostOwner>().Build();
+            var playerPrefab = SystemAPI.GetSingleton<PongPlayerSpawner>().Player;
+            var queryOfConnectionsWithoutSpawnedPrefabs = SystemAPI.QueryBuilder().WithNone<PlayerSpawned>().WithAll<GhostOwner>().Build();
 
-            if (query.IsEmpty) return;
+            if (queryOfConnectionsWithoutSpawnedPrefabs.IsEmpty) return;
             
-            var ghostOwners = query.ToComponentDataArray<GhostOwner>(Allocator.Temp);
-            var connectionEntities = query.ToEntityArray(Allocator.Temp);
+            var ghostOwners = queryOfConnectionsWithoutSpawnedPrefabs.ToComponentDataArray<GhostOwner>(Allocator.Temp);
+            var connectionEntities = queryOfConnectionsWithoutSpawnedPrefabs.ToEntityArray(Allocator.Temp);
             
-            
-
             for(var i=0; i<=ghostOwners.Length-1; i++)
             {
                 EntityManager.AddComponent<PlayerSpawned>(connectionEntities[i]);
-                var player = EntityManager.Instantiate(prefab);
+                var spawnedPlayerPrefab = EntityManager.Instantiate(playerPrefab);
                         
-                if (ghostOwners[i].connectionNetworkId % 2 == 0)
-                {
-                    Camera cam = Camera.main;
-                    float targetXPosition = 0.05f * Screen.width;
-                    Vector3 worldPosition = cam.ScreenToWorldPoint(new Vector3(targetXPosition, 0, cam.nearClipPlane));
+                Camera camera = Camera.main;
+                float targetSpawnPositionX = ghostOwners[i].connectionNetworkId % 2 == 0 ? 0.05f * Screen.width : 0.95f * Screen.width;
+                Vector3 worldPosition = camera.ScreenToWorldPoint(new Vector3(targetSpawnPositionX, 0, camera.nearClipPlane));
                     
-                    EntityManager.SetComponentData(player, new LocalTransform
-                    {
-                        Position = new float3(worldPosition.x, worldPosition.y, 13f), 
-                        Scale = 1f,
-                        Rotation = quaternion.identity
-                    });
-                    EntityManager.SetName(player, "Player");
-                }
-                else
+                EntityManager.SetComponentData(spawnedPlayerPrefab, new LocalTransform
                 {
-                    Camera cam = Camera.main;
-                    float targetXPosition = 0.95f * Screen.width;
-                    Vector3 worldPosition = cam.ScreenToWorldPoint(new Vector3(targetXPosition, 0, cam.nearClipPlane));
-                    
-                    EntityManager.SetComponentData(player, new LocalTransform
-                    {
-                        Position = new float3(worldPosition.x, worldPosition.y, 13f), 
-                        Scale = 1f,
-                        Rotation = quaternion.identity
-                    });
-                    EntityManager.SetName(player, "Player");
-                }
+                    Position = new float3(worldPosition.x, worldPosition.y, 13f), 
+                    Scale = 1f,
+                    Rotation = quaternion.identity
+                });
+                EntityManager.SetName(spawnedPlayerPrefab, "Player");
                 
-                ghostOwners[i] = new GhostOwner() { connectionNetworkId = ghostOwners[i].connectionNetworkId, connectionCommandsTargetEntity = player};
-                EntityManager.AddComponentData(connectionEntities[i], ghostOwners[i]); // is it necessary for the package? This is user implementation
+                ghostOwners[i] = new GhostOwner() { connectionNetworkId = ghostOwners[i].connectionNetworkId, connectionCommandsTargetEntity = spawnedPlayerPrefab};
+                EntityManager.AddComponentData(connectionEntities[i], ghostOwners[i]);
             }
         }
     }
