@@ -39,8 +39,8 @@ namespace PongGame
 
         protected override void OnStartRunning()
         { 
-            randomSeedFromServer = SystemAPI.GetSingleton<DeterministicSettings>().randomSeed;
-           random = new Random((int)randomSeedFromServer); // in theory it will allow users to predict the random numbers
+           randomSeedFromServer = SystemAPI.GetSingleton<DeterministicSettings>().randomSeed;
+           random = new Random((int)randomSeedFromServer);
         }
 
         protected override void OnUpdate()

@@ -6,6 +6,7 @@ using Unity.Jobs;
 using Unity.Transforms;
 using Unity.Mathematics;
 using UnityEngine;
+using Random = System.Random;
 
 namespace PongGame
 {
@@ -16,7 +17,7 @@ namespace PongGame
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
     [UpdateAfter(typeof(PongBallDestructionSystem))]
     [BurstCompile]
-    public partial struct BallBounceSystem : ISystem
+    public partial class BallBounceSystem : SystemBase
     {
         private EntityQuery ballsQuery;
         private EntityQuery playerQuery;
@@ -24,13 +25,25 @@ namespace PongGame
         private NativeArray<Velocity> ballVelocities;
         private NativeArray<Entity> ballEntities;
         
+        /// <summary>
+        /// Seed for generating random numbers.
+        /// </summary>
+        private uint randomSeedFromServer;
+        private Unity.Mathematics.Random random;
+        
         [BurstCompile]
-        public void OnCreate(ref SystemState state)
+        protected override void OnCreate()
         {
-            state.RequireForUpdate<PongBallSpawner>();
+            RequireForUpdate<PongBallSpawner>();
         }
         
-        public void OnUpdate(ref SystemState state)
+        protected override void OnStartRunning()
+        { 
+            randomSeedFromServer = SystemAPI.GetSingleton<DeterministicSettings>().randomSeed;
+            random = new Unity.Mathematics.Random(randomSeedFromServer);
+        }
+        
+        protected override void OnUpdate()
         {
             playerQuery = SystemAPI.QueryBuilder().WithAll<GhostOwner>().Build();
             ballsQuery = SystemAPI.QueryBuilder().WithAll<LocalTransform, Velocity>().Build();
@@ -62,11 +75,12 @@ namespace PongGame
                 minYPos = GameSettings.Instance.BottomScreenPosition,
                 maxYPos = GameSettings.Instance.TopScreenPosition,
                 players = playersTransforms,
+                random = random
             };
             
             JobHandle ballBounceHandle = ballBounceJob.Schedule(ballTransform.Length,1);
             ballBounceHandle.Complete();
-            ecb.Playback(state.EntityManager);
+            ecb.Playback(EntityManager);
             
             ecb.Dispose();
             ballTransform.Dispose();
@@ -91,6 +105,8 @@ namespace PongGame
         public float minYPos;
         public float maxYPos;
         
+        public Unity.Mathematics.Random random;
+        
         public NativeArray<LocalToWorld> players;
     
         public void Execute(int index)
@@ -112,6 +128,7 @@ namespace PongGame
                 if (velocity.value.y < 0)
                 {
                     // Reflect the velocity about the normal vector of the wall
+                    // newVelocityValue = math.reflect(velocity.value, new float3(0, random.NextFloat(0.5f, 1f), 0));
                     newVelocityValue = math.reflect(velocity.value, new float3(0, 1, 0));
                 }
             }
@@ -121,6 +138,7 @@ namespace PongGame
                 if (velocity.value.y > 0)
                 {
                     // Reflect the velocity about the normal vector of the wall
+                    // newVelocityValue = math.reflect(velocity.value, new float3(0, random.NextFloat(-0.5f, -1f), 0));
                     newVelocityValue = math.reflect(velocity.value, new float3(0, -1, 0));
                 }
             }
