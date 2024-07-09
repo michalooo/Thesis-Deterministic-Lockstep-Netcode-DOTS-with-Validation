@@ -164,6 +164,22 @@ namespace DeterministicLockstep
         public int clientNetworkId;
         public DeterministicClientWorkingMode deterministicClientWorkingMode;
     }
+    
+    /// <summary>
+    /// To ensure deterministic sorting of entities when logging, this component should be added to entities on creation.
+    /// It represents a unique, deterministic identifier.
+    /// This identifier is a simple incrementing integer that is assigned when the entity is created.
+    /// This way, the order of entity creation will determine the order of entities in the sorted log list for determinism validation, which should be deterministic as long as entities are created in a deterministic manner.
+    /// </summary>
+    public struct DeterministicEntityID : IComponentData, IComparable<DeterministicEntityID>
+    {
+        public int ID;
+
+        public int CompareTo(DeterministicEntityID other)
+        {
+            return ID.CompareTo(other.ID);
+        }
+    }
    
     /// <summary>
     /// Predefined struct for managing player inputs in the sample Pong game

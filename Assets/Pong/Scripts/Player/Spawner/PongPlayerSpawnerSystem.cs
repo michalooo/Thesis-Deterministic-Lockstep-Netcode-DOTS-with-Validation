@@ -35,13 +35,19 @@ namespace PongGame
                 EntityManager.AddComponent<PlayerSpawned>(connectionEntities[i]);
                 var spawnedPlayerPrefab = EntityManager.Instantiate(playerPrefab);
                         
-                Camera camera = Camera.main;
-                float targetSpawnPositionX = ghostOwners[i].connectionNetworkId % 2 == 0 ? 0.05f * Screen.width : 0.95f * Screen.width;
-                Vector3 worldPosition = camera.ScreenToWorldPoint(new Vector3(targetSpawnPositionX, 0, camera.nearClipPlane));
+                // Camera camera = Camera.main;
+                float targetSpawnPositionX = ghostOwners[i].connectionNetworkId % 2 == 0 ? -8f : 8f;
+                // Vector3 worldPosition = camera.ScreenToWorldPoint(new Vector3(targetSpawnPositionX, 0, camera.nearClipPlane));
+                
+                // Camera camera = Camera.main;
+                // float targetSpawnPositionX = ghostOwners[i].connectionNetworkId % 2 == 0 ? 0.05f : 0.95f;
+                // Vector3 viewportPosition = new Vector3(targetSpawnPositionX, 0.5f, camera.nearClipPlane);
+                // Vector3 worldPosition = camera.ViewportToWorldPoint(viewportPosition);
                     
+                EntityManager.AddComponentData(spawnedPlayerPrefab, new DeterministicEntityID { ID = DeterministicLogger.Instance.GetDeterministicEntityID(World.Name) });
                 EntityManager.SetComponentData(spawnedPlayerPrefab, new LocalTransform
                 {
-                    Position = new float3(worldPosition.x, worldPosition.y, 13f), 
+                    Position = new float3(targetSpawnPositionX, 0f, 13f), 
                     Scale = 1f,
                     Rotation = quaternion.identity
                 });

@@ -38,7 +38,8 @@ namespace PongGame
         }
 
         protected override void OnStartRunning()
-        { randomSeedFromServer = SystemAPI.GetSingleton<DeterministicSettings>().randomSeed;
+        { 
+            randomSeedFromServer = SystemAPI.GetSingleton<DeterministicSettings>().randomSeed;
            random = new Random((int)randomSeedFromServer); // in theory it will allow users to predict the random numbers
         }
 
@@ -56,6 +57,7 @@ namespace PongGame
             var ballPrefab = SystemAPI.GetSingleton<PongBallSpawner>().Ball;
                 
             var ballEntity = EntityManager.Instantiate(ballPrefab);
+            EntityManager.AddComponentData(ballEntity, new DeterministicEntityID { ID = DeterministicLogger.Instance.GetDeterministicEntityID(World.Name) });
             EntityManager.SetComponentData(ballEntity, new LocalTransform
             {
                 Position = new float3(0, 0, 13),

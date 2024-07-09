@@ -41,6 +41,23 @@ namespace DeterministicLockstep
         /// This is used for local simulation only.
         /// </summary>
         private Dictionary<ulong, List<string>> clientHashInfoBuffer2;
+        
+        private int deterministicEntityID = -1;
+        private int deterministicEntityID2 = -1; // For local client testing
+        
+        public int GetDeterministicEntityID(string worldName)
+        {
+            if(worldName == "ClientWorld")
+            {
+                deterministicEntityID++;
+                return deterministicEntityID;
+            }
+            else
+            {
+                deterministicEntityID2++;
+                return deterministicEntityID2;
+            }
+        }
 
         private void Awake()
         {

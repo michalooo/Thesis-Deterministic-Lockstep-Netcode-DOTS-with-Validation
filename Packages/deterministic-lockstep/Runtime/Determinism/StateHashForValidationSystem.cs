@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
@@ -38,9 +39,9 @@ namespace DeterministicLockstep
             state.RequireForUpdate<DeterministicSettings>();
             state.RequireForUpdate<DeterministicSimulationTime>();
             state.RequireForUpdate<DeterministicComponent>();
-
-            perJobHashArray = new NativeList<ulong>(128, Allocator.Persistent);
+            
             listOfDeterministicTypes = SystemAPI.GetSingletonBuffer<DeterministicComponent>();
+            perJobHashArray = new NativeList<ulong>(128, Allocator.Persistent);
             
             var componentTypes = new ComponentType[listOfDeterministicTypes.Length];
             for (int i = 0; i < listOfDeterministicTypes.Length; i++)
@@ -84,22 +85,22 @@ namespace DeterministicLockstep
                 listOfDeterministicTypes = dynamicListOfDeterministicTypes,
                 resultsNativeArray = perJobHashArray.AsArray(),
                 entityType = SystemAPI.GetEntityTypeHandle(),
-                logMap = determinismLogPerEntityTypeMap.AsParallelWriter()
+                logMap = determinismLogPerEntityTypeMap.AsParallelWriter(),
+                tick = timeComponent.ValueRO.currentClientTickToSend
             };
             
             var hashingJobHandle = hashingJob.ScheduleParallel(componentTypesQuery, state.Dependency);
             hashingJobHandle.Complete();
             
-            ulong stateHash = 0;
-            foreach (var perJobHash in perJobHashArray)
-                stateHash = TypeHash.CombineFNV1A64(stateHash, perJobHash);
-            timeComponent.ValueRW.hashesForTheCurrentTick.Add(stateHash);
+            var hashedSimulationTick = SystemAPI.GetSingletonRW<DeterministicSimulationTime>().ValueRO.currentClientTickToSend;
             
+            ulong stateHash = 0;
+           
             var keys = determinismLogPerEntityTypeMap.GetKeyArray(Allocator.Temp);
-            keys.Sort();
+            keys.Sort(new EntityComparer { manager = state.EntityManager });
+           
             var keyIndex = -1;
             var keyVersion = -1;
-            var hashedSimulationTick = SystemAPI.GetSingletonRW<DeterministicSimulationTime>().ValueRO.currentClientTickToSend;
             foreach (var key in keys)
             {
                 if (keyIndex != key.Index || keyVersion != key.Version) // This is used because for local simulation we get duplicated entities
@@ -114,12 +115,19 @@ namespace DeterministicLockstep
                     foreach (var value in values)
                     {
                         DeterministicLogger.Instance.AddToClientHashDictionary(state.World.Name, (ulong) hashedSimulationTick, $"               Component [{value.Key}] - Hash value {value.Value}");
+                        stateHash = TypeHash.CombineFNV1A64(stateHash, value.Value);
+                        
                         if (value.Key == TypeManager.GetTypeIndex<LocalTransform>())
                         {
                             LocalTransform localTransform = state.EntityManager.GetComponentData<LocalTransform>(key);
                             DeterministicLogger.Instance.AddToClientHashDictionary(state.World.Name, (ulong) hashedSimulationTick, $"                    Position: {localTransform.Position}");
                             DeterministicLogger.Instance.AddToClientHashDictionary(state.World.Name, (ulong) hashedSimulationTick, $"                    Rotation: {localTransform.Rotation}");
                             DeterministicLogger.Instance.AddToClientHashDictionary(state.World.Name, (ulong) hashedSimulationTick, $"                    Scale: {localTransform.Scale}");
+                        }
+                        else if (value.Key == TypeManager.GetTypeIndex<DeterministicEntityID>())
+                        {
+                            DeterministicEntityID deterministicEntityID = state.EntityManager.GetComponentData<DeterministicEntityID>(key);
+                            DeterministicLogger.Instance.AddToClientHashDictionary(state.World.Name, (ulong) hashedSimulationTick, $"                    Deterministic entity ID: {deterministicEntityID.ID}");
                         }
                         else if (value.Key == TypeManager.GetTypeIndex<DeterministicSettings>())
                         {
@@ -134,8 +142,10 @@ namespace DeterministicLockstep
                     }
                 }
             }
-            
-            perJobHashArray.Clear(); 
+            DeterministicLogger.Instance.AddToClientHashDictionary(state.World.Name, (ulong) hashedSimulationTick, $"State hash: {stateHash} ");
+            timeComponent.ValueRW.hashesForTheCurrentTick.Add(stateHash);
+
+            perJobHashArray.Clear();
             determinismLogPerEntityTypeMap.Dispose();
             keys.Dispose();
         }
@@ -144,6 +154,19 @@ namespace DeterministicLockstep
         public void OnDestroy(ref SystemState state)
         {
             perJobHashArray.Dispose();
+        }
+    }
+    
+    [BurstCompile]
+    struct EntityComparer : IComparer<Entity>
+    {
+        public EntityManager manager;
+
+        public int Compare(Entity entity1, Entity entity2)
+        {
+            var value1 = manager.GetComponentData<DeterministicEntityID>(entity1).ID;
+            var value2 = manager.GetComponentData<DeterministicEntityID>(entity2).ID;
+            return value1.CompareTo(value2);
         }
     }
 }

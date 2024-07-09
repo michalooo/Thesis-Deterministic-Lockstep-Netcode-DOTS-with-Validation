@@ -305,27 +305,28 @@ namespace DeterministicLockstep
         {
             foreach (var playerNetworkId in rpc.NetworkIDsOfAllClients)
             {
-                var newEntity = EntityManager.CreateEntity();
+                var connectionEntity = EntityManager.CreateEntity();
 
-                EntityManager.AddComponentData(newEntity, new PlayerInputDataToUse
+                EntityManager.AddComponentData(connectionEntity, new DeterministicEntityID { ID = DeterministicLogger.Instance.GetDeterministicEntityID(World.Name) });
+                EntityManager.AddComponentData(connectionEntity, new PlayerInputDataToUse
                 {
                     clientNetworkId = playerNetworkId,
                     playerInputToApply = new PongInputs(),
                     isPlayerDisconnected = false,
                 });
-                EntityManager.AddComponentData(newEntity, new GhostOwner
+                EntityManager.AddComponentData(connectionEntity, new GhostOwner
                 {
                     connectionNetworkId = playerNetworkId
                 });
-                EntityManager.AddComponentData(newEntity, new NetworkConnectionReference
+                EntityManager.AddComponentData(connectionEntity, new NetworkConnectionReference
                 {
                     driverReference = networkDriver,
                     reliablePipelineReference = reliablePipeline,
                     connectionReference = connectionToTheServer
                 });
-                EntityManager.AddComponentData(newEntity, new GhostOwnerIsLocal());
+                EntityManager.AddComponentData(connectionEntity, new GhostOwnerIsLocal());
                 if (playerNetworkId != rpc.ClientAssignedNetworkID)
-                    EntityManager.SetComponentEnabled<GhostOwnerIsLocal>(newEntity, false);
+                    EntityManager.SetComponentEnabled<GhostOwnerIsLocal>(connectionEntity, false);
             }
 
             var deterministicTime = SystemAPI.GetSingletonRW<DeterministicSimulationTime>();

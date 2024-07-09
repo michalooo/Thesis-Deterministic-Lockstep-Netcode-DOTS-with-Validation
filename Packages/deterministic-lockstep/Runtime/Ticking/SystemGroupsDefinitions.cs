@@ -34,14 +34,18 @@ namespace DeterministicLockstep
             RateManager = new DeterministicFixedStepRateManager(this);
             
             EntityManager.CreateSingletonBuffer<DeterministicComponent>();
-            var client = SystemAPI.GetSingletonBuffer<DeterministicComponent>();
-            client.Add(new DeterministicComponent
+            var deterministicComponentsBuffer = SystemAPI.GetSingletonBuffer<DeterministicComponent>();
+            deterministicComponentsBuffer.Add(new DeterministicComponent
             {
                 Type = ComponentType.ReadOnly<LocalTransform>(),
             });
-            client.Add(new DeterministicComponent
+            deterministicComponentsBuffer.Add(new DeterministicComponent
             {
                 Type = ComponentType.ReadOnly<DeterministicSettings>(),
+            });
+            deterministicComponentsBuffer.Add(new DeterministicComponent
+            {
+                Type = ComponentType.ReadOnly<DeterministicEntityID>(),
             });
             
             EntityManager.CreateSingleton(new DeterministicSimulationTime
@@ -133,6 +137,25 @@ namespace DeterministicLockstep
                     deterministicSettings.ValueRW.nonDeterministicTickDuringReplay = dataToReplayFromTheFile.Length;
                 }
                 
+                if (deterministicTime.ValueRO.currentClientTickToSend <=
+                    deterministicTime.ValueRO
+                        .forcedInputLatencyDelay) // Sending first inputs to cover for forced input delay
+                {
+                    var inputSendSystem = group.World.GetExistingSystem<PlayerInputSendSystem>();
+
+                    while (deterministicTime.ValueRO.currentClientTickToSend <=
+                           deterministicTime.ValueRO
+                               .forcedInputLatencyDelay)
+                    {
+                        inputSendSystem.Update(group.World.Unmanaged);
+                        deterministicTime.ValueRW.currentClientTickToSend++;
+                        deterministicTime.ValueRW.numTimesTickedThisFrame++;
+                        group.World.PushTime(new TimeData(localDeltaTime, localDeltaTime));
+                    }
+
+                    return false;
+                }
+                
                 var isTimeToSendNextTick = false;
                 
                 if (deterministicTime.ValueRO.numTimesTickedThisFrame >= MaxTicksPerFrame) // If we already ticked maximum times this frame
@@ -167,17 +190,6 @@ namespace DeterministicLockstep
                 
                 if (isTimeToSendNextTick)
                 {
-                    if (deterministicTime.ValueRO.currentClientTickToSend <=
-                        deterministicTime.ValueRO
-                            .forcedInputLatencyDelay) 
-                    {
-                        deterministicTime.ValueRW.currentClientTickToSend++;
-                        
-                        deterministicTime.ValueRW.numTimesTickedThisFrame++;
-                        group.World.PushTime(new TimeData(localDeltaTime, localDeltaTime));
-                        return true;
-                    }
-                    
                     if(dataToReplayFromTheFile.IsCreated && dataToReplayFromTheFile.Length > 0)
                     {
                         var rpc = dataToReplayFromTheFile[0];

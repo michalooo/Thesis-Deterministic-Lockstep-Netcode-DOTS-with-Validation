@@ -14,6 +14,7 @@ namespace DeterministicLockstep
     [BurstCompile]
     public unsafe struct GameStateHashJob : IJobChunk
     {
+        public int tick;
         /// <summary>
         /// Hash calculation option set for the game
         /// </summary>
@@ -49,6 +50,7 @@ namespace DeterministicLockstep
             in v128 chunkEnabledMask)
         {
             NativeArray<Entity> entitiesArray = chunk.GetNativeArray(entityType);
+            
             var dynamicTypeListPtr = listOfDeterministicTypes.GetData();
             var hash = (ulong) 0; // This is used to calculate the final hash of the chunk
             
@@ -73,16 +75,16 @@ namespace DeterministicLockstep
                                 var startIndex = i * typeInfo.TypeSize;
                                 // Calculate the end index
                                 var endIndex = startIndex + typeInfo.TypeSize;
-                                var localHash = (ulong) 0; // This is used to calculate the hash for the current component. In contrast to hash, this is local to every component and used for logging
+                                var chunkComponentHash = (ulong) 0; // This is used to calculate the hash for the current component. In contrast to hash, this is local to every component and used for logging
 
                                 // Extract the bytes for this entity and hash each of them. This allows to achieve bit-wise comparison of the data
                                 for (var byteIndex = startIndex; byteIndex < endIndex; byteIndex++)
                                 {
-                                    localHash = TypeHash.CombineFNV1A64(localHash, rawByteData[byteIndex]);
+                                    chunkComponentHash = TypeHash.CombineFNV1A64(chunkComponentHash, rawByteData[byteIndex]);
                                     hash = TypeHash.CombineFNV1A64(hash, rawByteData[byteIndex]);
                                 }
                                 
-                                var log = new KeyValuePair<TypeIndex, ulong>(dynamicComponentTypeHandle.TypeIndex, localHash);
+                                var log = new KeyValuePair<TypeIndex, ulong>(dynamicComponentTypeHandle.TypeIndex, chunkComponentHash);
                                 logMap.Add(entity, log);
                             }
                         }
@@ -122,7 +124,7 @@ namespace DeterministicLockstep
 
                     break;
             }
-
+            
             resultsNativeArray[unfilteredChunkIndex] = hash;
         }
     }

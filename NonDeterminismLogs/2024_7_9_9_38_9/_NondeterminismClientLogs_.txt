@@ -1,0 +1,36 @@
+Tick 12
+          Entity(167:1) - Ball
+               Component [PongGame.Velocity] - Hash value 8088593717820573300
+               Component [DeterministicLockstep.DeterministicEntityID] - Hash value 4608686622319016226
+                    Deterministic entity ID: 2
+               Component [Unity.Transforms.LocalTransform] - Hash value 1588315494476892578
+                    Position: float3(2.593491E-09f, -0.3114175f, 13f)
+                    Rotation: quaternion(0f, 0f, 0f, 1f)
+                    Scale: 0.2
+
+          Entity(168:1) - Player
+               Component [DeterministicLockstep.DeterministicEntityID] - Hash value 16136401970333300147
+                    Deterministic entity ID: 3
+               Component [Unity.Transforms.LocalTransform] - Hash value 9729014735595668944
+                    Position: float3(-8f, 0f, 13f)
+                    Rotation: quaternion(0f, 0f, 0f, 1f)
+                    Scale: 1
+          Entity(169:1) - Player
+               Component [DeterministicLockstep.DeterministicEntityID] - Hash value 9217373244638032452
+
+                    Deterministic entity ID: 4
+               Component [Unity.Transforms.LocalTransform] - Hash value 10344765052643411024
+                    Position: float3(8f, 0f, 13f)
+                    Rotation: quaternion(0f, 0f, 0f, 1f)
+                    Scale: 1
+          Entity(170:1) - Ball
+               Component [PongGame.Velocity] - Hash value 15173302261931692244
+               Component [DeterministicLockstep.DeterministicEntityID] - Hash value 2298344518942764757
+                    Deterministic entity ID: 5
+
+               Component [Unity.Transforms.LocalTransform] - Hash value 15056080320302003574
+                    Position: float3(0.09829264f, 0.2432828f, 13f)
+                    Rotation: quaternion(0f, 0f, 0f, 1f)
+                    Scale: 0.2
+State hash: 16781685079681428318 
+
