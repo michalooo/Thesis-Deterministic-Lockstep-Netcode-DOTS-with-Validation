@@ -30,6 +30,8 @@ The game is a modified version of the classic Pong. Two players compete by contr
 
 ## Sample Game Systems Overview
 
+Those are the systems that were implemented for the sake of the sample game showcasing package usage:
+
 1. **PongBallBounceSystem**: Detects if the ball hits the wall or a player and changes the velocity component to bounce it.
 2. **PongBallDestructionSystem**: Destroys the ball entity if it crosses the left or right border and adds a point to the respective player.
 3. **PongBallMovementSystem**: Moves balls according to their velocity component.
@@ -41,8 +43,8 @@ The game is a modified version of the classic Pong. Two players compete by contr
 9. **UIHandler**: Manages the in-game score display.
 10. **PongInputs**: Singleton component that stores player inputs for the local player.
 
-## Lockstep Model Overview
-This implementation demonstrates a basic deterministic lockstep netcode model with added forced input latency.
+## Lockstep Model Important Components
+This implementation demonstrates a basic deterministic lockstep netcode model with added forced input latency. Important concepts are:
 
 - **ClientBehaviour**: Handles incoming RPCs from the server.
 - **ServerBehaviour**: Manages connections and incoming RPCs from clients, validates hashes, and sends packets back.
@@ -86,6 +88,9 @@ When desync occurs, log files are generated to help identify the source of nonde
 - **System Info**: Provides information about the client machine.
 - **Game Settings**: Records game settings used during the game.
 
+## Replay functionality
+It's possible to replay the game in order to use different validation method to obtain informations about a particular desync. In order to use it GameSettings and ServerInputRecording files should be placed in main NondeterminismLogs folder and **isReplayFromFile** variable in DeterministicSettings should be set to true. It allows for local simulation based on save inputs and settings.
+
 ## Package Usage
 In order to use deterministic lockstep netcode model implemented by this package you can follow the implementation of the sample Pong game.
 The most important aspects are that in order for it to work, several steps need to be done.
@@ -94,6 +99,7 @@ The most important aspects are that in order for it to work, several steps need 
 - Upon creation of those worlds modify DeterministicSettings component as needed with game parameters.
 - Implement an input struct following the implementation of the one for PongSample, the struct must for now be implemented within the package and needs to contain Serialize and Deserialize methods in the same way as the PongInput struct.
 - Read about Client and Server modes in the README and use them to control your simulation.
+- Set all systems that are affecting simulation state to be part of DeterministicSimulationSystemGroup. This system group allows to run the systems inside with predefined in settings speed and also allows to point nondeterministic system in this group. If you have a systsem that is not affecting simulation state (for example connection handling that handles incoming information) it can be outside of the group.
 
 The package will be a subject for modifications and improvements and this README may change or be updated.
 
