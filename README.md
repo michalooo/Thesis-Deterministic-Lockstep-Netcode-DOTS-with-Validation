@@ -5,6 +5,8 @@ This repository contains the source code for the package which allows for creati
 
 Tool was implemented using Unity's Data-Oriented Technology Stack (DOTS). It needs to be noted that this is a showcase of methodology rather than fully working solution which will be a matter of further development.
 
+The master thesis explaining in detail how the framework was implemented is placed under **Thesis_writing** folder. It provides much more detailed explanation of package elements then README but the informatios here should be enaugh to set the stage for exploration of how the functionalities are working.
+
 ## Features of the package
 
 - **Deterministic Lockstep Netcode Model:** Ensures all clients in a multiplayer game remain in sync by only sending player inputs and simulating the same game state across all clients.
