@@ -52,20 +52,20 @@ This implementation demonstrates a basic deterministic lockstep netcode model wi
 
 ## Client and Server Modes
 ### Server Modes
-- **None**: Initial mode, no actions executed.
-- **Disconnect**: Disconnects all clients.
-- **RunDeterministicSimulation**: Tells clients to load the game and starts the game after clients confirm readiness.
-- **ListenForConnections**: Allows clients to connect.
+- **None**: Initial mode, no actions are being executed.
+- **Disconnect**: If this mode will be set, all clients will be disconnected.
+- **RunDeterministicSimulation**: If this mode will be set, the server sends aproperiate messages to all clients to load the game and starts the game after clients confirm readiness.
+- **ListenForConnections**: If this mode is set, the server will listen for connections which number is restricted by allowedConnections parameter on DeterministicSettings.
 
 ### Client Modes
-- **None**: Initial mode, no actions executed.
-- **Desync**: Stops the simulation upon receiving a desync message.
-- **GameFinished**: Sends the final hash to the server and returns to the menu after confirmation or 5 seconds.
-- **LoadingGame**: Loads the game scene upon server instruction and sends readiness confirmation.
-- **ClientReady**: Sends the starting hash and readiness confirmation to the server.
-- **RunDeterministicSimulation**: Starts the simulation upon server confirmation.
-- **Disconnect**: Disconnects from the server.
-- **Connect**: Connects to the server.
+- **None**: Initial mode, no actions are being executed.
+- **Desync**: This mode is being set by the package when nondeterminism will be detected. It's important to perform some action when this mode is set because otherwise the game will just look frozen.
+- **GameFinished**: If this mode will be set, the client sends the final hash to the server and ends the game after confirmation that there was no nondeterminism.
+- **LoadingGame**: This mode is being set by the package when user is supposed to load the game scene. When the game scene is loaded the mode should be chamged to ClientReady.
+- **ClientReady**: If this mode will be set, client sends readiness message to the server and upon receiving message back about starting the game the simulation starts.
+- **RunDeterministicSimulation**: This mode will be set automatically by the package and means that the client runs the lockstep simulation.
+- **Disconnect**: If this mode will be set, the client will disconnect from the server.
+- **Connect**: When this mode wil be set, the client will attemp to connect to the server with values of address and port taken from the DeterministicSettings.
 
 ## Determinism Validation and Debugging Tooling
 The game includes a determinism validation system with several validation options:
@@ -86,7 +86,18 @@ When desync occurs, log files are generated to help identify the source of nonde
 - **System Info**: Provides information about the client machine.
 - **Game Settings**: Records game settings used during the game.
 
-## Future Improvements
+## Package Usage
+In order to use deterministic lockstep netcode model implemented by this package you can follow the implementation of the sample Pong game.
+The most important aspects are that in order for it to work, several steps need to be done.
+
+- Create Client and Server worlds on which ClientBehaviourSystem and ServerBehaviourSystem will run.
+- Upon creation of those worlds modify DeterministicSettings component as needed with game parameters.
+- Implement an input struct following the implementation of the one for PongSample, the struct must for now be implemented within the package and needs to contain Serialize and Deserialize methods in the same way as the PongInput struct.
+- Read about Client and Server modes in the README and use them to control your simulation.
+
+The package will be a subject for modifications and improvements and this README may change or be updated.
+
+## Future Improvement Plans
 
 - **Automatic DeterministicID Assignment:**
   - Automate the assignment of `DeterministicID` to ensure all components are considered for validation, reducing the chance of human error.
