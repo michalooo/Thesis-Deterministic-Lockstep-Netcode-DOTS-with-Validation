@@ -6,7 +6,7 @@ namespace PongGame
     /// <summary>
     /// Class that manages the UI elements of the game.
     /// </summary>
-    public class UISingleton : MonoBehaviour 
+    public class GameManagerSingleton : MonoBehaviour 
     {
         [SerializeField] private TextMeshProUGUI scoreLeft;
         [SerializeField] private TextMeshProUGUI scoreRight;
@@ -14,7 +14,7 @@ namespace PongGame
         [SerializeField] private TextMeshProUGUI gameResultText;
         [SerializeField] private GameObject desyncMessage;
         
-        public static UISingleton Instance { get; private set; }
+        public static GameManagerSingleton Instance { get; private set; }
         
         private void Awake() 
         { 

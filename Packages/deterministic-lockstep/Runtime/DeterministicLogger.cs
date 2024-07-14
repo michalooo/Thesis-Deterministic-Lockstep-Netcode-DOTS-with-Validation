@@ -373,27 +373,53 @@ namespace DeterministicLockstep
         /// Function which logs the information about the client nondeterministic frame to a file
         /// </summary>
         /// <param name="nonDeterministicTick">Nondeterministic tick to log</param>
-        public void LogClientNondeterministicTickInfoToTheFile(string worldName, ulong nonDeterministicTick)
+        public void LogClientNondeterministicTickInfoToTheFile(string worldName, ulong nonDeterministicTick, bool isReplayFromFile)
         {
             var logBuilder = new StringBuilder();
             var hashInfoBuffer = worldName == "ClientWorld" ? clientHashInfoBuffer : clientHashInfoBuffer2;
-            
-            if(!hashInfoBuffer.TryGetValue(nonDeterministicTick, out var nondeterministicFrameInfo)) throw new Exception("No data to log for nondeterministic tick " + nonDeterministicTick);
-            
-            logBuilder.AppendLine("Tick " + nonDeterministicTick);
-            foreach (var frameInfoLine in nondeterministicFrameInfo)
+
+            if (isReplayFromFile)
             {
-                logBuilder.AppendLine(frameInfoLine);
-                        
-                if (logBuilder.Length >= maxBatchSize)
+                for (ulong i = 0; i <= nonDeterministicTick; i++)
                 {
-                    LogClientNondeterminismInfoToTheFile(worldName, logBuilder.ToString());
-                    logBuilder.Clear();
+                    if (!hashInfoBuffer.TryGetValue(i, out var nondeterministicFrameInfo)) continue; //throw new Exception("No data to log for tick " + i);
+            
+                    logBuilder.AppendLine("Tick " + i);
+                    foreach (var frameInfoLine in nondeterministicFrameInfo)
+                    {
+                        logBuilder.AppendLine(frameInfoLine);
+                        
+                        if (logBuilder.Length >= maxBatchSize)
+                        {
+                            LogClientNondeterminismInfoToTheFile(worldName, logBuilder.ToString());
+                            logBuilder.Clear();
+                        }
+                    }
+                    if (logBuilder.Length > 0)
+                    {
+                        LogClientNondeterminismInfoToTheFile(worldName, logBuilder.ToString());
+                    }
                 }
             }
-            if (logBuilder.Length > 0)
+            else
             {
-                LogClientNondeterminismInfoToTheFile(worldName, logBuilder.ToString());
+                if(!hashInfoBuffer.TryGetValue(nonDeterministicTick, out var nondeterministicFrameInfo)) throw new Exception("No data to log for nondeterministic tick " + nonDeterministicTick);
+            
+                logBuilder.AppendLine("Tick " + nonDeterministicTick);
+                foreach (var frameInfoLine in nondeterministicFrameInfo)
+                {
+                    logBuilder.AppendLine(frameInfoLine);
+                        
+                    if (logBuilder.Length >= maxBatchSize)
+                    {
+                        LogClientNondeterminismInfoToTheFile(worldName, logBuilder.ToString());
+                        logBuilder.Clear();
+                    }
+                }
+                if (logBuilder.Length > 0)
+                {
+                    LogClientNondeterminismInfoToTheFile(worldName, logBuilder.ToString());
+                }
             }
         }
     }

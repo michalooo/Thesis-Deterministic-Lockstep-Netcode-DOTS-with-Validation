@@ -55,15 +55,15 @@ namespace PongGame
 
             if (state.World.Name == "ClientWorld" && (rightPointsQueue.Count != 0 || leftPointsQueue.Count != 0)) // To prevent local simulation for counting points twice (from both worlds)
             {
-                UISingleton.Instance.AddRightScore(rightPointsQueue.Count);
-                UISingleton.Instance.AddLeftScore(leftPointsQueue.Count);
+                GameManagerSingleton.Instance.AddRightScore(rightPointsQueue.Count);
+                GameManagerSingleton.Instance.AddLeftScore(leftPointsQueue.Count);
             }
 
             if (rightPointsQueue.Count != 0 || leftPointsQueue.Count != 0)
             {
-                if (UISingleton.Instance.GetTotalScore() == GameSettings.Instance.GetTotalBallsToSpawn())
+                if (GameManagerSingleton.Instance.GetTotalScore() == GameSettings.Instance.GetTotalBallsToSpawn())
                 {
-                    UISingleton.Instance.SetGameResult();
+                    GameManagerSingleton.Instance.SetGameResult();
                     var client = SystemAPI.GetSingletonRW<DeterministicClientComponent>();
                     client.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.GameFinished;
                 }

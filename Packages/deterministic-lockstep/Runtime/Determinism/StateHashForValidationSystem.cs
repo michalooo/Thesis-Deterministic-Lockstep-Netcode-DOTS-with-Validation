@@ -72,18 +72,18 @@ namespace DeterministicLockstep
             var dynamicListOfDeterministicTypes = new DynamicTypeList();
             DynamicTypeList.PopulateList(ref state, listOfDeterministicTypes, true, ref dynamicListOfDeterministicTypes);
             
-            var resultsArrayCapacity = componentTypesQuery.CalculateChunkCount();
+            // var resultsArrayCapacity = componentTypesQuery.CalculateChunkCount();
             
-            var length = math.ceilpow2(resultsArrayCapacity);
-            perJobHashArray.Length = length;
-            perJobHashArray.Capacity = length;
+            // var length = math.ceilpow2(resultsArrayCapacity);
+            // perJobHashArray.Length = length;
+            // perJobHashArray.Capacity = length;
             var determinismLogPerEntityTypeMap = new NativeParallelMultiHashMap<Entity, KeyValuePair<TypeIndex, ulong>>(componentTypesQuery.CalculateEntityCount()*listOfDeterministicTypes.Length, Allocator.TempJob);
             
             var hashingJob = new GameStateHashJob()
             {
                 hashCalculationOption = hashCalculationOption,
                 listOfDeterministicTypes = dynamicListOfDeterministicTypes,
-                resultsNativeArray = perJobHashArray.AsArray(),
+                // resultsNativeArray = perJobHashArray.AsArray(),
                 entityType = SystemAPI.GetEntityTypeHandle(),
                 logMap = determinismLogPerEntityTypeMap.AsParallelWriter(),
                 tick = timeComponent.ValueRO.currentClientTickToSend
@@ -95,7 +95,11 @@ namespace DeterministicLockstep
             var hashedSimulationTick = SystemAPI.GetSingletonRW<DeterministicSimulationTime>().ValueRO.currentClientTickToSend;
             
             ulong stateHash = 0;
-           
+            //
+            // Debug.Log("Before hashing: " + Time.time * 1000);
+            // for(int i=0; i<32; i++) TypeHash.CombineFNV1A64(12345, 1);
+            // Debug.Log("After hashing: " + Time.time * 1000);
+            //
             var keys = determinismLogPerEntityTypeMap.GetKeyArray(Allocator.Temp);
             keys.Sort(new EntityComparer { manager = state.EntityManager });
            

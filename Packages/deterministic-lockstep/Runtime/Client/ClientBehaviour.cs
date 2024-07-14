@@ -109,7 +109,7 @@ namespace DeterministicLockstep
                 {
                     nondeterministicTick = (ulong) SystemAPI.GetSingletonRW<DeterministicSettings>().ValueRO.nonDeterministicTickDuringReplay;
                 }
-                DeterministicLogger.Instance.LogClientNondeterministicTickInfoToTheFile(World.Name, nondeterministicTick);
+                DeterministicLogger.Instance.LogClientNondeterministicTickInfoToTheFile(World.Name, nondeterministicTick, SystemAPI.GetSingletonRW<DeterministicSettings>().ValueRO.isReplayFromFile);
                 DeterministicLogger.Instance.LogSystemInfoToTheFile(World.Name);
                 DeterministicLogger.Instance.LogClientSettingsToTheFile(World.Name, SystemAPI.GetSingleton<DeterministicSettings>());
             }

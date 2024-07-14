@@ -67,7 +67,7 @@ namespace PongGame
             }
             else if (client.ValueRO.deterministicClientWorkingMode == DeterministicClientWorkingMode.RunDeterministicSimulation)
             {
-                UISingleton.Instance.SetWaitingTextEnabled(false);
+                GameManagerSingleton.Instance.SetWaitingTextEnabled(false);
             }
             else if(client.ValueRO.deterministicClientWorkingMode == DeterministicClientWorkingMode.None)
             {
@@ -75,7 +75,7 @@ namespace PongGame
             }
             else if(client.ValueRO.deterministicClientWorkingMode == DeterministicClientWorkingMode.Desync)
             {
-                UISingleton.Instance.SetDesyncMessageEnabled(true);
+                GameManagerSingleton.Instance.SetDesyncMessageEnabled(true);
             }
             
             

@@ -138,7 +138,7 @@ namespace PongGame
                 if (velocity.value.y > 0)
                 {
                     // Reflect the velocity about the normal vector of the wall
-                    // newVelocityValue = math.reflect(velocity.value, new float3(0, random.NextFloat(-0.5f, -1f), 0));
+                    // newVelocityValue = math.reflect(velocity.value, new float3(0, -random.NextFloat(0.5f, 1f), 0));
                     newVelocityValue = math.reflect(velocity.value, new float3(0, -1, 0));
                 }
             }
