@@ -5,10 +5,30 @@ This repository contains the source code for the package which allows for creati
 
 Tool was implemented using Unity's Data-Oriented Technology Stack (DOTS). It needs to be noted that this is a showcase of methodology rather than fully working solution which will be a matter of further development.
 
+## Features of the package
+
+- **Deterministic Lockstep Netcode Model:** Ensures all clients in a multiplayer game remain in sync by only sending player inputs and simulating the same game state across all clients.
+- **Determinism Validation Tools:** Detects nondeterministic behavior within DOTS-based games by comparing game state hashes.
+- **Debugging Tools:** Helps identify and resolve sources of nondeterminism by logging game state changes and comparing them.
+
+## Installation
+
+1. **Clone the Repository**:
+    ```sh
+    git clone https://github.com/michalooo/Thesis.git
+    ```
+
+2. **Open in Unity**:
+    - Open the project in Unity 6000.0.0.b16
+
+3. **Download necessary packages**:
+    - The project already contains modified version of com.unity.entities@1.2.3
+    - Download any other packages which are listed in manifest.json
+
 ## Sample Game Description
 The game is a modified version of the classic Pong. Two players compete by controlling paddles to hit a ball back and forth. The game starts by spawning one ball per tick until 1000 balls are spawned. The game counts the score, and when it is over, the game stops, waits for 5 seconds, and then returns to the menu.
 
-## Game Systems Overview
+## Sample Game Systems Overview
 
 1. **PongBallBounceSystem**: Detects if the ball hits the wall or a player and changes the velocity component to bounce it.
 2. **PongBallDestructionSystem**: Destroys the ball entity if it crosses the left or right border and adds a point to the respective player.
@@ -58,30 +78,6 @@ The game includes a determinism validation system with several validation option
 
 The validation system hashes game state components and sends hashes to the server for validation. If desync is detected, log files are generated for debugging.
 
-## Installation and Usage
-
-1. **Clone the Repository**:
-    ```sh
-    git clone https://github.com/michalooo/Thesis.git
-    ```
-
-2. **Open in Unity**:
-    - Open the project in Unity 6000.0.0.b16
-
-3. **Download necessary packages**:
-    - The project already contains modified version of com.unity.entities@1.2.3
-    - download other packages which are in manifest.json
-
-3. **Build and Run**:
-    - Build the project for your target platform.
-    - Run the game
-
-4. **Configure Game Settings**:
-    - Configure server and client settings through the in-game menu.
-
-5. **Run the Game**:
-    - Start the game by hosting a server and connecting clients.
-
 ## Log File Generation
 When desync occurs, log files are generated to help identify the source of nondeterminism:
 
@@ -89,3 +85,14 @@ When desync occurs, log files are generated to help identify the source of nonde
 - **Client Logs**: Includes hashes for the last input latency ticks and logs the state of the game at the desynchronized tick.
 - **System Info**: Provides information about the client machine.
 - **Game Settings**: Records game settings used during the game.
+
+## Future Improvements
+
+- **Automatic DeterministicID Assignment:**
+  - Automate the assignment of `DeterministicID` to ensure all components are considered for validation, reducing the chance of human error.
+  
+- **Enhanced Logging:**
+  - Implement code generation to log fields of user-created components, providing more detailed information for debugging.
+
+- **Performance Optimization:**
+  - Speed up the resimulation framework by skipping visual updates and iterating through the `DeterministicSystemGroup` as fast as possible.
