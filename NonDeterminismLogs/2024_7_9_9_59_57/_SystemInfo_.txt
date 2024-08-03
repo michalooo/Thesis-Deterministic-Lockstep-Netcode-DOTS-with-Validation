@@ -1,5 +1,0 @@
-Operating System: Windows 10  (10.0.19045) 64bit
-Processor: 11th Gen Intel(R) Core(TM) i9-11900H @ 2.50GHz with 16 cores
-GPU: NVIDIA GeForce RTX 3050 Ti Laptop GPU, VRAM: 3978 MB
-RAM: 65255 MB
-Screen Resolution: 3840x2400
