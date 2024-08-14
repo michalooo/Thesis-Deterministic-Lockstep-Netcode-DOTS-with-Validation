@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 namespace PongGame
 {
     /// <summary>
-    /// System responsible to modify server behaviour based on user input.
+    /// System responsible to modify lockstep server behaviour based on user input.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
     public partial struct GameLogicServerSystem : ISystem
@@ -19,6 +19,7 @@ namespace PongGame
         public void OnUpdate(ref SystemState state)
         {
             var server = SystemAPI.GetSingletonRW<DeterministicServerComponent>();
+            
             if (SceneManager.GetActiveScene().name == "PongGame" && Input.GetKey(KeyCode.Q)) // Simulation of disconnection 
             {
                 server.ValueRW.deterministicServerWorkingMode = DeterministicServerWorkingMode.Disconnect;

@@ -5,7 +5,7 @@ namespace PongGame
 {
     
     /// <summary>
-    /// Component used to store the player prefab entity
+    /// Component used to store the player prefab entity and should be placed on spawner
     /// </summary>
     public struct PongBallSpawner : IComponentData
     {

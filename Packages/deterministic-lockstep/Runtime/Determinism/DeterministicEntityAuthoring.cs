@@ -10,12 +10,8 @@ namespace DeterministicLockstep
     {
     }
     
-    /// <summary>
-    /// Behaviour which adds the EnsureDeterministicBehaviour component to an entity.
-    /// </summary>
     public class DeterministicEntityAuthoring : MonoBehaviour
     {
-
         class Baker : Baker<DeterministicEntityAuthoring>
         {
             public override void Bake(DeterministicEntityAuthoring authoring)

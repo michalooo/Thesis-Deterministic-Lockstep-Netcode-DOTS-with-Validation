@@ -17,16 +17,17 @@ namespace PongGame
     public partial class PongBallSpawnerSystem : SystemBase
     {
         /// <summary>
-        /// Seed for generating random numbers.
+        /// Seed for generating random numbers received from the server.
         /// </summary>
-        private uint randomSeedFromServer;
-        private Random random;
+        private uint _randomSeedFromServer;
+        private Random _random;
 
         /// <summary>
         /// Hack of allowing the second local client to spawn the last ball.
         /// The problem arises from the fact that both clients are sharing the same state so the actions are executed twice.
+        /// TODO get rid of those problems with second local client
         /// </summary>
-        private bool boolForSecondLocalClientForSpawningLastBall;
+        private bool _boolForSecondLocalClientForSpawningLastBall;
         
         protected override void OnCreate()
         {
@@ -34,66 +35,54 @@ namespace PongGame
             RequireForUpdate<PongInputs>();
             RequireForUpdate<DeterministicSimulationTime>();
             
-            boolForSecondLocalClientForSpawningLastBall = false;
+            _boolForSecondLocalClientForSpawningLastBall = false;
         }
 
         protected override void OnStartRunning()
         { 
-           randomSeedFromServer = SystemAPI.GetSingleton<DeterministicSettings>().randomSeed;
-           random = new Random((int)randomSeedFromServer);
+           _randomSeedFromServer = SystemAPI.GetSingleton<DeterministicSettings>().randomSeed;
+           _random = new Random((int)_randomSeedFromServer);
         }
 
         protected override void OnUpdate()
         {
             if (GameSettings.Instance.GetTotalBallsSpawned() >= GameSettings.Instance.GetTotalBallsToSpawn())
             {
-                if (World.Name == "ClientWorld1" && !boolForSecondLocalClientForSpawningLastBall)
+                if (World.Name == "ClientWorld1" && !_boolForSecondLocalClientForSpawningLastBall)
                 {
-                    boolForSecondLocalClientForSpawningLastBall = true;
+                    _boolForSecondLocalClientForSpawningLastBall = true;
                 }
                 else return;
             }
             
-            var ballPrefab = SystemAPI.GetSingleton<PongBallSpawner>().Ball;
+            var ballPrefabEntity = SystemAPI.GetSingleton<PongBallSpawner>().Ball;
                 
-            var ballEntity = EntityManager.Instantiate(ballPrefab);
-            EntityManager.AddComponentData(ballEntity, new DeterministicEntityID { ID = DeterministicLogger.Instance.GetDeterministicEntityID(World.Name) });
+            var ballEntity = EntityManager.Instantiate(ballPrefabEntity);
+            EntityManager.AddComponentData(ballEntity, new DeterministicEntityID { id = DeterministicLogger.Instance.GetDeterministicEntityID(World.Name) }); // For debugging purposes. The ID allows to sort the entities which are hashes which otherwise would be impossible due to nondeterminism of entities placement in chunks and nondeterminism of entity ID and Version on different devices (sorting by those is nondeterministic between 2 machines)
             EntityManager.SetComponentData(ballEntity, new LocalTransform
             {
                 Position = new float3(0, 0, 13),
                 Scale = 0.2f,
                 Rotation = quaternion.identity
             });
-            EntityManager.SetName(ballEntity, "Ball");
-                    
-            // Generate a random angle in degrees
-            var directionChoice = random.Next(0, 2);
+            EntityManager.SetName(ballEntity, "Ball"); // For debugging purposes. The name will be visible in nondeterminism debug file
+            
+            // var ballDirection = _random.Next(0, 2);
+            // var angleInDegrees = 0;
+            // if (ballDirection == 0) angleInDegrees = _random.Next(0, 2) == 0 ? _random.Next(0, 70) : _random.Next(110, 180);
+            // else angleInDegrees = _random.Next(0, 2) == 0 ? _random.Next(180, 250) : _random.Next(290, 360);
+            
+            // var angleInRadians = angleInDegrees * Mathf.Deg2Rad;
+            // var ballFinalDirection = new float3(Mathf.Cos(angleInRadians), Mathf.Sin(angleInRadians), 0);
 
-            var angleInDegrees = 0;
-            if (directionChoice == 0) {
-                // Generate an angle for the left direction
-                var rangeChoice = random.Next(0, 2);
-                angleInDegrees = rangeChoice == 0 ? random.Next(0, 70) : random.Next(110, 180);
-            }
-            else {
-                // Generate an angle for the right direction
-                var rangeChoice = random.Next(0, 2);
-                angleInDegrees = rangeChoice == 0 ? random.Next(180, 250) : random.Next(290, 360);
-            }
-
-
-            // Convert the angle to radians
-            var angleInRadians = angleInDegrees * Mathf.Deg2Rad;
-
-            // Generate a direction vector from the angle
-            var direction = new float3(Mathf.Cos(angleInRadians), Mathf.Sin(angleInRadians), 0);
-            direction = math.normalize(direction);
-
-            // Generate a random speed
-            var speed = random.Next(GameSettings.Instance.GetMinBallSpeed(), GameSettings.Instance.GetMaxBallSpeed());
-
-            // Set the velocity of the ball
-            EntityManager.SetComponentData(ballEntity, new Velocity { value = direction * speed });
+            var ballDirectionX = _random.Next(20, 50) * (_random.Next(0, 2) * 2 - 1);
+            var ballDirectionY = _random.Next(30, 100) * (_random.Next(0, 2) * 2 - 1); 
+            var ballFinalDirection = new float3(ballDirectionX, ballDirectionY, 0);
+            
+            ballFinalDirection = math.normalize(ballFinalDirection);
+            
+            var speed = _random.Next(GameSettings.Instance.GetMinBallSpeed(), GameSettings.Instance.GetMaxBallSpeed());
+            EntityManager.SetComponentData(ballEntity, new BallVelocity { value = ballFinalDirection * speed });
                     
             if (World.Name == "ClientWorld") // To prevent local simulation for counting points twice (from both worlds)
             {

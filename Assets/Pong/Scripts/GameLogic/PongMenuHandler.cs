@@ -20,46 +20,44 @@ namespace PongGame
         
         // Host options
         
-        [Tooltip("Toggle to enable local multiplayer simulation. If enabled, a second client will be created.")]
-        public Toggle IsLocalMultiplayerSimulation;
+        [Tooltip("Toggle to enable local multiplayer simulation. If enabled, a second client will be created on the same machine allowing for local testing or local game with second player.")]
+        public Toggle isLocalMultiplayerSimulation;
         
-        [Tooltip("Toggle to enable replay from file.")]
-        public Toggle IsReplayFromFile;
+        [Tooltip("Toggle to enable replay from file. If enabled the game will replay the game from a server input recording and game settings files placed in NonDeterminsmLogs folder")]
+        public Toggle isReplayFromFile;
         
-        [Tooltip("Input field for the game port. This port will be used to host the game.")]
-        public InputField GamePort;
+        [Tooltip("Input field for the game port. This port will be used to host the game and clients can connect to it.")]
+        public InputField gamePort;
         
-        [Tooltip("Input field for the frame rate of the game. This will be used to set the simulation tick rate.")]
-        public InputField FrameRate;
+        [Tooltip("Target frame rate of the game. This will be used to set the simulation tick rate.")]
+        public InputField frameRate;
         
-        [Tooltip("Input field for the forced input latency. This will be used to simulate network latency.")]
-        public InputField ForcedInputLatency;
+        [Tooltip("Forced input latency used in lockstep netcode model. This will define how many frames of delay the player will see as default. The bigger the value the more delay the player will see but also the probability of lag will decrease since there will be a bigger time window for the server to receive the input.")]
+        public InputField forcedInputLatency;
         
-        [Tooltip("Input field for the hash calculation option. This will be used to set the hash calculation option.")]
+        [Tooltip("Hash calculation option. This will be used to set the hash calculation option.")]
         public TMP_Dropdown hashOption;
         
         // Client options
         
-        [Tooltip("Input field for the host address. This address will be used to connect to the game.")]
-        public InputField HostAddress;
+        [Tooltip("Host address. Client will try to connect to this address when starting the game. Only valid if client is not a host")]
+        public InputField hostAddress;
         
-        [Tooltip("Input field for the host port. This port will be used to connect to the game.")]
-        public InputField HostPort;
+        [Tooltip("Host port. Client will try to connect to this port when starting the game. Only valid if client is not a host")]
+        public InputField hostPort;
         
-       
-
-        private void Start()
+        private void Start() // This is solely done because of the "quit" functionality (we want to reset the state of the game)
         {
-            List<World> worlds = new List<World>();
+            var serverClientWorldsList = new List<World>();
             foreach (var world in World.All)
             {
                 if (world.Flags is WorldFlags.GameServer or WorldFlags.GameClient)
                 {
-                    worlds.Add(world);
+                    serverClientWorldsList.Add(world);
                 }
             }
             
-            foreach (var world in worlds)
+            foreach (var world in serverClientWorldsList)
             {
                 world.Dispose();
             }
@@ -75,102 +73,100 @@ namespace PongGame
         
         public void HostGame()
         {
-            var server = CreateServerWorld("ServerWorld");
-            var client = CreateClientWorld("ClientWorld");
+            var serverWorld = CreateServerWorld("ServerWorld");
+            var clientWorld = CreateClientWorld("ClientWorld");
             
-            EntityManager serverEntityManager = server.EntityManager;
-            EntityManager clientEntityManager = client.EntityManager;
+            var serverWorldEntityManager = serverWorld.EntityManager;
+            var clientWorldEntityManager = clientWorld.EntityManager;
             
-            serverEntityManager.CreateSingleton(new DeterministicSettings
+            serverWorldEntityManager.CreateSingleton(new DeterministicSettings // TODO: make this from the package side so user doesn't need to do this
             {
-                _serverAddress = LOCAL_SERVER_ADDRESS,
-                _serverPort = int.Parse(GamePort.text),
+                serverAddress = LOCAL_SERVER_ADDRESS,
+                serverPort = int.Parse(gamePort.text),
                 hashCalculationOption = (DeterminismHashCalculationOption) hashOption.value,
-                ticksOfForcedInputLatency = int.Parse(ForcedInputLatency.text),
-                simulationTickRate = int.Parse(FrameRate.text),
-                allowedConnectionsPerGame = 2,
-                isReplayFromFile = IsReplayFromFile.isOn
+                ticksOfForcedInputLatency = int.Parse(forcedInputLatency.text),
+                simulationTickRate = int.Parse(frameRate.text),
+                allowedConnectionsPerGame = 2, // TODO: hardcoded
+                isReplayFromFile = isReplayFromFile.isOn
             });
             
-            clientEntityManager.CreateSingleton(new DeterministicSettings
+            clientWorldEntityManager.CreateSingleton(new DeterministicSettings
             {
-                _serverAddress = LOCAL_SERVER_ADDRESS,
-                _serverPort = int.Parse(GamePort.text),
+                serverAddress = LOCAL_SERVER_ADDRESS,
+                serverPort = int.Parse(gamePort.text),
                 hashCalculationOption = (DeterminismHashCalculationOption) hashOption.value,
-                ticksOfForcedInputLatency = int.Parse(ForcedInputLatency.text),
-                simulationTickRate = int.Parse(FrameRate.text),
-                allowedConnectionsPerGame = 2,
-                isReplayFromFile = IsReplayFromFile.isOn
+                ticksOfForcedInputLatency = int.Parse(forcedInputLatency.text),
+                simulationTickRate = int.Parse(frameRate.text),
+                allowedConnectionsPerGame = 2, // TODO: hardcoded
+                isReplayFromFile = isReplayFromFile.isOn
             });
             
-            if (IsLocalMultiplayerSimulation.isOn)
+            if (isLocalMultiplayerSimulation.isOn)
             {
-                var secondClient = CreateClientWorld($"ClientWorld1");
-                EntityManager secondClientEntityManager = secondClient.EntityManager;
-                secondClientEntityManager.CreateSingleton(new DeterministicSettings
+                var secondLocalClientWorld = CreateClientWorld($"ClientWorld1");
+                var secondLocalClientWorldEntityManager = secondLocalClientWorld.EntityManager;
+                secondLocalClientWorldEntityManager.CreateSingleton(new DeterministicSettings
                 {
-                    _serverAddress = LOCAL_SERVER_ADDRESS,
-                    _serverPort = int.Parse(GamePort.text),
+                    serverAddress = LOCAL_SERVER_ADDRESS,
+                    serverPort = int.Parse(gamePort.text),
                     hashCalculationOption = (DeterminismHashCalculationOption) hashOption.value,
-                    ticksOfForcedInputLatency = int.Parse(ForcedInputLatency.text),
-                    simulationTickRate = int.Parse(FrameRate.text),
-                    allowedConnectionsPerGame = 2,
-                    isReplayFromFile = IsReplayFromFile.isOn
+                    ticksOfForcedInputLatency = int.Parse(forcedInputLatency.text),
+                    simulationTickRate = int.Parse(frameRate.text),
+                    allowedConnectionsPerGame = 2, // TODO: hardcoded
+                    isReplayFromFile = isReplayFromFile.isOn
                 });
             }
             
-
             SceneManager.LoadScene("PongGame");
-            World.DefaultGameObjectInjectionWorld = client;
+            World.DefaultGameObjectInjectionWorld = clientWorld;
         }
 
         public void ConnectToGame()
         {
-            var client = CreateClientWorld("ClientWorld");
-            EntityManager clientEntityManager = client.EntityManager;
+            var clientWorld = CreateClientWorld("ClientWorld");
+            var clientWorldEntityManager = clientWorld.EntityManager;
             
-            clientEntityManager.CreateSingleton(new DeterministicSettings
+            clientWorldEntityManager.CreateSingleton(new DeterministicSettings
             {
-                _serverPort = int.Parse(GamePort.text),
+                serverPort = int.Parse(gamePort.text),
                 hashCalculationOption = (DeterminismHashCalculationOption) hashOption.value,
-                ticksOfForcedInputLatency = int.Parse(ForcedInputLatency.text),
-                simulationTickRate = int.Parse(FrameRate.text),
-                allowedConnectionsPerGame = 2,
-                isReplayFromFile = IsReplayFromFile.isOn,
-                _serverAddress = HostAddress.text,
+                ticksOfForcedInputLatency = int.Parse(forcedInputLatency.text),
+                simulationTickRate = int.Parse(frameRate.text),
+                allowedConnectionsPerGame = 2, // TODO: hardcoded
+                isReplayFromFile = isReplayFromFile.isOn,
+                serverAddress = hostAddress.text,
             });
             
             SceneManager.LoadScene("PongGame");
-            World.DefaultGameObjectInjectionWorld = client;
+            World.DefaultGameObjectInjectionWorld = clientWorld;
         }
 
-        private static World CreateServerWorld(string name)
+        private static World CreateServerWorld(string worldName)
         {
-            var world = new World(name, WorldFlags.GameServer);
+            var serverWorld = new World(worldName, WorldFlags.GameServer);
 
-            var systems = DefaultWorldInitialization.GetAllSystems(WorldSystemFilterFlags.ServerSimulation);
-            DefaultWorldInitialization.AddSystemsToRootLevelSystemGroups(world, systems);
-            ScriptBehaviourUpdateOrder.AppendWorldToCurrentPlayerLoop(world);
+            var serverWorldSystems = DefaultWorldInitialization.GetAllSystems(WorldSystemFilterFlags.ServerSimulation);
+            DefaultWorldInitialization.AddSystemsToRootLevelSystemGroups(serverWorld, serverWorldSystems);
+            ScriptBehaviourUpdateOrder.AppendWorldToCurrentPlayerLoop(serverWorld);
 
-            if (World.DefaultGameObjectInjectionWorld == null)
-                World.DefaultGameObjectInjectionWorld = world;
+            World.DefaultGameObjectInjectionWorld ??= serverWorld;
 
-            return world;
+            return serverWorld;
         }
         
-        private static World CreateClientWorld(string name)
+        private static World CreateClientWorld(string worldName)
         {
-            var world = new World(name, WorldFlags.GameClient);
+            var clientWorld = new World(worldName, WorldFlags.GameClient);
 
-            var systems =
+            var clientWorldSystems =
                 DefaultWorldInitialization.GetAllSystems(WorldSystemFilterFlags.ClientSimulation |
                                                          WorldSystemFilterFlags.Presentation);
-            DefaultWorldInitialization.AddSystemsToRootLevelSystemGroups(world, systems);
-            ScriptBehaviourUpdateOrder.AppendWorldToCurrentPlayerLoop(world);
+            DefaultWorldInitialization.AddSystemsToRootLevelSystemGroups(clientWorld, clientWorldSystems);
+            ScriptBehaviourUpdateOrder.AppendWorldToCurrentPlayerLoop(clientWorld);
 
-            World.DefaultGameObjectInjectionWorld = world;
+            World.DefaultGameObjectInjectionWorld = clientWorld;
 
-            return world;
+            return clientWorld;
         }
     }
 }

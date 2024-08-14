@@ -11,23 +11,22 @@ namespace DeterministicLockstep
     /// It is responsible for handling connection with the server.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
-    [UpdateBefore(typeof(DeterministicSimulationSystemGroup))]
     public partial class ClientBehaviour : SystemBase
     {
         /// <summary>
         /// Network driver used to handle connections
         /// </summary>
-        private NetworkDriver networkDriver;
+        private NetworkDriver _networkDriver;
         
         /// <summary>
         /// Connection reference to the server
         /// </summary>
-        private NetworkConnection connectionToTheServer;
+        private NetworkConnection _connectionToTheServer;
         
         /// <summary>
         /// Pipeline used to handle reliable and sequenced messages
         /// </summary>
-        private NetworkPipeline reliablePipeline;
+        private NetworkPipeline _reliablePipeline;
         
         /// <summary>
         /// The time that the client should wait after the game finished before sending final hash and disconnecting.
@@ -38,17 +37,17 @@ namespace DeterministicLockstep
         /// <summary>
         /// Counter of the time it passed after the game finished.
         /// </summary>
-        private float timeWaitedAfterEndingTheGame = 0.0f;
+        private float _timeWaitedAfterEndingTheGame = 0.0f;
         
         /// <summary>
         /// Tick that is nondeterministic and caused the desynchronization
         /// </summary>
-        private ulong nondeterministicTick = 0;
+        private ulong _nondeterministicTick = 0;
         
         /// <summary>
         /// Bool used to indicate if player is ready to start the game after initial scene load.
         /// </summary>
-        private bool isClientReady = false;
+        private bool _isClientReady = false;
 
         protected override void OnCreate()
         {
@@ -62,14 +61,14 @@ namespace DeterministicLockstep
 
         protected override void OnStartRunning()
         {
-            networkDriver = NetworkDriver.Create();
-            reliablePipeline =
-                networkDriver.CreatePipeline(typeof(ReliableSequencedPipelineStage));
+            _networkDriver = NetworkDriver.Create();
+            _reliablePipeline =
+                _networkDriver.CreatePipeline(typeof(ReliableSequencedPipelineStage));
         }
 
         protected override void OnDestroy()
         {
-            networkDriver.Dispose();
+            _networkDriver.Dispose();
         }
 
         /// <summary>
@@ -78,23 +77,23 @@ namespace DeterministicLockstep
         /// </summary>
         private void ClearSavedHashes()
         {
-            var deterministicTime = SystemAPI.GetSingleton<DeterministicSimulationTime>();
-            deterministicTime.hashesForTheCurrentTick.Dispose();
-            deterministicTime.hashesForTheCurrentTick = new NativeList<ulong>(Allocator.Persistent);
-            SystemAPI.SetSingleton(deterministicTime);
+            var deterministicTimeComponent = SystemAPI.GetSingleton<DeterministicSimulationTime>();
+            deterministicTimeComponent.hashesForTheCurrentTick.Dispose();
+            deterministicTimeComponent.hashesForTheCurrentTick = new NativeList<ulong>(Allocator.Persistent);
+            SystemAPI.SetSingleton(deterministicTimeComponent);
         }
 
         protected override void OnUpdate()
         {
             if(SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode == DeterministicClientWorkingMode.None) return;
             
-            if (SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode == DeterministicClientWorkingMode.Connect && !connectionToTheServer.IsCreated)
+            if (SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode == DeterministicClientWorkingMode.Connect && !_connectionToTheServer.IsCreated)
             {
                Connect();
             }
 
             if (SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode == DeterministicClientWorkingMode.Disconnect &&
-                connectionToTheServer.IsCreated)
+                _connectionToTheServer.IsCreated)
             {
                 Disconnect();
             }
@@ -107,83 +106,83 @@ namespace DeterministicLockstep
                 determinismSystemGroup.Enabled = false;
                 if (SystemAPI.GetSingletonRW<DeterministicSettings>().ValueRO.isReplayFromFile)
                 {
-                    nondeterministicTick = (ulong) SystemAPI.GetSingletonRW<DeterministicSettings>().ValueRO.nonDeterministicTickDuringReplay;
+                    _nondeterministicTick = (ulong) SystemAPI.GetSingletonRW<DeterministicSettings>().ValueRO.targetNonDeterministicTickDuringReplay;
                 }
-                DeterministicLogger.Instance.LogClientNondeterministicTickInfoToTheFile(World.Name, nondeterministicTick, SystemAPI.GetSingletonRW<DeterministicSettings>().ValueRO.isReplayFromFile);
-                DeterministicLogger.Instance.LogSystemInfoToTheFile(World.Name);
+                DeterministicLogger.Instance.LogClientNondeterministicTickInfoToTheFile(World.Name, _nondeterministicTick, SystemAPI.GetSingleton<DeterministicSettings>());
+                DeterministicLogger.Instance.LogSystemInfoToTheFile(World.Name, SystemAPI.GetSingleton<DeterministicSettings>());
                 DeterministicLogger.Instance.LogClientSettingsToTheFile(World.Name, SystemAPI.GetSingleton<DeterministicSettings>());
             }
 
             if (SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode ==
                 DeterministicClientWorkingMode.GameFinished &&
-                connectionToTheServer.IsCreated)
+                _connectionToTheServer.IsCreated)
             {
-                if(timeWaitedAfterEndingTheGame >= TimeToWaitBeforeEndingGame)
+                if(_timeWaitedAfterEndingTheGame >= TimeToWaitBeforeEndingGame)
                 {
-                    timeWaitedAfterEndingTheGame = -1.0f;
+                    _timeWaitedAfterEndingTheGame = -1.0f;
                  
-                    var deterministicTime = SystemAPI.GetSingleton<DeterministicSimulationTime>();
-                    var determinismCheckSystem = World.GetExistingSystem<StateHashForValidationSystem>();
+                    var deterministicTimeComponent = SystemAPI.GetSingleton<DeterministicSimulationTime>();
+                    var stateHashForValidationSystem = World.GetExistingSystem<StateHashForValidationSystem>();
                     
-                    determinismCheckSystem.Update(World.Unmanaged);
+                    stateHashForValidationSystem.Update(World.Unmanaged);
                     
-                    foreach (var (connectionReference, owner) in SystemAPI
+                    foreach (var (connectionReference, ghostOwner) in SystemAPI
                                  .Query<RefRO<NetworkConnectionReference>, RefRO<GhostOwner>>()
                                  .WithAll<GhostOwnerIsLocal>())
                     {
-                        Debug.Log("Sending game ended RPC to server from player: " + owner.ValueRO.connectionNetworkId);
-                        var rpc = new RpcEndGameHash()
+                        Debug.Log("Sending game ended RPC to server from player: " + ghostOwner.ValueRO.connectionNetworkId);
+                        var rpcEndGameHash = new RpcEndGameHash()
                         {
-                            FinalGameHash = deterministicTime.hashesForTheCurrentTick[0],
-                            ClientNetworkID = owner.ValueRO.connectionNetworkId
+                            FinalGameHash = deterministicTimeComponent.hashesForTheCurrentTick[0],
+                            ClientNetworkID = ghostOwner.ValueRO.connectionNetworkId
                         };
 
-                        rpc.Serialize(connectionReference.ValueRO.driverReference, connectionReference.ValueRO.connectionReference,
+                        rpcEndGameHash.Serialize(connectionReference.ValueRO.driverReference, connectionReference.ValueRO.connectionReference,
                             connectionReference.ValueRO.reliablePipelineReference);
                         
                         ClearSavedHashes();
                     }
                 }
-                else if(timeWaitedAfterEndingTheGame >= 0.0f)
+                else if(_timeWaitedAfterEndingTheGame >= 0.0f)
                 {
-                    timeWaitedAfterEndingTheGame += SystemAPI.Time.DeltaTime;
+                    _timeWaitedAfterEndingTheGame += SystemAPI.Time.DeltaTime;
                 }
             }
 
             if (SystemAPI.GetSingleton<DeterministicClientComponent>().deterministicClientWorkingMode == DeterministicClientWorkingMode.ClientReady &&
-                connectionToTheServer.IsCreated && !isClientReady)
+                _connectionToTheServer.IsCreated && !_isClientReady)
             {
-                var determinismCheckSystem = World.GetExistingSystem<StateHashForValidationSystem>();
-                var deterministicTime = SystemAPI.GetSingleton<DeterministicSimulationTime>();
+                var stateHashForValidationSystem = World.GetExistingSystem<StateHashForValidationSystem>();
+                var deterministicSimulationTimeComponent = SystemAPI.GetSingleton<DeterministicSimulationTime>();
                     
-                determinismCheckSystem.Update(World.Unmanaged);
+                stateHashForValidationSystem.Update(World.Unmanaged);
                 
-                var clientReadyRPC = new RpcPlayerReady
+                var rpcPlayerReady = new RpcPlayerReady
                 {
                     ClientNetworkID = SystemAPI.GetSingleton<DeterministicClientComponent>().clientNetworkId,
-                    StartingHash = deterministicTime.hashesForTheCurrentTick[0] // Only one hashing is performed so we can take the first element
+                    StartingHash = deterministicSimulationTimeComponent.hashesForTheCurrentTick[0] // Only one hashing is performed so we can take the first element
                 };
-                clientReadyRPC.Serialize(networkDriver, connectionToTheServer, reliablePipeline);
+                rpcPlayerReady.Serialize(_networkDriver, _connectionToTheServer, _reliablePipeline);
                 ClearSavedHashes();
-                isClientReady = true;
+                _isClientReady = true;
             }
             
-            if (!connectionToTheServer.IsCreated) return;
-            networkDriver.ScheduleUpdate().Complete();
+            if (!_connectionToTheServer.IsCreated) return;
+            _networkDriver.ScheduleUpdate().Complete();
             
             NetworkEvent.Type cmd;
-            while ((cmd = connectionToTheServer.PopEvent(networkDriver, out var stream)) != NetworkEvent.Type.Empty)
+            while ((cmd = _connectionToTheServer.PopEvent(_networkDriver, out var stream)) != NetworkEvent.Type.Empty)
             {
                 switch (cmd)
                 {
                     case NetworkEvent.Type.Connect:
                         break;
                     case NetworkEvent.Type.Data:
-                        HandleRpc(stream);
+                        HandleIncomingRpcFromStream(stream);
                         break;
                     case NetworkEvent.Type.Disconnect:
                         SystemAPI.GetSingletonRW<DeterministicClientComponent>().ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.Disconnect;
-                        connectionToTheServer = default;
+                        _connectionToTheServer = default;
                         break;
                     case NetworkEvent.Type.Empty:
                         break;
@@ -198,12 +197,12 @@ namespace DeterministicLockstep
         /// </summary>
         private void Disconnect()
         {
-            networkDriver.ScheduleUpdate().Complete();
+            _networkDriver.ScheduleUpdate().Complete(); // Complete the update before disconnecting
                 
-            connectionToTheServer.Disconnect(networkDriver);
-            connectionToTheServer = default;
+            _connectionToTheServer.Disconnect(_networkDriver);
+            _connectionToTheServer = default;
             
-            networkDriver.ScheduleUpdate().Complete();
+            _networkDriver.ScheduleUpdate().Complete();
             SystemAPI.GetSingletonRW<DeterministicClientComponent>().ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.None;
         }
         
@@ -214,8 +213,8 @@ namespace DeterministicLockstep
         {
             if (SystemAPI.TryGetSingleton(out DeterministicSettings deterministicSettings))
             {
-                var endpoint = NetworkEndpoint.Parse(deterministicSettings._serverAddress.ToString(), (ushort) deterministicSettings._serverPort);
-                connectionToTheServer = networkDriver.Connect(endpoint);
+                var endpoint = NetworkEndpoint.Parse(deterministicSettings.serverAddress.ToString(), (ushort) deterministicSettings.serverPort);
+                _connectionToTheServer = _networkDriver.Connect(endpoint);
             }
             else
             {
@@ -227,7 +226,7 @@ namespace DeterministicLockstep
         /// Function used to handle incoming RPCs from server.
         /// </summary>
         /// <param name="stream">Stream from which the data arrived</param>
-        private void HandleRpc(DataStreamReader stream)
+        private void HandleIncomingRpcFromStream(DataStreamReader stream)
         {
             var copyOfStream = stream;
             var id = (RpcID)copyOfStream.ReadByte();
@@ -254,7 +253,7 @@ namespace DeterministicLockstep
                     var rpcPlayerDesynchronizationInfo = new RpcPlayerDesynchronization();
                     rpcPlayerDesynchronizationInfo.Deserialize(ref stream);
                     SystemAPI.GetSingletonRW<DeterministicClientComponent>().ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.Desync;
-                    nondeterministicTick = rpcPlayerDesynchronizationInfo.NonDeterministicTick;
+                    _nondeterministicTick = rpcPlayerDesynchronizationInfo.NonDeterministicTick;
                     break;
                 case RpcID.LoadGame:
                     var loadGameRPC = new RpcLoadGame();
@@ -268,29 +267,22 @@ namespace DeterministicLockstep
             }
         }
 
-        private void DestroyDisconnectedClients(RpcBroadcastTickDataToClients rpc)
+        private void DestroyDisconnectedClients(RpcBroadcastTickDataToClients rpcBroadcastTickDataToClients)
         {
             var connectionEntities = GetEntityQuery(
                 typeof(GhostOwner),
                 ComponentType.Exclude<GhostOwnerIsLocal>()
             ).ToEntityArray(Allocator.TempJob); // We should never even consider to destroy local player
             
-            if(rpc.NetworkIDsOfAllClients.Length >= connectionEntities.Length) return;
+            if(rpcBroadcastTickDataToClients.NetworkIDsOfAllClients.Length >= connectionEntities.Length) return;
             
-            foreach (var entity in connectionEntities)
+            foreach (var connectionEntity in connectionEntities)
             {
-                var connectionReference = EntityManager.GetComponentData<GhostOwner>(entity);
-                
-                if (!rpc.NetworkIDsOfAllClients.Contains(connectionReference.connectionNetworkId))
-                {
-                    for(int i=0; i<rpc.NetworkIDsOfAllClients.Length; i++)
-                    {
-                        Debug.Log("rpc: " + rpc.NetworkIDsOfAllClients[i]);
-                    }
-                    Debug.LogError("Destroying connection: " + connectionReference.connectionNetworkId);
-                    EntityManager.DestroyEntity(connectionReference.connectionCommandsTargetEntity);
-                    EntityManager.DestroyEntity(entity);
-                }
+                var connectionReference = EntityManager.GetComponentData<GhostOwner>(connectionEntity);
+
+                if (rpcBroadcastTickDataToClients.NetworkIDsOfAllClients.Contains(connectionReference.connectionNetworkId)) continue;
+                EntityManager.DestroyEntity(connectionReference.connectionCommandsTargetEntity);
+                EntityManager.DestroyEntity(connectionEntity);
             }
 
             connectionEntities.Dispose();
@@ -307,7 +299,7 @@ namespace DeterministicLockstep
             {
                 var connectionEntity = EntityManager.CreateEntity();
 
-                EntityManager.AddComponentData(connectionEntity, new DeterministicEntityID { ID = DeterministicLogger.Instance.GetDeterministicEntityID(World.Name) });
+                EntityManager.AddComponentData(connectionEntity, new DeterministicEntityID { id = DeterministicLogger.Instance.GetDeterministicEntityID(World.Name) });
                 EntityManager.AddComponentData(connectionEntity, new PlayerInputDataToUse
                 {
                     clientNetworkId = playerNetworkId,
@@ -320,32 +312,32 @@ namespace DeterministicLockstep
                 });
                 EntityManager.AddComponentData(connectionEntity, new NetworkConnectionReference
                 {
-                    driverReference = networkDriver,
-                    reliablePipelineReference = reliablePipeline,
-                    connectionReference = connectionToTheServer
+                    driverReference = _networkDriver,
+                    reliablePipelineReference = _reliablePipeline,
+                    connectionReference = _connectionToTheServer
                 });
                 EntityManager.AddComponentData(connectionEntity, new GhostOwnerIsLocal());
                 if (playerNetworkId != rpc.ClientAssignedNetworkID)
                     EntityManager.SetComponentEnabled<GhostOwnerIsLocal>(connectionEntity, false);
             }
 
-            var deterministicTime = SystemAPI.GetSingletonRW<DeterministicSimulationTime>();
-            deterministicTime.ValueRW.GameTickRate = rpc.GameIntendedTickRate;
-            deterministicTime.ValueRW.forcedInputLatencyDelay = rpc.TicksOfForcedInputLatency;
-            deterministicTime.ValueRW.timeLeftToSendNextTick = 1f / rpc.GameIntendedTickRate;
-            deterministicTime.ValueRW.currentSimulationTick = 0;
-            deterministicTime.ValueRW.currentClientTickToSend = 0;
-            deterministicTime.ValueRW.numTimesTickedThisFrame = 0;
+            var deterministicSimulationTimeComponent = SystemAPI.GetSingletonRW<DeterministicSimulationTime>();
+            deterministicSimulationTimeComponent.ValueRW.GameTickRate = rpc.GameIntendedTickRate;
+            deterministicSimulationTimeComponent.ValueRW.forcedInputLatencyDelay = rpc.TicksOfForcedInputLatency;
+            deterministicSimulationTimeComponent.ValueRW.timeLeftToSendNextTick = 1f / rpc.GameIntendedTickRate;
+            deterministicSimulationTimeComponent.ValueRW.currentSimulationTick = 0;
+            deterministicSimulationTimeComponent.ValueRW.currentClientTickToSend = 0;
+            deterministicSimulationTimeComponent.ValueRW.numTimesTickedThisFrame = 0;
 
-            var client = SystemAPI.GetSingletonRW<DeterministicClientComponent>();
-            client.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.RunDeterministicSimulation;
+            var clientComponent = SystemAPI.GetSingletonRW<DeterministicClientComponent>();
+            clientComponent.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.RunDeterministicSimulation;
             
-            var settings = SystemAPI.GetSingletonRW<DeterministicSettings>();
-            settings.ValueRW.simulationTickRate = rpc.GameIntendedTickRate;
-            settings.ValueRW.ticksOfForcedInputLatency = rpc.TicksOfForcedInputLatency;
-            settings.ValueRW.hashCalculationOption = (DeterminismHashCalculationOption) rpc.DeterminismHashCalculationOption;
-            settings.ValueRW.isInGame = true;
-            settings.ValueRW.randomSeed = rpc.SeedForPlayerRandomActions;
+            var deterministicSettings = SystemAPI.GetSingletonRW<DeterministicSettings>();
+            deterministicSettings.ValueRW.simulationTickRate = rpc.GameIntendedTickRate;
+            deterministicSettings.ValueRW.ticksOfForcedInputLatency = rpc.TicksOfForcedInputLatency;
+            deterministicSettings.ValueRW.hashCalculationOption = (DeterminismHashCalculationOption) rpc.DeterminismHashCalculationOption;
+            deterministicSettings.ValueRW.isInGame = true;
+            deterministicSettings.ValueRW.randomSeed = rpc.SeedForPlayerRandomActions;
         }
 
         /// <summary>
@@ -355,8 +347,8 @@ namespace DeterministicLockstep
         /// <param name="rpc">RPC from the server with input data from each player for the given tick</param>
         private void UpdatePlayersData(RpcBroadcastTickDataToClients rpc)
         {
-            var deterministicTime = SystemAPI.GetSingletonRW<DeterministicSimulationTime>();
-            deterministicTime.ValueRW.storedIncomingTicksFromServer.Enqueue(rpc);
+            var deterministicSimulationTimeComponent = SystemAPI.GetSingletonRW<DeterministicSimulationTime>();
+            deterministicSimulationTimeComponent.ValueRW.storedIncomingTicksFromServer.Enqueue(rpc);
         }
     }
 }

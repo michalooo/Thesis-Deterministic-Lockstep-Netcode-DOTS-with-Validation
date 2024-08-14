@@ -1,5 +1,4 @@
 ﻿using DeterministicLockstep;
-using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
@@ -14,95 +13,89 @@ namespace PongGame
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
-    [UpdateAfter(typeof(BallBounceSystem))]
+    [UpdateAfter(typeof(PongBallBounceSystem))]
     public partial struct BallMovementSystem : ISystem
     {
-        public void OnCreate(ref SystemState state)
-        {
-            state.RequireForUpdate<PongBallSpawner>();
-        }
-
-        private EntityQuery ballsQuery;
-        private NativeArray<LocalTransform> ballTransform;
-        private NativeArray<Velocity> ballVelocities;
-        private NativeArray<Entity> ballEntities;
+        private EntityQuery _ballsQuery;
+        private NativeArray<LocalTransform> _ballsTransform;
+        private NativeArray<BallVelocity> _ballsVelocity;
+        private NativeArray<Entity> _ballsEntity;
         
         public void OnUpdate(ref SystemState state)
         {
             var deltaTime = SystemAPI.Time.DeltaTime;
             
-            ballsQuery = SystemAPI.QueryBuilder().WithAll<LocalTransform, Velocity>().Build();
-            ballTransform = ballsQuery.ToComponentDataArray<LocalTransform>(Allocator.TempJob);
-            ballVelocities = ballsQuery.ToComponentDataArray<Velocity>(Allocator.TempJob);
-            ballEntities = ballsQuery.ToEntityArray(Allocator.TempJob);
+            _ballsQuery = SystemAPI.QueryBuilder().WithAll<LocalTransform, BallVelocity>().Build();
+            _ballsTransform = _ballsQuery.ToComponentDataArray<LocalTransform>(Allocator.TempJob);
+            _ballsVelocity = _ballsQuery.ToComponentDataArray<BallVelocity>(Allocator.TempJob);
+            _ballsEntity = _ballsQuery.ToEntityArray(Allocator.TempJob);
             
             var ecb = new EntityCommandBuffer(Allocator.TempJob);
             
-            Camera cam = Camera.main;
-            float targetXPosition = Screen.width;
-            Vector3 worldPosition = cam.ScreenToWorldPoint(new Vector3(targetXPosition, 0, cam.nearClipPlane));
+            var mainCamera = Camera.main;
+            float screenWidth = Screen.width;
+            var worldPosition = mainCamera.ScreenToWorldPoint(new Vector3(screenWidth, 0, mainCamera.nearClipPlane));
             
             var ballMovementJob = new BallMovementJob
             {
-                ECB = ecb.AsParallelWriter(),
-                ballVelocities = ballVelocities,
-                localTransform = ballTransform,
-                ballEntitiesToMove = ballEntities,
+                ecb = ecb.AsParallelWriter(),
+                ballsVelocity = _ballsVelocity,
+                ballsTransform = _ballsTransform,
+                ballsEntity = _ballsEntity,
                 worldPosition = worldPosition,
-                deltaTime = deltaTime
+                deltaTime = deltaTime,
+                interpolationSpeed = 0.2f
             };
             
-            JobHandle ballMovementHandle = ballMovementJob.Schedule(ballTransform.Length,1);
-            ballMovementHandle.Complete();
+            var ballMovementJobHandle = ballMovementJob.Schedule(_ballsTransform.Length,1);
+            ballMovementJobHandle.Complete();
             ecb.Playback(state.EntityManager);
             
             ecb.Dispose();
-            ballTransform.Dispose();
-            ballVelocities.Dispose();
-            ballEntities.Dispose();
+            _ballsTransform.Dispose();
+            _ballsVelocity.Dispose();
+            _ballsEntity.Dispose();
         }
     }
     
     /// <summary>
     /// Job that moves the ball in the game world on per ball basis.
     /// </summary>
-    [BurstCompile]
     public struct BallMovementJob : IJobParallelFor
     {
-        public EntityCommandBuffer.ParallelWriter ECB;
+        public EntityCommandBuffer.ParallelWriter ecb;
         
-        public NativeArray<Entity> ballEntitiesToMove;
-        public NativeArray<LocalTransform> localTransform;
-        public NativeArray<Velocity> ballVelocities;
+        public NativeArray<Entity> ballsEntity;
+        public NativeArray<LocalTransform> ballsTransform;
+        public NativeArray<BallVelocity> ballsVelocity;
         
         public Vector3 worldPosition;
         public float deltaTime;
-        private float interpolationSpeed; // New field for interpolation speed
+        public float interpolationSpeed;
         
         public void Execute(int index)
         {
-            LocalTransform transform = localTransform[index];
-            Velocity velocity = ballVelocities[index];
-            Entity entity = ballEntitiesToMove[index];
-            interpolationSpeed = 0.2f;
+            var ballTransform = ballsTransform[index];
+            var ballVelocity = ballsVelocity[index];
+            var ballEntity = ballsEntity[index];
             
-            if (transform.Position.x < -worldPosition.x || transform.Position.x > worldPosition.x) return;
+            if (ballTransform.Position.x < -worldPosition.x || ballTransform.Position.x > worldPosition.x) return; // ball is already outside the border
             
-            var newPosition = transform.Position + deltaTime * velocity.value;
+            var newPosition = ballTransform.Position + deltaTime * ballVelocity.value;
           
-            var interpolatedPositionX = Mathf.Lerp(transform.Position.x, newPosition.x, interpolationSpeed * deltaTime);
-            var interpolatedPositionY = Mathf.Lerp(transform.Position.y, newPosition.y, interpolationSpeed * deltaTime);
-            var interpolatedPositionZ = Mathf.Lerp(transform.Position.z, newPosition.z, interpolationSpeed * deltaTime);
+            var interpolatedPositionX = Mathf.Lerp(ballTransform.Position.x, newPosition.x, interpolationSpeed * deltaTime); // Do I need deltaTime here?
+            var interpolatedPositionY = Mathf.Lerp(ballTransform.Position.y, newPosition.y, interpolationSpeed * deltaTime);
+            var interpolatedPositionZ = Mathf.Lerp(ballTransform.Position.z, newPosition.z, interpolationSpeed * deltaTime);
             var interpolatedPosition = new float3(interpolatedPositionX, interpolatedPositionY, interpolatedPositionZ);
             
             var newTransform = new LocalTransform
             {
                 Position = interpolatedPosition,
-                Rotation = transform.Rotation,
-                Scale = transform.Scale
+                Rotation = ballTransform.Rotation,
+                Scale = ballTransform.Scale
             };
         
-            ECB.SetComponent(index , entity, newTransform);
+            ecb.SetComponent(index , ballEntity, newTransform);
         }
     }
 }

@@ -14,34 +14,33 @@ namespace DeterministicLockstep
     /// It listens for incoming connections and handles incoming client RPCs.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
-    [UpdateBefore(typeof(DeterministicSimulationSystemGroup))]
     public partial class ServerBehaviour : SystemBase
     {
         /// <summary>
         /// Network driver used to handle connections
         /// </summary>
-        private NetworkDriver networkDriver;
+        private NetworkDriver _networkDriver;
         
         /// <summary>
         /// Pipeline used to handle reliable and sequenced messages
         /// </summary>
-        private NetworkPipeline reliablePipeline;
+        private NetworkPipeline _reliablePipeline;
         
         /// <summary>
         /// List of network IDs assigned to players
         /// </summary>
-        private NativeList<int> clientsNetworkIDs;
+        private NativeList<int> _clientsNetworkIDs;
 
         /// <summary>
         /// List of player inputs for each tick
         /// </summary>
-        private Dictionary<ulong, NativeList<RpcBroadcastPlayerTickDataToServer>> bufferOfClientInputsForEachTick;
+        private Dictionary<ulong, NativeList<RpcBroadcastPlayerTickDataToServer>> _bufferOfClientInputsForEachTick;
 
         /// <summary>
         /// NativeList of combined RPC send from every client with their input.
         /// This list is subsequently sent to every client.
         /// </summary>
-        private NativeList<RpcBroadcastTickDataToClients> dataToSendToEveryClientWithEveryClientInputs;
+        private NativeList<RpcBroadcastTickDataToClients> _dataToSendToEveryClientWithEveryClientInputs;
         
         /// <summary>
         /// List of hashes from every client for each tick.
@@ -49,23 +48,23 @@ namespace DeterministicLockstep
         /// It may contain one hash per tick per client if game is using per-tick hash calculation.
         /// It may contain multiple hashes per tick per client if game is using per-system hash calculation.
         /// </summary>
-        private Dictionary<ulong, NativeList<NativeList<ulong>>> hashBufferForEveryTick;
+        private Dictionary<ulong, NativeList<NativeList<ulong>>> _hashBufferForEveryTick;
 
         /// <summary>
         /// NativeList of final hashes for each client.
         /// Used to compare if all clients ended the game with the same state.
         /// </summary>
-        private NativeList<RpcEndGameHash> endGameHashes;
+        private NativeList<RpcEndGameHash> _endGameHashes;
 
         /// <summary>
         /// Array of all possible connection slots in the game containing clients that are already connected
         /// </summary>
-        private NativeArray<NetworkConnection> connectedPlayers; 
+        private NativeArray<NetworkConnection> _connectedPlayers; 
         
         /// <summary>
         /// NativeArray containing starting game state hashes for each connected client.
         /// </summary>
-        private NativeArray<ulong> clientsReady;
+        private NativeArray<ulong> _clientsReady;
         
         /// <summary>
         /// Specifies the last tick received from all clients.
@@ -76,7 +75,7 @@ namespace DeterministicLockstep
         /// <summary>
         /// Bool value signaling that nondeterminism was detected.
         /// </summary>
-        private bool nondeterminismDetected;
+        private bool _nondeterminismDetected;
 
         protected override void OnCreate()
         {
@@ -85,17 +84,17 @@ namespace DeterministicLockstep
             {
                 deterministicServerWorkingMode = DeterministicServerWorkingMode.None
             });
-            nondeterminismDetected = false;
+            _nondeterminismDetected = false;
         }
 
         protected override void OnUpdate()
         {
-            if (SystemAPI.GetSingleton<DeterministicServerComponent>().deterministicServerWorkingMode == DeterministicServerWorkingMode.ListenForConnections && !networkDriver.IsCreated)
+            if (SystemAPI.GetSingleton<DeterministicServerComponent>().deterministicServerWorkingMode == DeterministicServerWorkingMode.ListenForConnections && !_networkDriver.IsCreated)
             {
                 StartListening();
             }
             
-            if(!networkDriver.IsCreated) return;
+            if(!_networkDriver.IsCreated) return;
 
             if (SystemAPI.GetSingleton<DeterministicServerComponent>().deterministicServerWorkingMode ==
                 DeterministicServerWorkingMode.RunDeterministicSimulation &&
@@ -109,28 +108,27 @@ namespace DeterministicLockstep
                 Disconnect();
             }
             
-            networkDriver.ScheduleUpdate().Complete();
+            _networkDriver.ScheduleUpdate().Complete();
             
             if (!SystemAPI.GetSingleton<DeterministicSettings>().isInGame)
             {
                 AcceptAndHandleConnections();
             }
 
-            for (var i = 0; i < connectedPlayers.Length; i++)
+            for (var i = 0; i < _connectedPlayers.Length; i++)
             {
-                if (!connectedPlayers[i].IsCreated) continue;
-                NetworkEvent.Type cmd;
-                while ((cmd = networkDriver.PopEventForConnection(connectedPlayers[i], out var stream)) !=
+                if (!_connectedPlayers[i].IsCreated) continue;
+                NetworkEvent.Type networkEvent;
+                while ((networkEvent = _networkDriver.PopEventForConnection(_connectedPlayers[i], out var stream)) !=
                        NetworkEvent.Type.Empty)
                 {
-                    switch (cmd)
+                    switch (networkEvent)
                     {
                         case NetworkEvent.Type.Data:
-                            HandleRpc(stream, connectedPlayers[i]);
+                            HandleRpc(stream, _connectedPlayers[i]);
                             break;
                         case NetworkEvent.Type.Disconnect:
-                            Debug.Log("Client disconnected from the server: " + i);
-                            connectedPlayers[i] = default;
+                            _connectedPlayers[i] = default;
                             CheckIfAllDataReceivedAndSendToClients();
                             break;
                         case NetworkEvent.Type.Empty:
@@ -146,29 +144,27 @@ namespace DeterministicLockstep
         
         private void Disconnect()
         {
-            networkDriver.ScheduleUpdate().Complete();
+            _networkDriver.ScheduleUpdate().Complete();
 
-            for (int i = 0; i < connectedPlayers.Length; i++)
+            for (int i = 0; i < _connectedPlayers.Length; i++)
             {
-                if (connectedPlayers[i].IsCreated)
-                {
-                    connectedPlayers[i].Disconnect(networkDriver);
-                    connectedPlayers[i] = default;
-                }
+                if (!_connectedPlayers[i].IsCreated) continue;
+                _connectedPlayers[i].Disconnect(_networkDriver);
+                _connectedPlayers[i] = default;
             }
         }
         
         protected override void OnDestroy()
         {
-            if (!networkDriver.IsCreated) return;
-            networkDriver.Dispose();
-            connectedPlayers.Dispose();
-            clientsNetworkIDs.Dispose();
-            clientsReady.Dispose();
-            bufferOfClientInputsForEachTick.Clear();
-            dataToSendToEveryClientWithEveryClientInputs.Dispose();
-            hashBufferForEveryTick.Clear();
-            endGameHashes.Dispose();
+            if (!_networkDriver.IsCreated) return;
+            _networkDriver.Dispose();
+            _connectedPlayers.Dispose();
+            _clientsNetworkIDs.Dispose();
+            _clientsReady.Dispose();
+            _bufferOfClientInputsForEachTick.Clear();
+            _dataToSendToEveryClientWithEveryClientInputs.Dispose();
+            _hashBufferForEveryTick.Clear();
+            _endGameHashes.Dispose();
         }
 
         /// <summary>
@@ -179,32 +175,32 @@ namespace DeterministicLockstep
         /// <param name="settings"> Specific network settings for this port</param>
         private void StartListening()
         {
-            connectedPlayers = new NativeArray<NetworkConnection>(SystemAPI.GetSingleton<DeterministicSettings>().allowedConnectionsPerGame, Allocator.Persistent);
-            clientsReady = new NativeArray<ulong>(SystemAPI.GetSingleton<DeterministicSettings>().allowedConnectionsPerGame, Allocator.Persistent);
-            for (int i = 0; i < clientsReady.Length; i++)
+            _connectedPlayers = new NativeArray<NetworkConnection>(SystemAPI.GetSingleton<DeterministicSettings>().allowedConnectionsPerGame, Allocator.Persistent);
+            _clientsReady = new NativeArray<ulong>(SystemAPI.GetSingleton<DeterministicSettings>().allowedConnectionsPerGame, Allocator.Persistent);
+            for (int i = 0; i < _clientsReady.Length; i++)
             {
-                clientsReady[i] = 1;
+                _clientsReady[i] = 1;
             }
-            clientsNetworkIDs = new NativeList<int>(Allocator.Persistent);
+            _clientsNetworkIDs = new NativeList<int>(Allocator.Persistent);
 
-            bufferOfClientInputsForEachTick = new Dictionary<ulong, NativeList<RpcBroadcastPlayerTickDataToServer>>();
-            dataToSendToEveryClientWithEveryClientInputs = new NativeList<RpcBroadcastTickDataToClients>(Allocator.Persistent);
-            hashBufferForEveryTick = new Dictionary<ulong, NativeList<NativeList<ulong>>>();
-            endGameHashes = new NativeList<RpcEndGameHash>(Allocator.Persistent);
+            _bufferOfClientInputsForEachTick = new Dictionary<ulong, NativeList<RpcBroadcastPlayerTickDataToServer>>();
+            _dataToSendToEveryClientWithEveryClientInputs = new NativeList<RpcBroadcastTickDataToClients>(Allocator.Persistent);
+            _hashBufferForEveryTick = new Dictionary<ulong, NativeList<NativeList<ulong>>>();
+            _endGameHashes = new NativeList<RpcEndGameHash>(Allocator.Persistent);
             
-            networkDriver = NetworkDriver.Create();
-            reliablePipeline =
-                networkDriver.CreatePipeline(typeof(ReliableSequencedPipelineStage));
+            _networkDriver = NetworkDriver.Create();
+            _reliablePipeline =
+                _networkDriver.CreatePipeline(typeof(ReliableSequencedPipelineStage));
             
-            var endpoint = NetworkEndpoint.AnyIpv4.WithPort((ushort) SystemAPI.GetSingleton<DeterministicSettings>()._serverPort);
+            var endpoint = NetworkEndpoint.AnyIpv4.WithPort((ushort) SystemAPI.GetSingleton<DeterministicSettings>().serverPort);
 
-            if (networkDriver.Bind(endpoint) != 0)
+            if (_networkDriver.Bind(endpoint) != 0)
             {
-                Debug.LogError("Failed to bind to port: " + SystemAPI.GetSingleton<DeterministicSettings>()._serverPort);
+                Debug.LogError("Failed to bind to port: " + SystemAPI.GetSingleton<DeterministicSettings>().serverPort);
                 return;
             }
 
-            networkDriver.Listen();
+            _networkDriver.Listen();
         }
 
         /// <summary>
@@ -215,8 +211,8 @@ namespace DeterministicLockstep
         {
             if (SystemAPI.GetSingleton<DeterministicSettings>().isInGame) return;
             
-            var settings = SystemAPI.GetSingletonRW<DeterministicSettings>();
-            settings.ValueRW.isInGame = true;
+            var deterministicSettings = SystemAPI.GetSingletonRW<DeterministicSettings>();
+            deterministicSettings.ValueRW.isInGame = true;
             
             SendRPCToLoadGame();
         }
@@ -229,14 +225,14 @@ namespace DeterministicLockstep
         private void HandleRpc(DataStreamReader stream, NetworkConnection connection)
         {
             var copyOfStream = stream;
-            var id = (RpcID)copyOfStream.ReadByte();
-            if (!Enum.IsDefined(typeof(RpcID), id))
+            var rpcID = (RpcID)copyOfStream.ReadByte();
+            if (!Enum.IsDefined(typeof(RpcID), rpcID))
             {
-                Debug.LogError("Received invalid RPC ID: " + id);
+                Debug.LogError("Received invalid RPC ID: " + rpcID);
                 return;
             }
 
-            switch (id)
+            switch (rpcID)
             {
                 case RpcID.BroadcastPlayerTickDataToServer:
                     var rpc = new RpcBroadcastPlayerTickDataToServer();
@@ -254,8 +250,20 @@ namespace DeterministicLockstep
                     gameEndedRPC.Deserialize(ref stream);
                     CheckEndGameHashes(gameEndedRPC);
                     break;
+                case RpcID.StartDeterministicGameSimulation:
+                    Debug.LogError("Received RPC with ID: " + rpcID + " should not be received by the server.");
+                    break;
+                case RpcID.BroadcastTickDataToClients:
+                    Debug.LogError("Received RPC with ID: " + rpcID + " should not be received by the server.");
+                    break;
+                case RpcID.PlayerDesynchronized:
+                    Debug.LogError("Received RPC with ID: " + rpcID + " should not be received by the server.");
+                    break;
+                case RpcID.LoadGame:
+                    Debug.LogError("Received RPC with ID: " + rpcID + " should not be received by the server.");
+                    break;
                 default:
-                    Debug.LogError("Received RPC ID not proceeded by the server: " + id);
+                    Debug.LogError("Received RPC ID not proceeded by the server: " + rpcID);
                     break;
             }
         }
@@ -264,23 +272,23 @@ namespace DeterministicLockstep
         /// Function used to check if all clients are ready to start the game.
         /// </summary>
         /// <param name="rpc">Last received rpc with client readiness message</param>
-        private void CheckIfAllClientsReady(RpcPlayerReady rpc)
+        private void CheckIfAllClientsReady(RpcPlayerReady rpcPlayerReady)
         {
-            // mark that this specific client is ready
-            clientsReady[rpc.ClientNetworkID] = rpc.StartingHash;
+            // mark that this specific client is ready. This value is a starting hash
+            _clientsReady[rpcPlayerReady.ClientNetworkID] = rpcPlayerReady.StartingHash;
             
             // check if all clients are ready
-            var hostHash = clientsReady[0];
+            var hostStartingHash = _clientsReady[0];
             var desynchronized = false;
-            if (hostHash == 1) return;
+            if (hostStartingHash == 1) return;
             
-            for (int i = 0; i < clientsReady.Length; i++)
+            for (var i = 0; i < _clientsReady.Length; i++)
             {
-                if (clientsReady[i] == 1 && connectedPlayers[i].IsCreated)
+                if (_clientsReady[i] == 1 && _connectedPlayers[i].IsCreated)
                 {
                     return;
                 }
-                if(clientsReady[i] != hostHash && connectedPlayers[i].IsCreated)
+                if(_clientsReady[i] != hostStartingHash && _connectedPlayers[i].IsCreated)
                 {
                     desynchronized = true;
                 }
@@ -298,35 +306,33 @@ namespace DeterministicLockstep
         
         private void SendRPCToLoadGame()
         {
-            clientsNetworkIDs.Clear();
+            _clientsNetworkIDs.Clear();
             
-            for (ushort i = 0; i < connectedPlayers.Length; i++)
+            for (ushort i = 0; i < _connectedPlayers.Length; i++)
             {
-                if (connectedPlayers[i].IsCreated)
+                if (_connectedPlayers[i].IsCreated)
                 {
-                    clientsNetworkIDs.Add(i); 
+                    _clientsNetworkIDs.Add(i); 
                 }
             }
             
             
-            var rpc = new RpcLoadGame();
+            var rpcLoadGame = new RpcLoadGame();
             var playersIDs = new NativeList<int>(Allocator.Temp);
-            for (ushort i = 0; i < connectedPlayers.Length; i++)
+            for (ushort i = 0; i < _connectedPlayers.Length; i++)
             {
-                if (connectedPlayers[i].IsCreated)
+                if (_connectedPlayers[i].IsCreated)
                 {
                     playersIDs.Add(i);
                 }
             }
             
-            for (ushort i = 0; i < connectedPlayers.Length; i++)
+            for (ushort i = 0; i < _connectedPlayers.Length; i++)
             {
-                if (connectedPlayers[i].IsCreated)
-                {
-                    rpc.ClientNetworkID = i;
-                    rpc.NetworkIDsOfAllClients = playersIDs;
-                    rpc.Serialize(networkDriver, connectedPlayers[i], reliablePipeline);
-                }
+                if (!_connectedPlayers[i].IsCreated) continue;
+                rpcLoadGame.ClientNetworkID = i;
+                rpcLoadGame.NetworkIDsOfAllClients = playersIDs;
+                rpcLoadGame.Serialize(_networkDriver, _connectedPlayers[i], _reliablePipeline);
             }
             playersIDs.Dispose();
         }
@@ -337,23 +343,22 @@ namespace DeterministicLockstep
         /// </summary>
         private void SendRPCtoStartGame()
         {
-            var rng = new Random();
-            RpcStartDeterministicSimulation rpc = new RpcStartDeterministicSimulation
+            var random = new Random();
+            RpcStartDeterministicSimulation rpcStartDeterministicSimulation = new RpcStartDeterministicSimulation
             {
-                NetworkIDsOfAllClients = clientsNetworkIDs,
+                NetworkIDsOfAllClients = _clientsNetworkIDs,
                 GameIntendedTickRate = SystemAPI.GetSingleton<DeterministicSettings>().simulationTickRate,
                 TicksOfForcedInputLatency = SystemAPI.GetSingleton<DeterministicSettings>().ticksOfForcedInputLatency,
-                SeedForPlayerRandomActions = (uint)rng.Next(1, int.MaxValue),
+                SeedForPlayerRandomActions = (uint)random.Next(1, int.MaxValue),
+                // SeedForPlayerRandomActions = 550619823, // hardcoded seed which results in nondeterministic sin/cos values
                 DeterminismHashCalculationOption = (int) SystemAPI.GetSingleton<DeterministicSettings>().hashCalculationOption
             };
             
-            for (ushort i = 0; i < connectedPlayers.Length; i++)
+            for (ushort i = 0; i < _connectedPlayers.Length; i++)
             {
-                if (connectedPlayers[i].IsCreated)
-                {
-                    rpc.ClientAssignedNetworkID = i;
-                    rpc.Serialize(networkDriver, connectedPlayers[i], reliablePipeline);
-                }
+                if (!_connectedPlayers[i].IsCreated) continue;
+                rpcStartDeterministicSimulation.ClientAssignedNetworkID = i;
+                rpcStartDeterministicSimulation.Serialize(_networkDriver, _connectedPlayers[i], _reliablePipeline);
             }
         }
 
@@ -365,30 +370,30 @@ namespace DeterministicLockstep
         /// <param name="playerInputs">List of client inputs</param>
         private void SendRPCWithPlayersInputUpdate(NativeList<int> networkIDs, NativeList<PongInputs> playerInputs)
         {
-            NativeList<int> clonedNetworkIDs = new NativeList<int>(Allocator.TempJob);
-            foreach (var id in networkIDs)
+            var clonedNetworkIDsNativeList = new NativeList<int>(Allocator.TempJob);
+            foreach (var networkID in networkIDs)
             {
-                clonedNetworkIDs.Add(id);
+                clonedNetworkIDsNativeList.Add(networkID);
             }
             
-            NativeList<PongInputs> clonedPlayerInputs = new NativeList<PongInputs>(Allocator.TempJob);
+            var clonedPlayerInputsNativeList = new NativeList<PongInputs>(Allocator.TempJob);
             foreach (var input in playerInputs)
             {
-                clonedPlayerInputs.Add(input);
+                clonedPlayerInputsNativeList.Add(input);
             }
             
             var rpc = new RpcBroadcastTickDataToClients
             {
-                NetworkIDsOfAllClients = clonedNetworkIDs,
-                GameInputsFromAllClients = clonedPlayerInputs,
+                NetworkIDsOfAllClients = clonedNetworkIDsNativeList,
+                GameInputsFromAllClients = clonedPlayerInputsNativeList,
                 SimulationTick = _lastTickReceivedFromClient
             };
-            dataToSendToEveryClientWithEveryClientInputs.Add(rpc);
+            _dataToSendToEveryClientWithEveryClientInputs.Add(rpc);
             
             
-            foreach (var connectedPlayer in connectedPlayers.Where(connectedPlayer => connectedPlayer.IsCreated))
+            foreach (var connectedPlayer in _connectedPlayers.Where(connectedPlayer => connectedPlayer.IsCreated))
             {
-                rpc.Serialize(networkDriver, connectedPlayer, reliablePipeline);
+                rpc.Serialize(_networkDriver, connectedPlayer, _reliablePipeline);
             }
         }
         
@@ -404,15 +409,15 @@ namespace DeterministicLockstep
                 GameInputsFromAllClients = playerInputs,
                 SimulationTick = _lastTickReceivedFromClient
             };
-            dataToSendToEveryClientWithEveryClientInputs.Add(rpcWithPlayersDataToStore);
+            _dataToSendToEveryClientWithEveryClientInputs.Add(rpcWithPlayersDataToStore);
             
             var rpcWithPlayerDesynchronizationSignal = new RpcPlayerDesynchronization { NonDeterministicTick = (ulong) _lastTickReceivedFromClient};
 
-            foreach (var connection in connectedPlayers.Where(connection => connection.IsCreated))
+            foreach (var connection in _connectedPlayers.Where(connection => connection.IsCreated))
             {
-                rpcWithPlayerDesynchronizationSignal.Serialize(networkDriver, connection, reliablePipeline);
+                rpcWithPlayerDesynchronizationSignal.Serialize(_networkDriver, connection, _reliablePipeline);
             }
-            DeterministicLogger.Instance.LogServerInputRecordingToTheFile(dataToSendToEveryClientWithEveryClientInputs);
+            DeterministicLogger.Instance.LogServerInputRecordingToTheFile(_dataToSendToEveryClientWithEveryClientInputs, SystemAPI.GetSingleton<DeterministicSettings>());
         }
         
         /// <summary>
@@ -423,11 +428,11 @@ namespace DeterministicLockstep
         {
             var rpcWithPlayerDesynchronizationSignal = new RpcPlayerDesynchronization { NonDeterministicTick = (ulong) _lastTickReceivedFromClient};
 
-            foreach (var connection in connectedPlayers.Where(connection => connection.IsCreated))
+            foreach (var connection in _connectedPlayers.Where(connection => connection.IsCreated))
             {
-                rpcWithPlayerDesynchronizationSignal.Serialize(networkDriver, connection, reliablePipeline);
+                rpcWithPlayerDesynchronizationSignal.Serialize(_networkDriver, connection, _reliablePipeline);
             }
-            DeterministicLogger.Instance.LogServerInputRecordingToTheFile(dataToSendToEveryClientWithEveryClientInputs);
+            DeterministicLogger.Instance.LogServerInputRecordingToTheFile(_dataToSendToEveryClientWithEveryClientInputs, SystemAPI.GetSingleton<DeterministicSettings>());
         }
 
         /// <summary>
@@ -439,35 +444,22 @@ namespace DeterministicLockstep
         private void 
             SaveTheData(RpcBroadcastPlayerTickDataToServer rpc, NetworkConnection connection)
         {
-            string playerArrivingHashes = "";
-
-            for (var i = 0;
-                 i < rpc.HashesForTheTick.Length;
-                 i++)
+            for (var i = 0; i < _connectedPlayers.Length; i++)
             {
-                    // Append the current hash to the allHashes string
-                    playerArrivingHashes +=
-                        rpc.HashesForTheTick[i] +
-                        ", ";
-                
-            }
+                if (!_connectedPlayers[i].Equals(connection)) continue;
             
-            for (var i = 0; i < connectedPlayers.Length; i++)
-            {
-                if (!connectedPlayers[i].Equals(connection)) continue;
-            
-                if (!bufferOfClientInputsForEachTick.ContainsKey((ulong) rpc.TickToApplyInputsOn))
+                if (!_bufferOfClientInputsForEachTick.ContainsKey((ulong) rpc.TickToApplyInputsOn))
                 {
-                    bufferOfClientInputsForEachTick[(ulong) rpc.TickToApplyInputsOn] = new NativeList<RpcBroadcastPlayerTickDataToServer>(Allocator.Persistent);
+                    _bufferOfClientInputsForEachTick[(ulong) rpc.TickToApplyInputsOn] = new NativeList<RpcBroadcastPlayerTickDataToServer>(Allocator.Persistent);
                 }
                 
-                if (!hashBufferForEveryTick.ContainsKey((ulong) rpc.TickToApplyInputsOn))
+                if (!_hashBufferForEveryTick.ContainsKey((ulong) rpc.TickToApplyInputsOn))
                 {
-                    hashBufferForEveryTick[(ulong) rpc.TickToApplyInputsOn] = new NativeList<NativeList<ulong>>(Allocator.Persistent);
+                    _hashBufferForEveryTick[(ulong) rpc.TickToApplyInputsOn] = new NativeList<NativeList<ulong>>(Allocator.Persistent);
                 }
             
                 // This tick already exists in the buffer. Check if the player already has inputs saved for this tick. No need to check for hash in that case because those should be send together and hash can be the same (if everything is correct) so we will get for example 3 same hashes
-                foreach (var oldInputData in bufferOfClientInputsForEachTick[(ulong) rpc.TickToApplyInputsOn])
+                foreach (var oldInputData in _bufferOfClientInputsForEachTick[(ulong) rpc.TickToApplyInputsOn])
                 {
                     if (oldInputData.ClientNetworkID == i)
                     {
@@ -475,8 +467,8 @@ namespace DeterministicLockstep
                     }
                 }
             
-                bufferOfClientInputsForEachTick[(ulong) rpc.TickToApplyInputsOn].Add(rpc);
-                hashBufferForEveryTick[(ulong) rpc.TickToApplyInputsOn].Add(rpc.HashesForTheTick);
+                _bufferOfClientInputsForEachTick[(ulong) rpc.TickToApplyInputsOn].Add(rpc);
+                _hashBufferForEveryTick[(ulong) rpc.TickToApplyInputsOn].Add(rpc.HashesForTheTick);
                 _lastTickReceivedFromClient = rpc.TickToApplyInputsOn;
             }
         }
@@ -487,8 +479,7 @@ namespace DeterministicLockstep
         /// <returns>Amount of active connections</returns>
         private int GetActiveConnectionCount()
         {
-            return connectedPlayers.Count(connectedPlayer => connectedPlayer.IsCreated);
-            
+            return _connectedPlayers.Count(connectedPlayer => connectedPlayer.IsCreated);
         }
         
         /// <summary>
@@ -498,18 +489,17 @@ namespace DeterministicLockstep
         private void AcceptAndHandleConnections()
         {
             NetworkConnection connection;
-            while ((connection = networkDriver.Accept()) != default)
+            while ((connection = _networkDriver.Accept()) != default)
             {
-                var index = FindFreePlayerSlot();
-                if (index != -1)
+                var slotIndex = FindFreePlayerSlot();
+                if (slotIndex != -1)
                 {
-                    connectedPlayers[index] = connection;
-                    Debug.Log("Accepted a connection with network ID: " + index);
+                    _connectedPlayers[slotIndex] = connection;
                 }
                 else
                 {
                     Debug.LogWarning("Cannot accept more connections. Server is full.");
-                    connection.Disconnect(networkDriver);
+                    connection.Disconnect(_networkDriver);
                 }
             }
         }
@@ -520,9 +510,9 @@ namespace DeterministicLockstep
         /// <returns>Empty slot number or -1 otherwise</returns>
         private int FindFreePlayerSlot()
         {
-            for (var i = 0; i < connectedPlayers.Length; i++)
+            for (var i = 0; i < _connectedPlayers.Length; i++)
             {
-                if (!connectedPlayers[i].IsCreated)
+                if (!_connectedPlayers[i].IsCreated)
                 {
                     return i;
                 }
@@ -537,113 +527,70 @@ namespace DeterministicLockstep
         /// </summary>
         private void CheckIfAllDataReceivedAndSendToClients()
         {
-            if (nondeterminismDetected)
-            {
-                return;
-            }
+            if (_nondeterminismDetected) return;
             
-            if (bufferOfClientInputsForEachTick[(ulong) _lastTickReceivedFromClient].Length == GetActiveConnectionCount() &&
-                hashBufferForEveryTick[(ulong) _lastTickReceivedFromClient].Length ==
+            if (_bufferOfClientInputsForEachTick[(ulong) _lastTickReceivedFromClient].Length == GetActiveConnectionCount() &&
+                _hashBufferForEveryTick[(ulong) _lastTickReceivedFromClient].Length ==
                 GetActiveConnectionCount())
             {
                 var networkIDs = new NativeList<int>(Allocator.Temp);
-                var inputs = new NativeList<PongInputs>(Allocator.Temp);
+                var playerInputs = new NativeList<PongInputs>(Allocator.Temp);
             
-                foreach (var inputData in bufferOfClientInputsForEachTick[(ulong) _lastTickReceivedFromClient])
+                foreach (var inputDataForEachTick in _bufferOfClientInputsForEachTick[(ulong) _lastTickReceivedFromClient])
                 {
-                    if(connectedPlayers[inputData.ClientNetworkID].IsCreated)
-                    {
-                        networkIDs.Add(inputData.ClientNetworkID);
-                        inputs.Add(inputData.PlayerGameInput);
-                    }
+                    if (!_connectedPlayers[inputDataForEachTick.ClientNetworkID].IsCreated) continue;
+                    networkIDs.Add(inputDataForEachTick.ClientNetworkID);
+                    playerInputs.Add(inputDataForEachTick.PlayerGameInput);
                 }
                 
                 // Get the number of hashes (assuming all players have the same number of hashes)
-                var numHashesPerPlayer = hashBufferForEveryTick[(ulong)_lastTickReceivedFromClient][0].Length;
+                var numHashesPerPlayer = _hashBufferForEveryTick[(ulong)_lastTickReceivedFromClient][0].Length;
 
                 // Iterate over each hash index
                 for (var systemHash = 0; systemHash < numHashesPerPlayer; systemHash++)
                 {
                     // Get the first player's hash at this index
-                    var firstPlayerHash = hashBufferForEveryTick[(ulong)_lastTickReceivedFromClient][0][systemHash];
+                    var firstPlayerHash = _hashBufferForEveryTick[(ulong)_lastTickReceivedFromClient][0][systemHash];
 
                     // Iterate over each player's hashes at this index
-                    for (var player = 1; player < hashBufferForEveryTick[(ulong)_lastTickReceivedFromClient].Length; player++)
+                    for (var player = 1; player < _hashBufferForEveryTick[(ulong)_lastTickReceivedFromClient].Length; player++)
                     {
-                        var currentPlayerHash = hashBufferForEveryTick[(ulong)_lastTickReceivedFromClient][player][systemHash];
+                        var currentPlayerHash = _hashBufferForEveryTick[(ulong)_lastTickReceivedFromClient][player][systemHash];
 
                         // If the hashes are not equal, log an error and set desynchronized to true
                         if (firstPlayerHash != currentPlayerHash)
                         {
-                            string allHashes = "";
-
-                            for (var i = 0;
-                                 i < hashBufferForEveryTick[(ulong)_lastTickReceivedFromClient].Length;
-                                 i++)
-                            {
-                                // Iterate over each hash for the current player
-                                for (var hashIndex = 0;
-                                     hashIndex < hashBufferForEveryTick[(ulong)_lastTickReceivedFromClient][i]
-                                         .Length;
-                                     hashIndex++)
-                                {
-                                    // Append the current hash to the allHashes string
-                                    allHashes +=
-                                        hashBufferForEveryTick[(ulong)_lastTickReceivedFromClient][i][hashIndex] +
-                                        ", ";
-                                }
-                            }
-                            
                             if (!SystemAPI.GetSingletonRW<DeterministicSettings>().ValueRO.isReplayFromFile)
                             {
                                 Debug.LogError("DESYNCHRONIZATION HAPPENED! HASHES ARE NOT EQUAL! " + "Ticks: " +
                                                _lastTickReceivedFromClient + " Hashes: " + firstPlayerHash + " and " +
-                                               currentPlayerHash + " System number: " + systemHash + ". All hashes: " + allHashes);
-                                nondeterminismDetected = true;
+                                               currentPlayerHash + " System number: " + systemHash);
+                                _nondeterminismDetected = true;
                             }
                             
                             break;
                         }
                     }
                     
-                    if (nondeterminismDetected) break;
+                    if (_nondeterminismDetected) break;
                 }
                 
-                if (!nondeterminismDetected)
+                if (!_nondeterminismDetected)
                 {
-                    string allHashes = "";
-
-                    for (var i = 0;
-                         i < hashBufferForEveryTick[(ulong)_lastTickReceivedFromClient].Length;
-                         i++)
-                    {
-                        // Iterate over each hash for the current player
-                        for (var hashIndex = 0;
-                             hashIndex < hashBufferForEveryTick[(ulong)_lastTickReceivedFromClient][i]
-                                 .Length;
-                             hashIndex++)
-                        {
-                            // Append the current hash to the allHashes string
-                            allHashes +=
-                                hashBufferForEveryTick[(ulong)_lastTickReceivedFromClient][i][hashIndex] +
-                                ", ";
-                        }
-                    }
-                    
-                    SendRPCWithPlayersInputUpdate(networkIDs, inputs);
+                    SendRPCWithPlayersInputUpdate(networkIDs, playerInputs);
                 }
                 else if(!SystemAPI.GetSingletonRW<DeterministicSettings>().ValueRO.isReplayFromFile)
                 {
-                    SendRPCSignallingNondeterminismDetection(networkIDs, inputs);
+                    SendRPCSignallingNondeterminismDetection(networkIDs, playerInputs);
                 }
             
                 networkIDs.Dispose();
-                inputs.Dispose();
+                playerInputs.Dispose();
                 
-                hashBufferForEveryTick.Remove((ulong) _lastTickReceivedFromClient);
+                _hashBufferForEveryTick.Remove((ulong) _lastTickReceivedFromClient);
                 _lastTickReceivedFromClient++;
             }
-            else if (hashBufferForEveryTick[(ulong) _lastTickReceivedFromClient].Length > GetActiveConnectionCount())
+            else if (_hashBufferForEveryTick[(ulong) _lastTickReceivedFromClient].Length > GetActiveConnectionCount())
             {
                 Debug.LogError("Too many player inputs saved in one tick");
             }
@@ -653,22 +600,21 @@ namespace DeterministicLockstep
         /// Function which compares hashes from all clients for the last game frame checking if all clients ended the game with the same state.
         /// </summary>
         /// <param name="rpc"> Last received rpc from client </param>
-        private void CheckEndGameHashes(RpcEndGameHash rpc)
+        private void CheckEndGameHashes(RpcEndGameHash rpcEndGameHash)
         {
-            Debug.Log("Player: " + rpc.ClientNetworkID + " ended the game with hash: " + rpc.FinalGameHash);
-            for (var i = 0; i < endGameHashes.Length; i++)
+            foreach (var endGameHash in _endGameHashes)
             {
-                if (rpc.ClientNetworkID == endGameHashes[i].ClientNetworkID) return;
+                if (rpcEndGameHash.ClientNetworkID == endGameHash.ClientNetworkID) return;
             }
-            endGameHashes.Add(rpc);
+            _endGameHashes.Add(rpcEndGameHash);
             
-            if (endGameHashes.Length == GetActiveConnectionCount())
+            if (_endGameHashes.Length == GetActiveConnectionCount())
             {
                 var desynchronized = false;
-                var hostHash = endGameHashes[0].FinalGameHash;
-                for (var i = 1; i < endGameHashes.Length; i++)
+                var endGameHostHash = _endGameHashes[0].FinalGameHash;
+                for (var i = 1; i < _endGameHashes.Length; i++)
                 {
-                    if(hostHash != endGameHashes[i].FinalGameHash)
+                    if(endGameHostHash != _endGameHashes[i].FinalGameHash)
                     {
                         desynchronized = true;
                         break;

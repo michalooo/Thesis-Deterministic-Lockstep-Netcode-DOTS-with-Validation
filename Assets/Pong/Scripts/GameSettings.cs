@@ -17,30 +17,11 @@ namespace PongGame
         [Tooltip("The maximum speed of the ball.")]
         [SerializeField] private int maxBallSpeed = 5000;
         
-        /// <summary>
-        /// Value indicating the leftmost screen position.
-        /// </summary>
         public float LeftmostScreenPosition { get; private set; }
-        
-        /// <summary>
-        /// Value indicating the rightmost screen position.
-        /// </summary>
         public float RightmostScreenPosition { get; private set; }
-        
-        /// <summary>
-        /// Value indicating the bottom screen position.
-        /// </summary>
         public float BottomScreenPosition { get; private set; }
-        
-        /// <summary>
-        /// Value indicating the top screen position.
-        /// </summary>
         public float TopScreenPosition { get; private set; }
-        
-        /// <summary>
-        /// Counter of how many balls were already spawned.
-        /// </summary>
-        private int ballsSpawned = 0;
+        private int _ballsSpawned = 0;
         
         public static GameSettings Instance { get; private set; }
         
@@ -58,14 +39,21 @@ namespace PongGame
 
         private void Start()
         {
-            Camera mainCamera = Camera.main;
-            float halfHeight = mainCamera.orthographicSize;
-            float halfWidth = mainCamera.aspect * halfHeight;
+            var mainCamera = Camera.main;
+            if (mainCamera != null)
+            {
+                var halfCameraHeight = mainCamera.orthographicSize;
+                var halfCameraWidth = mainCamera.aspect * halfCameraHeight;
 
-            LeftmostScreenPosition = -halfWidth;
-            RightmostScreenPosition = halfWidth;
-            BottomScreenPosition = -halfHeight;
-            TopScreenPosition = halfHeight;
+                LeftmostScreenPosition = -halfCameraWidth;
+                RightmostScreenPosition = halfCameraWidth;
+                BottomScreenPosition = -halfCameraHeight;
+                TopScreenPosition = halfCameraHeight;
+            }
+            else
+            {
+                throw new Exception("Main camera not found in the scene.");
+            }
         }
 
         /// <summary>
@@ -83,7 +71,7 @@ namespace PongGame
         /// <param name="spawnedBalls">How many balls were spawned</param>
         public void AddSpawnedBalls(int spawnedBalls)
         {
-            ballsSpawned += spawnedBalls;
+            _ballsSpawned += spawnedBalls;
         }
         
         /// <summary>
@@ -92,7 +80,7 @@ namespace PongGame
         /// <returns>The number of spawned balls in the game</returns>
         public int GetTotalBallsSpawned()
         {
-            return ballsSpawned;
+            return _ballsSpawned;
         }
         
         /// <summary>

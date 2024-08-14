@@ -9,74 +9,66 @@ namespace PongGame
 {
     /// <summary>
     /// System responsible for updating all of players positions based on their PlayerInputDataToUse component.
-    /// After updating those positions this component will be disabled signalling that those informations were applied
+    /// After updating those positions this component will be disabled signalling that those information were applied
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
     public partial struct PlayerMovementSystem : ISystem
     {
-        /// <summary>
-        /// Query to get all of the players that are currently in the game
-        /// </summary>
-        private EntityQuery playerQuery;
-        
-        /// <summary>
-        /// Interpolation speed for the player movement
-        /// </summary>
-        private const float interpolationSpeed = 0.2f;
+        private EntityQuery _playersQuery;
+        private const float PlayerSpeedInterpolationSpeed = 0.2f;
 
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<PlayerInputDataToUse>(); 
             state.RequireForUpdate<PongInputs>();
-            playerQuery = state.GetEntityQuery(typeof(GhostOwner), typeof(PlayerInputDataToUse), typeof(PlayerSpawned));
+            _playersQuery = state.GetEntityQuery(typeof(GhostOwner), typeof(PlayerInputDataToUse), typeof(PlayerSpawned));
         }
 
         public void OnUpdate(ref SystemState state)
         {
-            var ghostOwnerData = playerQuery.ToComponentDataArray<GhostOwner>(Allocator.Temp);
-            var playerInputData = playerQuery.ToComponentDataArray<PlayerInputDataToUse>(Allocator.Temp);
-            var connectionEntity = playerQuery.ToEntityArray(Allocator.Temp);
+            var ghostOwnersData = _playersQuery.ToComponentDataArray<GhostOwner>(Allocator.Temp);
+            var playersInputData = _playersQuery.ToComponentDataArray<PlayerInputDataToUse>(Allocator.Temp);
+            var connectionEntities = _playersQuery.ToEntityArray(Allocator.Temp);
 
-            for (int i = 0; i < playerInputData.Length; i++)
+            for (int i = 0; i < playersInputData.Length; i++)
             {
-                if (playerInputData[i].isPlayerDisconnected)
+                if (playersInputData[i].isPlayerDisconnected)
                 {
-                    Debug.Log("Destroying entity with ID: " + playerInputData[i].clientNetworkId);
-                    state.EntityManager.DestroyEntity(ghostOwnerData[i].connectionCommandsTargetEntity);
-                    state.EntityManager.DestroyEntity(connectionEntity[i]);
+                    state.EntityManager.DestroyEntity(ghostOwnersData[i].connectionCommandsTargetEntity);
+                    state.EntityManager.DestroyEntity(connectionEntities[i]);
                 }
                 else
                 {
-                    var verticalInput = playerInputData[i].playerInputToApply.verticalInput;
+                    var playerVerticalInput = playersInputData[i].playerInputToApply.verticalInput;
 
-                    var targetTransform = SystemAPI.GetComponentRW<LocalTransform>(ghostOwnerData[i].connectionCommandsTargetEntity);
-                    var targetPosition = targetTransform.ValueRO.Position;
+                    var playerCurrentTransform = SystemAPI.GetComponentRW<LocalTransform>(ghostOwnersData[i].connectionCommandsTargetEntity);
+                    var playerCurrentPosition = playerCurrentTransform.ValueRO.Position;
 
-                    var newPositionY = targetPosition.y + (state.World.Time.DeltaTime * verticalInput);
+                    var playerNewPositionY = playerCurrentPosition.y + (state.World.Time.DeltaTime * playerVerticalInput);
                     
                     // Check if the new position is within the bounds
-                    if (newPositionY < GameSettings.Instance.BottomScreenPosition)
+                    if (playerNewPositionY < GameSettings.Instance.BottomScreenPosition)
                     {
-                        newPositionY = GameSettings.Instance.BottomScreenPosition;
+                        playerNewPositionY = GameSettings.Instance.BottomScreenPosition;
                     }
-                    else if (newPositionY > GameSettings.Instance.TopScreenPosition)
+                    else if (playerNewPositionY > GameSettings.Instance.TopScreenPosition)
                     {
-                        newPositionY = GameSettings.Instance.TopScreenPosition;
+                        playerNewPositionY = GameSettings.Instance.TopScreenPosition;
                     }
                     
                     
                     // Interpolate from the current position to the new position
-                    targetPosition.y = Mathf.Lerp(targetPosition.y, newPositionY, interpolationSpeed);
+                    playerCurrentPosition.y = Mathf.Lerp(playerCurrentPosition.y, playerNewPositionY, PlayerSpeedInterpolationSpeed);
                     
-                    state.EntityManager.SetComponentData(ghostOwnerData[i].connectionCommandsTargetEntity, new LocalTransform
+                    state.EntityManager.SetComponentData(ghostOwnersData[i].connectionCommandsTargetEntity, new LocalTransform
                     {
-                        Position = new float3(targetPosition.x, targetPosition.y, targetPosition.z),
+                        Position = new float3(playerCurrentPosition.x, playerCurrentPosition.y, playerCurrentPosition.z),
                         Scale = 1f,
                         Rotation = quaternion.identity
                     });
 
-                    state.EntityManager.SetComponentEnabled<PlayerInputDataToUse>(connectionEntity[i],
+                    state.EntityManager.SetComponentEnabled<PlayerInputDataToUse>(connectionEntities[i],
                         false);
                 }
             }

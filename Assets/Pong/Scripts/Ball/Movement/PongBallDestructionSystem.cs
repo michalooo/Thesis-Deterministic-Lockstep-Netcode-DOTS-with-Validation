@@ -1,5 +1,4 @@
 ﻿using DeterministicLockstep;
-using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
@@ -9,104 +8,98 @@ using UnityEngine;
 namespace PongGame
 {
     /// <summary>
-    /// System that destroys the ball when it goes out of the screen and counts the points for the players.
+    /// System that is responsible for destroying the ball when it goes out of the screen and counts the points for the players.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
     public partial struct PongBallDestructionSystem : ISystem
     {
-        private EntityQuery ballsQuery;
-        private NativeArray<LocalTransform> ballTransform;
-        private NativeArray<Entity> ballEntities;
-        
-        public void OnCreate(ref SystemState state)
-        {
-            state.RequireForUpdate<PongBallSpawner>();
-        }
-        
+        private EntityQuery _ballsQuery;
+        private NativeArray<LocalTransform> _ballsTransform;
+        private NativeArray<Entity> _ballsEntity;
+
         public void OnUpdate(ref SystemState state)
         {
             var ecb = new EntityCommandBuffer(Allocator.TempJob);
 
-            ballsQuery = SystemAPI.QueryBuilder().WithAll<LocalTransform, Velocity>().Build();
-            ballTransform = ballsQuery.ToComponentDataArray<LocalTransform>(Allocator.TempJob);
-            ballEntities = ballsQuery.ToEntityArray(Allocator.TempJob);
+            _ballsQuery = SystemAPI.QueryBuilder().WithAll<LocalTransform, BallVelocity>().Build();
+            _ballsTransform = _ballsQuery.ToComponentDataArray<LocalTransform>(Allocator.TempJob);
+            _ballsEntity = _ballsQuery.ToEntityArray(Allocator.TempJob);
             
-            var leftPointsQueue = new NativeQueue<int>(Allocator.TempJob);
-            var rightPointsQueue = new NativeQueue<int>(Allocator.TempJob);
+            var leftPointsCounterForCurrentTick = new NativeQueue<int>(Allocator.TempJob);
+            var rightPointsCounterForCurrentTick = new NativeQueue<int>(Allocator.TempJob);
             
-            Camera cam = Camera.main;
-            float targetXPosition = Screen.width;
-            Vector3 worldPosition = cam.ScreenToWorldPoint(new Vector3(targetXPosition, 0, cam.nearClipPlane));
-           
-            var ballDestructionJob = new BallDestructionJob
+            var mainCamera = Camera.main;
+            float screenWidth = Screen.width;
+            if (mainCamera != null)
             {
-                ECB = ecb.AsParallelWriter(),
-                localTransform = ballTransform,
-                ballEntities = ballEntities,
-                worldPosition = worldPosition,
-                leftCounter = leftPointsQueue.AsParallelWriter(),
-                rightCounter = rightPointsQueue.AsParallelWriter()
-            };
+                var worldPosition = mainCamera.ScreenToWorldPoint(new Vector3(screenWidth, 0, mainCamera.nearClipPlane));
+           
+                var ballDestructionJob = new BallDestructionJob
+                {
+                    ecb = ecb.AsParallelWriter(),
+                    ballsTransform = _ballsTransform,
+                    ballsEntity = _ballsEntity,
+                    worldPosition = worldPosition,
+                    leftPointsCounterForCurrentTick = leftPointsCounterForCurrentTick.AsParallelWriter(),
+                    rightPointsCounterForCurrentTick = rightPointsCounterForCurrentTick.AsParallelWriter()
+                };
             
-            JobHandle ballDestructionHandle = ballDestructionJob.Schedule(ballTransform.Length,1);
-            ballDestructionHandle.Complete();
+                var ballDestructionJobHandle = ballDestructionJob.Schedule(_ballsTransform.Length,1);
+                ballDestructionJobHandle.Complete();
+            }
+
             ecb.Playback(state.EntityManager);
 
-            if (state.World.Name == "ClientWorld" && (rightPointsQueue.Count != 0 || leftPointsQueue.Count != 0)) // To prevent local simulation for counting points twice (from both worlds)
+            if (state.World.Name == "ClientWorld") // To prevent local simulation for counting points twice (from both worlds) since GameManagerSingleton will already affect both client worlds
             {
-                GameManagerSingleton.Instance.AddRightScore(rightPointsQueue.Count);
-                GameManagerSingleton.Instance.AddLeftScore(leftPointsQueue.Count);
+                GameManagerSingleton.Instance.AddRightScore(rightPointsCounterForCurrentTick.Count);
+                GameManagerSingleton.Instance.AddLeftScore(leftPointsCounterForCurrentTick.Count);
             }
 
-            if (rightPointsQueue.Count != 0 || leftPointsQueue.Count != 0)
+            if (GameManagerSingleton.Instance.GetTotalScore() == GameSettings.Instance.GetTotalBallsToSpawn())
             {
-                if (GameManagerSingleton.Instance.GetTotalScore() == GameSettings.Instance.GetTotalBallsToSpawn())
-                {
-                    GameManagerSingleton.Instance.SetGameResult();
-                    var client = SystemAPI.GetSingletonRW<DeterministicClientComponent>();
-                    client.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.GameFinished;
-                }
+                GameManagerSingleton.Instance.SetGameResult();
+                var client = SystemAPI.GetSingletonRW<DeterministicClientComponent>();
+                client.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.GameFinished;
             }
             
+            _ballsTransform.Dispose();
+            _ballsEntity.Dispose();
+            leftPointsCounterForCurrentTick.Dispose();
+            rightPointsCounterForCurrentTick.Dispose();
             ecb.Dispose();
-            rightPointsQueue.Dispose();
-            leftPointsQueue.Dispose();
-            ballTransform.Dispose();
-            ballEntities.Dispose();
         }
     }
     
     /// <summary>
-    /// Job that destroys the ball when it goes out of the screen and counts the points for the players.
-    /// This job runs on per ball basis.
+    /// Parallel job that destroys the ball when it goes out of the screen (left or right) and adds the points for the players.
     /// </summary>
-    [BurstCompile]
     public struct BallDestructionJob : IJobParallelFor
     {
-        public EntityCommandBuffer.ParallelWriter ECB;
+        public EntityCommandBuffer.ParallelWriter ecb;
         
-        public NativeArray<Entity> ballEntities;
-        public NativeArray<LocalTransform> localTransform;
+        public NativeArray<Entity> ballsEntity;
+        public NativeArray<LocalTransform> ballsTransform;
 
         public Vector3 worldPosition;
-        public NativeQueue<int>.ParallelWriter leftCounter;
-        public NativeQueue<int>.ParallelWriter rightCounter;
+        public NativeQueue<int>.ParallelWriter leftPointsCounterForCurrentTick;
+        public NativeQueue<int>.ParallelWriter rightPointsCounterForCurrentTick;
     
         public void Execute(int index)
         {
-            LocalTransform transform = localTransform[index];
-            Entity entity = ballEntities[index];
+            var ballTransform = ballsTransform[index];
+            var ballEntity = ballsEntity[index];
 
-            if (transform.Position.x < -worldPosition.x)
+            if (ballTransform.Position.x < -worldPosition.x)
             {
-                rightCounter.Enqueue(1);
-                ECB.DestroyEntity(index, entity);
+                rightPointsCounterForCurrentTick.Enqueue(1);
+                ecb.DestroyEntity(index, ballEntity);
             }
-            else if (transform.Position.x > worldPosition.x)
+            else if (ballTransform.Position.x > worldPosition.x)
             {
-                leftCounter.Enqueue(1);
-                ECB.DestroyEntity(index, entity);
+                leftPointsCounterForCurrentTick.Enqueue(1);
+                ecb.DestroyEntity(index, ballEntity);
             }
         }
     }

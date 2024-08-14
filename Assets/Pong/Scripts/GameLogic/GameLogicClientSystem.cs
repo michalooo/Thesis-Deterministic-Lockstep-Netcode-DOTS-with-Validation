@@ -7,13 +7,13 @@ using UnityEngine.SceneManagement;
 namespace PongGame
 {
     /// <summary>
-    /// System responsible to modify client behaviour based on user input.
+    /// System responsible to modify lockstep client behaviour based on user input and actions.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateBefore(typeof(InputGatherSystem))]
     public partial class GameLogicClientSystem : SystemBase
     {
-        private AsyncOperation gameAsyncLoad = null;
+        private AsyncOperation _gameAsyncLoad = null;
         
         protected override void OnCreate()
         {
@@ -23,24 +23,25 @@ namespace PongGame
 
         protected override void OnStartRunning()
         {
-            var client = SystemAPI.GetSingletonBuffer<DeterministicComponent>();
+            var client = SystemAPI.GetSingletonBuffer<DeterministicComponent>(); // Add all components that should be deterministic
             client.Add(new DeterministicComponent
             {
-                Type = ComponentType.ReadOnly<TextMeshProUGUI>(),
+                type = ComponentType.ReadOnly<TextMeshProUGUI>(),
             });
             client.Add(new DeterministicComponent
             {
-                Type = ComponentType.ReadOnly<GameSettings>(),
+                type = ComponentType.ReadOnly<GameSettings>(),
             });
             client.Add(new DeterministicComponent
             {
-                Type = ComponentType.ReadOnly<Velocity>(),
+                type = ComponentType.ReadOnly<BallVelocity>(),
             });
         }
 
         protected override void OnUpdate()
         {
             var client = SystemAPI.GetSingletonRW<DeterministicClientComponent>();
+            
             if (SceneManager.GetActiveScene().name == "PongGame" && (Input.GetKey(KeyCode.Q) || client.ValueRO.deterministicClientWorkingMode == DeterministicClientWorkingMode.Disconnect)) //Simulation of disconnection 
             {
                 client.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.Disconnect;
@@ -57,13 +58,13 @@ namespace PongGame
 
                 SceneManager.LoadSceneAsync("PongMenu");
             }
-            else if (client.ValueRO.deterministicClientWorkingMode == DeterministicClientWorkingMode.LoadingGame && gameAsyncLoad == null)
+            else if (client.ValueRO.deterministicClientWorkingMode == DeterministicClientWorkingMode.LoadingGame && _gameAsyncLoad == null)
             {
                 if (SceneManager.GetActiveScene().name == "PongGame")
                 {
                     client.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.ClientReady;
                 }
-                else gameAsyncLoad = SceneManager.LoadSceneAsync("PongGame");
+                else _gameAsyncLoad = SceneManager.LoadSceneAsync("PongGame");
             }
             else if (client.ValueRO.deterministicClientWorkingMode == DeterministicClientWorkingMode.RunDeterministicSimulation)
             {
@@ -79,9 +80,9 @@ namespace PongGame
             }
             
             
-            if (gameAsyncLoad != null && gameAsyncLoad.isDone)
+            if (_gameAsyncLoad != null && _gameAsyncLoad.isDone)
             {
-                gameAsyncLoad = null;
+                _gameAsyncLoad = null;
                 client.ValueRW.deterministicClientWorkingMode = DeterministicClientWorkingMode.ClientReady;
             }
         }

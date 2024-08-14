@@ -4,11 +4,11 @@ using UnityEngine;
 namespace PongGame
 {
     /// <summary>
-    /// Component used to store the player prefab entity
+    /// Component used to store the player prefab entity for spawner
     /// </summary>
     public struct PongPlayerSpawner : IComponentData
     {
-        public Entity Player;
+        public Entity player;
     }
 
     /// <summary>
@@ -16,16 +16,16 @@ namespace PongGame
     /// </summary>
     public class PongPlayerSpawnerAuthoring : MonoBehaviour
     {
-        public GameObject Player;
+        public GameObject player;
 
         class Baker : Baker<PongPlayerSpawnerAuthoring>
         {
             public override void Bake(PongPlayerSpawnerAuthoring authoring)
             {
-                var component = default(PongPlayerSpawner);
-                component.Player = GetEntity(authoring.Player, TransformUsageFlags.Dynamic);
+                var pongPlayerSpawnerComponent = default(PongPlayerSpawner);
+                pongPlayerSpawnerComponent.player = GetEntity(authoring.player, TransformUsageFlags.Dynamic);
                 var entity = GetEntity(TransformUsageFlags.Dynamic);
-                AddComponent(entity, component);
+                AddComponent(entity, pongPlayerSpawnerComponent);
             }
         }
         

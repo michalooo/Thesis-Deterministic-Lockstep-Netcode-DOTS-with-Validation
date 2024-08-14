@@ -35,7 +35,7 @@ namespace DeterministicLockstep
             list.Length = listLength;
             for (int i = 0; i < list.Length; ++i)
             {
-                var compType = deterministicComponentsCollection[i].Type;
+                var compType = deterministicComponentsCollection[i].type;
                 if (readOnly)
                     compType.AccessModeType = ComponentType.AccessMode.ReadOnly;
                 GhostChunkComponentTypesPtr[i] = system.GetDynamicComponentTypeHandle(compType);

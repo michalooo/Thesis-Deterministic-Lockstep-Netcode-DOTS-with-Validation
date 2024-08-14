@@ -8,9 +8,9 @@ namespace PongGame
     /// </summary>
     public class GameManagerSingleton : MonoBehaviour 
     {
-        [SerializeField] private TextMeshProUGUI scoreLeft;
-        [SerializeField] private TextMeshProUGUI scoreRight;
-        [SerializeField] private TextMeshProUGUI gameStatusText;
+        [SerializeField] private TextMeshProUGUI leftPlayerScoreText;
+        [SerializeField] private TextMeshProUGUI rightPlayerScoreText;
+        [SerializeField] private TextMeshProUGUI gameWaitingStatusText;
         [SerializeField] private TextMeshProUGUI gameResultText;
         [SerializeField] private GameObject desyncMessage;
         
@@ -46,7 +46,7 @@ namespace PongGame
         /// <returns>Bool signalling if left player is winning</returns>
         public bool IsLeftPlayerWinning()
         {
-            return int.Parse(scoreLeft.text) > int.Parse(scoreRight.text);
+            return int.Parse(leftPlayerScoreText.text) > int.Parse(rightPlayerScoreText.text);
         }
 
         /// <summary>
@@ -55,7 +55,7 @@ namespace PongGame
         /// <returns>Combined total score of both players</returns>
         public int GetTotalScore()
         {
-            return int.Parse(scoreLeft.text) + int.Parse(scoreRight.text);
+            return int.Parse(leftPlayerScoreText.text) + int.Parse(rightPlayerScoreText.text);
         }
 
         /// <summary>
@@ -80,7 +80,7 @@ namespace PongGame
         /// <param name="score">Score to add</param>
         public void AddLeftScore(int score)
         {
-            scoreLeft.text = (int.Parse(scoreLeft.text) + score).ToString();
+            leftPlayerScoreText.text = (int.Parse(leftPlayerScoreText.text) + score).ToString();
         }
         
         /// <summary>
@@ -89,7 +89,7 @@ namespace PongGame
         /// <param name="score">Score to add</param>
         public void AddRightScore(int score)
         {
-            scoreRight.text = (int.Parse(scoreRight.text) + score).ToString();
+            rightPlayerScoreText.text = (int.Parse(rightPlayerScoreText.text) + score).ToString();
         }
         
         /// <summary>
@@ -98,7 +98,7 @@ namespace PongGame
         /// <param name="enable">Value to use in SetActive call</param>
         public void SetWaitingTextEnabled(bool enable)
         {
-            gameStatusText.gameObject.SetActive(enable);
+            gameWaitingStatusText.gameObject.SetActive(enable);
         }
         
     }

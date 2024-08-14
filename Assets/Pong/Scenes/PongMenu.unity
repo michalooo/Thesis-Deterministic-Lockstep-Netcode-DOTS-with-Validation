@@ -5658,14 +5658,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: af2d94aeb9274bc8928834c566b61729, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  IsLocalMultiplayerSimulation: {fileID: 1161937535}
-  IsReplayFromFile: {fileID: 1270766187}
-  GamePort: {fileID: 193756027}
-  FrameRate: {fileID: 1320930964}
-  ForcedInputLatency: {fileID: 1581888555}
+  isLocalMultiplayerSimulation: {fileID: 1161937535}
+  isReplayFromFile: {fileID: 1270766187}
+  gamePort: {fileID: 193756027}
+  frameRate: {fileID: 1320930964}
+  forcedInputLatency: {fileID: 1581888555}
   hashOption: {fileID: 1664012559}
-  HostAddress: {fileID: 992908264}
-  HostPort: {fileID: 140193403}
+  hostAddress: {fileID: 992908264}
+  hostPort: {fileID: 140193403}
 --- !u!1 &1904609170
 GameObject:
   m_ObjectHideFlags: 0

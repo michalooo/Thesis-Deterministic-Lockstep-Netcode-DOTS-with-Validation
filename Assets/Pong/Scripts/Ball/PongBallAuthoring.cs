@@ -7,7 +7,7 @@ namespace PongGame
     /// <summary>
     /// A component used to store current ball velocity value in float3 format.
     /// </summary>
-    public struct Velocity : IComponentData
+    public struct BallVelocity : IComponentData
     {
         public float3 value;
     }
@@ -20,7 +20,7 @@ namespace PongGame
             {
                 var entity = GetEntity(TransformUsageFlags.Dynamic);
 
-                var velocity = default(Velocity);
+                var velocity = default(BallVelocity);
                 AddComponent(entity, velocity);
             }
         }

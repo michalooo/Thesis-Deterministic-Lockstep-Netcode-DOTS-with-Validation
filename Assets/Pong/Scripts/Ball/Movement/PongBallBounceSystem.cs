@@ -1,180 +1,153 @@
 ﻿using DeterministicLockstep;
-using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Transforms;
 using Unity.Mathematics;
 using UnityEngine;
-using Random = System.Random;
 
 namespace PongGame
 {
     /// <summary>
-    /// System that bounces the ball off the walls and the players.
+    /// System that is responsible for bouncing the balls off the walls and players.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup))]
     [UpdateAfter(typeof(PongBallDestructionSystem))]
-    [BurstCompile]
-    public partial class BallBounceSystem : SystemBase
+    public partial class PongBallBounceSystem : SystemBase
     {
-        private EntityQuery ballsQuery;
-        private EntityQuery playerQuery;
-        private NativeArray<LocalTransform> ballTransform;
-        private NativeArray<Velocity> ballVelocities;
-        private NativeArray<Entity> ballEntities;
+        private EntityQuery _ballsQuery;
+        private EntityQuery _playersQuery;
+        private NativeArray<LocalTransform> _ballsTransforms;
+        private NativeArray<BallVelocity> _ballsVelocities;
+        private NativeArray<Entity> _ballsEntities;
         
-        /// <summary>
-        /// Seed for generating random numbers.
-        /// </summary>
-        private uint randomSeedFromServer;
-        private Unity.Mathematics.Random random;
-        
-        [BurstCompile]
-        protected override void OnCreate()
-        {
-            RequireForUpdate<PongBallSpawner>();
-        }
+        private uint _randomSeedGeneratedOnServer;
+        private Unity.Mathematics.Random _random;
+        private NativeArray<GhostOwner> _ghostOwnerData;
+        private NativeArray<LocalToWorld> _playersTransforms;
         
         protected override void OnStartRunning()
         { 
-            randomSeedFromServer = SystemAPI.GetSingleton<DeterministicSettings>().randomSeed;
-            random = new Unity.Mathematics.Random(randomSeedFromServer);
+            _randomSeedGeneratedOnServer = SystemAPI.GetSingleton<DeterministicSettings>().randomSeed;
+            _random = new Unity.Mathematics.Random(_randomSeedGeneratedOnServer);
         }
         
         protected override void OnUpdate()
         {
-            playerQuery = SystemAPI.QueryBuilder().WithAll<GhostOwner>().Build();
-            ballsQuery = SystemAPI.QueryBuilder().WithAll<LocalTransform, Velocity>().Build();
-            ballTransform = ballsQuery.ToComponentDataArray<LocalTransform>(Allocator.TempJob);
-            ballVelocities = ballsQuery.ToComponentDataArray<Velocity>(Allocator.TempJob);
-            ballEntities = ballsQuery.ToEntityArray(Allocator.TempJob);
+            _playersQuery = SystemAPI.QueryBuilder().WithAll<GhostOwner>().Build();
+            _ballsQuery = SystemAPI.QueryBuilder().WithAll<LocalTransform, BallVelocity>().Build();
             
-            var ghostOwnerData = playerQuery.ToComponentDataArray<GhostOwner>(Allocator.TempJob);
-            var playersTransforms = new NativeArray<LocalToWorld>(ghostOwnerData.Length, Allocator.TempJob);
+            _ballsTransforms = _ballsQuery.ToComponentDataArray<LocalTransform>(Allocator.TempJob);
+            _ballsVelocities = _ballsQuery.ToComponentDataArray<BallVelocity>(Allocator.TempJob);
+            _ballsEntities = _ballsQuery.ToEntityArray(Allocator.TempJob);
+            
+            _ghostOwnerData = _playersQuery.ToComponentDataArray<GhostOwner>(Allocator.TempJob);
+            _playersTransforms = new NativeArray<LocalToWorld>(_ghostOwnerData.Length, Allocator.TempJob);
 
-            for (int i = 0; i < ghostOwnerData.Length; i++)
+            for (var i = 0; i < _ghostOwnerData.Length; i++)
             {
-                playersTransforms[i] = SystemAPI.GetComponent<LocalToWorld>(ghostOwnerData[i].connectionCommandsTargetEntity);
+                _playersTransforms[i] = SystemAPI.GetComponent<LocalToWorld>(_ghostOwnerData[i].connectionCommandsTargetEntity);
             }
             
             var ecb = new EntityCommandBuffer(Allocator.TempJob);
             
-            Camera cam = Camera.main;
-            float targetXPosition = Screen.width;
-            Vector3 worldPosition = cam.ScreenToWorldPoint(new Vector3(targetXPosition, 0, cam.nearClipPlane));
-            
-            var ballBounceJob = new BallBounceJob
+            var mainCamera = Camera.main;
+            float screenWidth = Screen.width;
+            if (mainCamera != null)
             {
-                ECB = ecb.AsParallelWriter(),
-                ballVelocities = ballVelocities,
-                localTransform = ballTransform,
-                ballEntities = ballEntities,
-                worldPosition = worldPosition,
-                minYPos = GameSettings.Instance.BottomScreenPosition,
-                maxYPos = GameSettings.Instance.TopScreenPosition,
-                players = playersTransforms,
-                random = random
-            };
+                var worldPosition = mainCamera.ScreenToWorldPoint(new Vector3(screenWidth, 0, mainCamera.nearClipPlane));
             
-            JobHandle ballBounceHandle = ballBounceJob.Schedule(ballTransform.Length,1);
-            ballBounceHandle.Complete();
+                var ballBounceJob = new BallBounceJob
+                {
+                    ecb = ecb.AsParallelWriter(),
+                    ballsVelocities = _ballsVelocities,
+                    ballsTransforms = _ballsTransforms,
+                    ballsEntities = _ballsEntities,
+                    worldPosition = worldPosition,
+                    bottomScreenPosition = GameSettings.Instance.BottomScreenPosition,
+                    topScreenPosition = GameSettings.Instance.TopScreenPosition,
+                    playersTransforms = _playersTransforms,
+                    random = _random
+                };
+            
+                JobHandle ballBounceHandle = ballBounceJob.Schedule(_ballsTransforms.Length,1);
+                ballBounceHandle.Complete();
+            }
+
             ecb.Playback(EntityManager);
             
             ecb.Dispose();
-            ballTransform.Dispose();
-            ballVelocities.Dispose();
-            ballEntities.Dispose();
+            _ghostOwnerData.Dispose();
+            _playersTransforms.Dispose();
+            _ballsTransforms.Dispose();
+            _ballsVelocities.Dispose();
+            _ballsEntities.Dispose();
         }
     }
     
     /// <summary>
-    /// Parallel job that bounces the ball off the walls and the players.
+    /// Parallel job that calculates new ball velocity if the ball bounces off the walls or players.
     /// </summary>
-    [BurstCompile]
     public struct BallBounceJob : IJobParallelFor
     {
-        public EntityCommandBuffer.ParallelWriter ECB;
+        public EntityCommandBuffer.ParallelWriter ecb;
         
-        public NativeArray<Entity> ballEntities;
-        public NativeArray<LocalTransform> localTransform;
-        public NativeArray<Velocity> ballVelocities;
+        public NativeArray<Entity> ballsEntities;
+        public NativeArray<LocalTransform> ballsTransforms;
+        public NativeArray<BallVelocity> ballsVelocities;
 
         public Vector3 worldPosition;
-        public float minYPos;
-        public float maxYPos;
+        public float bottomScreenPosition;
+        public float topScreenPosition;
         
         public Unity.Mathematics.Random random;
         
-        public NativeArray<LocalToWorld> players;
+        public NativeArray<LocalToWorld> playersTransforms;
     
         public void Execute(int index)
         {
-            LocalTransform transform = localTransform[index];
-            Velocity velocity = ballVelocities[index];
-            Entity entity = ballEntities[index];
+            var ballTransform = ballsTransforms[index];
+            var ballVelocity = ballsVelocities[index];
+            var ballEntity = ballsEntities[index];
             
-            const float playerBoundaryOffsetX = 0.1f;
-            const float playerBoundaryOffsetY = 1f;
+            const float playerPrefabBoundaryOffsetX = 0.1f; // TODO This value should not be hardcoded
+            const float playerPrefabBoundaryOffsetY = 1f; // TODO This value should not be hardcoded
 
-            if (transform.Position.x < -worldPosition.x || transform.Position.x > worldPosition.x) return;
+            if (ballTransform.Position.x < -worldPosition.x || ballTransform.Position.x > worldPosition.x) return; // Ball is already outside of the screen (crossed left or right wall)
             
-            var newVelocityValue = new float3(velocity.value);
+            var newBallVelocityValue = new float3(ballVelocity.value);
             
-            if (transform.Position.y < minYPos)
+            if (ballTransform.Position.y < bottomScreenPosition) // Ball crossed bottom wall
             {
-                // Check if the velocity is in the direction of the wall
-                if (velocity.value.y < 0)
+                // Check if the velocity is in the direction of the wall (there may be a case that the ball bounced back already but is still in the wall)
+                if (ballVelocity.value.y < 0)
                 {
                     // Reflect the velocity about the normal vector of the wall
-                    // newVelocityValue = math.reflect(velocity.value, new float3(0, random.NextFloat(0.5f, 1f), 0));
-                    newVelocityValue = math.reflect(velocity.value, new float3(0, 1, 0));
+                    newBallVelocityValue = math.reflect(ballVelocity.value, new float3(0, 1, 0));
                 }
             }
-            else if (transform.Position.y > maxYPos)
+            else if (ballTransform.Position.y > topScreenPosition) // Ball crossed top wall
             {
                 // Check if the velocity is in the direction of the wall
-                if (velocity.value.y > 0)
+                if (ballVelocity.value.y > 0)
                 {
                     // Reflect the velocity about the normal vector of the wall
-                    // newVelocityValue = math.reflect(velocity.value, new float3(0, -random.NextFloat(0.5f, 1f), 0));
-                    newVelocityValue = math.reflect(velocity.value, new float3(0, -1, 0));
+                    newBallVelocityValue = math.reflect(ballVelocity.value, new float3(0, -1, 0));
                 }
             }
-
-            foreach (var player in players)
+            
+            foreach (var player in playersTransforms) // check if ball touched any of players pods. TODO: This should be optimized
             {
-                if (newVelocityValue.x < 0 && transform.Position.x < 0 && // Check if the velocity is in the direction of the player
-                    transform.Position.x <= player.Position.x + playerBoundaryOffsetX && // Check if the ball is within the player's right boundary
-                    transform.Position.x >= player.Position.x - playerBoundaryOffsetX) // Check if the ball is within the player's left boundary
+                if (math.distance(ballTransform.Position.x, player.Position.x) <= playerPrefabBoundaryOffsetX && 
+                    math.distance(ballTransform.Position.y, player.Position.y) <= playerPrefabBoundaryOffsetY) // Check if the ball is within the player boundary
                 {
-                    if(transform.Position.y <= player.Position.y + playerBoundaryOffsetY && // Check if the ball is within the player's top boundary
-                       transform.Position.y >= player.Position.y - playerBoundaryOffsetY) // Check if the ball is within the player's bottom boundary
-                    {
-                        // Reflect the velocity about the normal vector of the left player
-                        newVelocityValue = math.reflect(newVelocityValue, new float3(1, 0, 0));
-                    }
-                }
-                else if (newVelocityValue.x > 0 && transform.Position.x > 0 && // Check if the velocity is in the direction of the player
-                    transform.Position.x >= player.Position.x - playerBoundaryOffsetX && // Check if the ball is within the player's right boundary
-                    transform.Position.x <= player.Position.x + playerBoundaryOffsetX) // Check if the ball is within the player's left boundary
-                {
-                    if(transform.Position.y <= player.Position.y + playerBoundaryOffsetY && // Check if the ball is within the player's top boundary
-                       transform.Position.y >= player.Position.y - playerBoundaryOffsetY) // Check if the ball is within the player's bottom boundary
-                    {
-                        // Reflect the velocity about the normal vector of the left player
-                        newVelocityValue = math.reflect(newVelocityValue, new float3(-1, 0, 0));
-                    }
+                    if(ballVelocity.value.x < 0 && player.Position.x < 0) newBallVelocityValue = math.reflect(newBallVelocityValue, new float3(1, 0, 0)); // Left player front part
+                    else if(ballVelocity.value.x > 0 && player.Position.x > 0) newBallVelocityValue = math.reflect(newBallVelocityValue, new float3(-1, 0, 0)); // Right player front part
                 }
             }
-
-            var newVelocity = new Velocity
-            {
-                value = newVelocityValue
-            };
-           
-            ECB.SetComponent(index , entity, newVelocity);
+            
+            ecb.SetComponent(index, ballEntity, new BallVelocity { value = newBallVelocityValue });
         }
     }
 }

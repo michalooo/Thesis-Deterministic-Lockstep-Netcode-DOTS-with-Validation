@@ -10,10 +10,10 @@ namespace DeterministicLockstep
     /// </summary>
     public enum DeterministicServerWorkingMode
     {
-        ListenForConnections,
-        RunDeterministicSimulation,
-        Disconnect,
-        None
+        ListenForConnections, // Server is waiting for listening for connections without running the simulation
+        RunDeterministicSimulation, // Server starts running the simulation and validating client inputs and hashes
+        Disconnect, // Server is disconnecting all clients
+        None // Default state, server is not doing anything
     }
     
     /// <summary>
@@ -21,19 +21,20 @@ namespace DeterministicLockstep
     /// </summary>
     public enum DeterministicClientWorkingMode
     {
-        Connect,
-        Disconnect,
-        RunDeterministicSimulation,
-        ClientReady,
-        LoadingGame,
-        GameFinished,
-        Desync,
-        None
+        Connect, // Client is connecting to the server
+        Disconnect, // Client is disconnecting from the server
+        RunDeterministicSimulation, // Client is running the simulation and sending inputs and hashes to the server
+        ClientReady, // Client is ready to start the simulation (all the scenes and elements are loaded)
+        LoadingGame, // Client is loading the game
+        GameFinished, // Client has finished the game
+        Desync, // Desync message was received from the server. The game stops
+        None // Default state, client is not doing anything
     }
     
     
     /// <summary>
     /// Component used to store the player input data to use for current simulation step.
+    /// It should be assumed that it contains the input data to use for current frame and its automatically updated by the package.
     /// </summary>
     public struct PlayerInputDataToUse : IComponentData, IEnableableComponent
     {
@@ -145,7 +146,7 @@ namespace DeterministicLockstep
     /// </summary>
     public struct DeterministicComponent : IBufferElementData
     {
-        public ComponentType Type;
+        public ComponentType type;
     }
     
     /// <summary>
@@ -173,11 +174,11 @@ namespace DeterministicLockstep
     /// </summary>
     public struct DeterministicEntityID : IComponentData, IComparable<DeterministicEntityID>
     {
-        public int ID;
+        public int id;
 
-        public int CompareTo(DeterministicEntityID other)
+        public int CompareTo(DeterministicEntityID otherEntityID)
         {
-            return ID.CompareTo(other.ID);
+            return id.CompareTo(otherEntityID.id);
         }
     }
    
@@ -185,7 +186,7 @@ namespace DeterministicLockstep
     /// Predefined struct for managing player inputs in the sample Pong game
     /// </summary>
     [Serializable]
-    public struct PongInputs: IComponentData
+    public struct PongInputs: IComponentData // TODO: this should be codegen and not placed in the package
     {
         public int verticalInput;
 

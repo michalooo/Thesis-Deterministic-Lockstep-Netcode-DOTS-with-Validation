@@ -76,19 +76,21 @@ namespace DeterministicLockstep
         public uint randomSeed;
         
         /// <summary>
-        /// If isReplayFromFile is set to true, this value will be set from the file to mark which tick was nondeterministic. This is needed since during replay there is no validation performed
+        /// If targetNonDeterministicTickDuringReplay is set to true, this value will be set from the file to mark which tick was the last simulated (first nondeterministic tick).
+        /// This is needed since during replay there is no validation performed and system needs to know until when to re-simulate the game.
+        /// If server input recording would contain more inputs it would be possible to keep replaying the game further.
         /// </summary>
-        public int nonDeterministicTickDuringReplay;
+        public int targetNonDeterministicTickDuringReplay;
         
         /// <summary>
         /// Server address for the game. Default value is the local address of 127.0.0.1.
         /// </summary>
-        public FixedString32Bytes _serverAddress;
+        public FixedString32Bytes serverAddress;
         
         /// <summary>
         /// Server port for the game. Default value is 7979.
         /// </summary>
-        public int _serverPort;
+        public int serverPort;
 
         /// <summary>
         /// Bool signifying if the game simulation is running
@@ -122,8 +124,8 @@ namespace DeterministicLockstep
                 component.allowedConnectionsPerGame = authoring.allowedConnectionsPerGame;
                 component.simulationTickRate = authoring.simulationTickRate;
                 component.hashCalculationOption = authoring.hashCalculationOption;
-                component._serverPort = authoring.serverPort;
-                component._serverAddress = authoring.serverAddress;
+                component.serverPort = authoring.serverPort;
+                component.serverAddress = authoring.serverAddress;
                 component.isReplayFromFile = authoring.isReplayFromFile;
                 component.isInGame = false;
                 var entity = GetEntity(TransformUsageFlags.Dynamic);

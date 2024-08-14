@@ -1158,9 +1158,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cd8e25a8c99315d4da0c486cbee4f350, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  scoreLeft: {fileID: 1901449024}
-  scoreRight: {fileID: 1973436366}
-  gameStatusText: {fileID: 686434932}
+  leftPlayerScoreText: {fileID: 1901449024}
+  rightPlayerScoreText: {fileID: 1973436366}
+  gameWaitingStatusText: {fileID: 686434932}
   gameResultText: {fileID: 276243719}
   desyncMessage: {fileID: 717302703}
 --- !u!4 &1825070034
