@@ -10,26 +10,33 @@ namespace DeterministicLockstep
     /// When run, it adds a hash to the DeterministicSimulationTime component.
     /// </summary>
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup), OrderLast = true)]
-    [WorldSystemFilter(WorldSystemFilterFlags.LocalSimulation | WorldSystemFilterFlags.Default)]
+    [WorldSystemFilter(WorldSystemFilterFlags.LocalSimulation)]
     public partial struct StateHashForValidationSystem : ISystem
     {
         private NativeList<ulong> _perJobHashArray;
         private EntityQuery _componentTypesQuery;
-        private DynamicBuffer<DeterministicComponent> _listOfDeterministicTypes;
+        private bool _initialized;
 
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<DeterministicSettings>();
             state.RequireForUpdate<DeterministicSimulationTime>();
             state.RequireForUpdate<DeterministicComponent>();
-            
-            _listOfDeterministicTypes = SystemAPI.GetSingletonBuffer<DeterministicComponent>();
+            _initialized = false;
+        }
+        
+        private void EnsureInitialized(ref SystemState state)
+        {
+            if (_initialized)
+                return;
+                
             _perJobHashArray = new NativeList<ulong>(128, Allocator.Persistent);
             
-            var componentTypes = new ComponentType[_listOfDeterministicTypes.Length];
-            for (var i = 0; i < _listOfDeterministicTypes.Length; i++)
+            var listOfDeterministicTypes = SystemAPI.GetSingletonBuffer<DeterministicComponent>();
+            var componentTypes = new ComponentType[listOfDeterministicTypes.Length];
+            for (var i = 0; i < listOfDeterministicTypes.Length; i++)
             {
-                componentTypes[i] = _listOfDeterministicTypes[i].type;
+                componentTypes[i] = listOfDeterministicTypes[i].type;
             }
 
             var query = new EntityQueryDesc
@@ -37,21 +44,24 @@ namespace DeterministicLockstep
                 Any = componentTypes
             };
             _componentTypesQuery = state.EntityManager.CreateEntityQuery(query);
+            _initialized = true;
         }
 
         public void OnUpdate(ref SystemState state)
         {
+            EnsureInitialized(ref state);
+            
             var simTime = SystemAPI.GetSingletonRW<DeterministicSimulationTime>();
             var settings = SystemAPI.GetSingleton<DeterministicSettings>();
             
-            _listOfDeterministicTypes = SystemAPI.GetSingletonBuffer<DeterministicComponent>();
+            var listOfDeterministicTypes = SystemAPI.GetSingletonBuffer<DeterministicComponent>();
             var dynamicListOfDeterministicTypes = new DynamicTypeList();
             var typeIndexList = new TypeIndexList();
-            DynamicTypeList.PopulateList(ref state, _listOfDeterministicTypes, true, ref dynamicListOfDeterministicTypes, ref typeIndexList);
+            DynamicTypeList.PopulateList(ref state, listOfDeterministicTypes, true, ref dynamicListOfDeterministicTypes, ref typeIndexList);
             
             var entityCount = _componentTypesQuery.CalculateEntityCount();
             var determinismLogPerEntityTypeMap = new NativeParallelMultiHashMap<Entity, KeyValuePair<TypeIndex, ulong>>(
-                entityCount * _listOfDeterministicTypes.Length, Allocator.TempJob);
+                entityCount * listOfDeterministicTypes.Length, Allocator.TempJob);
             
             var hashingJob = new GameStateHashJob
             {

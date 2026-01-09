@@ -63,6 +63,10 @@ Add to your project's `Packages/manifest.json`:
 }
 ```
 
+### Important: Opt-In by Default
+
+This package is **opt-in** and will not affect your project until you explicitly configure it. The validation systems only run in worlds with `LocalSimulation` filter and require the `DeterministicSettingsAuthoring` component to be present in your scene. Simply importing the package will not change your game's behavior.
+
 ## Quick Start
 
 ### 1. Configure Settings

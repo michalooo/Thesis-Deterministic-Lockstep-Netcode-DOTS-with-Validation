@@ -11,7 +11,7 @@ namespace DeterministicLockstep
     /// All systems that affect game state should be added to this group.
     /// Runs at a fixed tick rate for deterministic simulation.
     /// </summary>
-    [WorldSystemFilter(WorldSystemFilterFlags.LocalSimulation | WorldSystemFilterFlags.Default)]
+    [WorldSystemFilter(WorldSystemFilterFlags.LocalSimulation)]
     public partial class DeterministicSimulationSystemGroup : ComponentSystemGroup
     {
         /// <summary>
