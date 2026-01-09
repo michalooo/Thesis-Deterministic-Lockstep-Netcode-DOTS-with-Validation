@@ -2,483 +2,309 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using Unity.Collections;
-using Unity.Logging;
-using Unity.Logging.Sinks;
 using UnityEngine;
-using Logger = Unity.Logging.Logger;
-using Random = System.Random;
 
 namespace DeterministicLockstep
 {
+    /// <summary>
+    /// Logger for determinism validation. Collects hash logs per tick for debugging nondeterminism.
+    /// </summary>
     public class DeterministicLogger : MonoBehaviour
     {
         public static DeterministicLogger Instance { get; private set; }
         
-        private StreamWriter _nondeterminismInfoClientLogger; // 2 loggers in case of local client testing
-        private StreamWriter _nondeterminismInfoClientLogger2;
-        private bool _isNondeterminismClientLoggerInitialized = false;
-        private bool _isNondeterminismClientLoggerInitialized2 = false;
-        
-        private StreamWriter _serverInputRecordingLogger;
-        private bool _isServerInputRecordingLoggerInitialized = false;
-        
-        private StreamWriter _clientSettingsLogger; // 2 loggers in case of local client testing
-        private StreamWriter _clientSettingsLogger2;
-        private bool _isClientSettingsLoggerInitialized = false;
-        private bool _isClientSettingsLoggerInitialized2 = false;
-        
-        private StreamWriter _clientSystemInfoLogger; // 2 loggers in case of local client testing
-        private StreamWriter _clientSystemInfoLogger2;
-        private bool _isClientSystemInfoLoggerInitialized = false;
-        private bool _isClientSystemInfoLoggerInitialized2 = false;
+        /// <summary>
+        /// Hash logs per run, per tick.
+        /// </summary>
+        private Dictionary<int, Dictionary<int, List<string>>> _hashLogsPerRun = new Dictionary<int, Dictionary<int, List<string>>>();
         
         /// <summary>
-        /// Maximum batch size for logging to avoid writing too much data at once.
-        /// Value is given in bytes
+        /// Current run index for logging.
         /// </summary>
-        const int MaxLoggingBatchSize = 500; // TODO: investigate optimal value for speed
-
-        /// <summary>
-        /// Information about the game state after hashing
-        /// </summary>
-        private Dictionary<ulong, List<string>> _clientHashInfoBuffer;
+        private int _currentRunIndex = 0;
         
         /// <summary>
-        /// Information about the game state after hashing for the second client.
-        /// This is used for local simulation only.
+        /// Directory for output files.
         /// </summary>
-        private Dictionary<ulong, List<string>> _clientHashInfoBuffer2;
+        private string _outputDirectory;
         
-        private int _deterministicEntityIDInDictionary = -1;
-        private int _deterministicEntityIDInDictionary2 = -1; // For local client testing
-        
-        public int GetDeterministicEntityID(string worldName) // TODO: remove the problems with separation on 2 client worlds
-        {
-            if(worldName == "ClientWorld")
-            {
-                _deterministicEntityIDInDictionary++;
-                return _deterministicEntityIDInDictionary;
-            }
-            
-            _deterministicEntityIDInDictionary2++;
-            return _deterministicEntityIDInDictionary2;
-        }
+        /// <summary>
+        /// Counter for deterministic entity IDs.
+        /// </summary>
+        private int _entityIdCounter = 0;
 
         private void Awake()
         {
             if (Instance != null && Instance != this)
             {
-                Destroy(this);
+                Destroy(gameObject);
+                return;
             }
-            else
-            {
-                Instance = this;
-            }
+            
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+            
+            // Create output directory
+            _outputDirectory = Path.Combine(Application.dataPath, "..", "ValidationLogs",
+                $"{DateTime.Now:yyyy_MM_dd_HH_mm_ss}");
+        }
 
-            _clientHashInfoBuffer = new Dictionary<ulong, List<string>>();
-            _clientHashInfoBuffer2 = new Dictionary<ulong, List<string>>();
-        }
-        
-        /// <summary>
-        /// Function which adds the message to the dictionary for the client.
-        /// This dictionary will be used when nondeterminism is detected to print all of the messages to the log file.
-        /// </summary>
-        /// <param name="worldName"> The name of the world, used in order to add the message to aproperiate dictionary </param>
-        /// <param name="tick"> On which simulation tick is this message </param>
-        /// <param name="message"> What text should be added to the dictionary </param>
-        public void AddToClientHashDictionary(string worldName, ulong tick, string message)
+        private void OnDestroy()
         {
-            var dictionaryToWrite = worldName == "ClientWorld" ? _clientHashInfoBuffer : _clientHashInfoBuffer2;
-            
-            if (dictionaryToWrite.ContainsKey(tick))
+            if (Instance == this)
             {
-                dictionaryToWrite[tick].Add(message);
-            }
-            else
-            {
-                dictionaryToWrite.Add(tick, new List<string>());
-                dictionaryToWrite[tick].Add(message);
-            }
-        }
-        
-        /// <summary>
-        /// Function which creates the logger for the client nondeterminism info.
-        /// </summary>
-        private void CreateNondeterminismClientLogger(string worldName, DeterministicSettings settings)
-        {
-            var randomHashForAGameWithGivenSeed = new Random((int)settings.randomSeed).Next();
-            
-            if (worldName == "ClientWorld")
-            {
-                if (_isNondeterminismClientLoggerInitialized) return;
-                var directoryPath = "NonDeterminismLogs/" + DateTime.Now.Year + "_" +
-                                    DateTime.Now.Month + "_" +
-                                    DateTime.Now.Day + "_" + DateTime.Now.Hour + "_" + DateTime.Now.Minute +
-                                    "_" + randomHashForAGameWithGivenSeed;
-                Directory.CreateDirectory(directoryPath);
-                var nonDeterminismLoggerFileName = "NonDeterminismLogs/" + DateTime.Now.Year + "_" +
-                                                   DateTime.Now.Month + "_" +
-                                                   DateTime.Now.Day + "_" + DateTime.Now.Hour + "_" + DateTime.Now.Minute +
-                                                   "_" + randomHashForAGameWithGivenSeed + "/_NondeterminismClientLogs_.txt";
-                _nondeterminismInfoClientLogger = new StreamWriter(nonDeterminismLoggerFileName, true);
-                
-                _isNondeterminismClientLoggerInitialized = true;
-            }
-            else
-            {
-                if (_isNondeterminismClientLoggerInitialized2) return;
-                var directoryPath = "NonDeterminismLogs/" + DateTime.Now.Year + "_" +
-                                    DateTime.Now.Month + "_" +
-                                    DateTime.Now.Day + "_" + DateTime.Now.Hour + "_" + DateTime.Now.Minute +
-                                    "_" + randomHashForAGameWithGivenSeed;
-                Directory.CreateDirectory(directoryPath);
-                var nonDeterminismLoggerFileName2 = "NonDeterminismLogs/" + DateTime.Now.Year + "_" +
-                                                    DateTime.Now.Month + "_" +
-                                                    DateTime.Now.Day + "_" + DateTime.Now.Hour + "_" + DateTime.Now.Minute +
-                                                    "_" + randomHashForAGameWithGivenSeed + "/_NondeterminismClientLogs2_.txt";
-            
-                _nondeterminismInfoClientLogger2 = new StreamWriter(nonDeterminismLoggerFileName2, true);
-                
-                _isNondeterminismClientLoggerInitialized2 = true;
-            }
-        }
-        
-        /// <summary>
-        /// Function which creates the logger for the client system info.
-        /// </summary>
-        private void CreateClientSystemInfoLogger(string worldName, DeterministicSettings settings)
-        {
-            var randomHashForAGameWithGivenSeed = new Random((int)settings.randomSeed).Next();
-            
-            if (worldName == "ClientWorld")
-            {
-                if(_isClientSystemInfoLoggerInitialized) return;
-                
-                var systemInfoLoggerFileName = "NonDeterminismLogs/" + DateTime.Now.Year + "_" +
-                                               DateTime.Now.Month + "_" +
-                                               DateTime.Now.Day + "_" + DateTime.Now.Hour + "_" + DateTime.Now.Minute +
-                                               "_" + randomHashForAGameWithGivenSeed + "/_SystemInfo_.txt";
-                _clientSystemInfoLogger = new StreamWriter(systemInfoLoggerFileName, true);
-                
-                _isClientSystemInfoLoggerInitialized = true;
-            }
-            else
-            {
-                if(_isClientSystemInfoLoggerInitialized2) return;
-                
-                var systemInfoLoggerFileName2 = "NonDeterminismLogs/" + DateTime.Now.Year + "_" +
-                                                DateTime.Now.Month + "_" +
-                                                DateTime.Now.Day + "_" + DateTime.Now.Hour + "_" + DateTime.Now.Minute +
-                                                "_" + randomHashForAGameWithGivenSeed + "/_SystemInfo2_.txt";
-            
-                _clientSystemInfoLogger2 = new StreamWriter(systemInfoLoggerFileName2, true);
-                
-                _isClientSystemInfoLoggerInitialized2 = true;
+                Instance = null;
             }
         }
 
         /// <summary>
-        /// Function which creates the logger for the server input recording.
+        /// Get the next deterministic entity ID.
         /// </summary>
-        private void CreateServerInputRecordingLogger(DeterministicSettings settings)
+        public int GetNextEntityId()
         {
-            var randomHashForAGameWithGivenSeed = new Random((int)settings.randomSeed).Next();
-            
-            if(_isServerInputRecordingLoggerInitialized) return;
+            return _entityIdCounter++;
+        }
+        
+        /// <summary>
+        /// Reset entity ID counter (call at start of each run).
+        /// </summary>
+        public void ResetEntityIdCounter()
+        {
+            _entityIdCounter = 0;
+        }
 
-            var directoryPath = "NonDeterminismLogs/" + DateTime.Now.Year + "_" +
-                                DateTime.Now.Month + "_" +
-                                DateTime.Now.Day + "_" + DateTime.Now.Hour + "_" + DateTime.Now.Minute +
-                                "_" + randomHashForAGameWithGivenSeed;
-            Directory.CreateDirectory(directoryPath);
-            
-            var serverInputRecordingLoggerFileName = "NonDeterminismLogs/" + DateTime.Now.Year + "_" +
-                                      DateTime.Now.Month + "_" +
-                                      DateTime.Now.Day + "_" + DateTime.Now.Hour + "_" + DateTime.Now.Minute +
-                                      "_" + randomHashForAGameWithGivenSeed + "/_ServerInputRecording_.txt";
-            _serverInputRecordingLogger = new StreamWriter(serverInputRecordingLoggerFileName, true);
-            
-            _isServerInputRecordingLoggerInitialized = true;
-        }
-        
         /// <summary>
-        /// Function which creates the logger for the client game settings.
+        /// Start a new validation run.
         /// </summary>
-        private void CreateClientSettingsLogger(string worldName, DeterministicSettings settings)
+        public void StartNewRun(int runIndex)
         {
-            var randomHashForAGameWithGivenSeed = new Random((int)settings.randomSeed).Next();
-            
-            if (worldName == "ClientWorld")
+            _currentRunIndex = runIndex;
+            if (!_hashLogsPerRun.ContainsKey(runIndex))
             {
-                if(_isClientSettingsLoggerInitialized) return;
-                var directoryPath = "NonDeterminismLogs/" + DateTime.Now.Year + "_" +
-                                    DateTime.Now.Month + "_" +
-                                    DateTime.Now.Day + "_" + DateTime.Now.Hour + "_" + DateTime.Now.Minute +
-                                    "_" + randomHashForAGameWithGivenSeed;
-                Directory.CreateDirectory(directoryPath);
-                var clientSettingsLoggerFileName = "NonDeterminismLogs/" + DateTime.Now.Year + "_" +
-                                                   DateTime.Now.Month + "_" +
-                                                   DateTime.Now.Day + "_" + DateTime.Now.Hour + "_" + DateTime.Now.Minute +
-                                                   "_" + randomHashForAGameWithGivenSeed + "/_ClientGameSettings_.txt";
-                _clientSettingsLogger = new StreamWriter(clientSettingsLoggerFileName, true);
-                
-                _isClientSettingsLoggerInitialized = true;
+                _hashLogsPerRun[runIndex] = new Dictionary<int, List<string>>();
             }
-            else
-            {
-                if(_isClientSettingsLoggerInitialized2) return;
-                var directoryPath = "NonDeterminismLogs/" + DateTime.Now.Year + "_" +
-                                    DateTime.Now.Month + "_" +
-                                    DateTime.Now.Day + "_" + DateTime.Now.Hour + "_" + DateTime.Now.Minute +
-                                    "_" + randomHashForAGameWithGivenSeed;
-                Directory.CreateDirectory(directoryPath);
-                var clientSettingsLoggerFileName2 = "NonDeterminismLogs/" + DateTime.Now.Year + "_" +
-                                                    DateTime.Now.Month + "_" +
-                                                    DateTime.Now.Day + "_" + DateTime.Now.Hour + "_" + DateTime.Now.Minute +
-                                                    "_" + randomHashForAGameWithGivenSeed + "/_ClientGameSettings2_.txt";
-                _clientSettingsLogger2 = new StreamWriter(clientSettingsLoggerFileName2, true);
-                
-                _isClientSettingsLoggerInitialized2 = true;
-            }
+            ResetEntityIdCounter();
         }
-        
-        /// <summary>
-        /// Function which saves client determinism related settings to the file.
-        /// </summary>
-        /// <param name="settings"> Game determinism related setting stored in DeterministicSettings component </param>
-        public void LogClientSettingsToTheFile(string worldName, DeterministicSettings settings)
-        {
-            CreateClientSettingsLogger(worldName, settings); 
-            var loggerToUse = worldName == "ClientWorld" ? _clientSettingsLogger : _clientSettingsLogger2;
-            
-            var jsonOutput = JsonUtility.ToJson(settings, true);
-            loggerToUse.Write(jsonOutput);
-            loggerToUse.Flush();
-            // Log.Logger = loggerToUse;
-            // Log.Info(jsonOutput);
-            // Log.FlushAll();
-        }
-        
-        /// <summary>
-        /// Function which saves client system info to the file.
-        /// </summary>
-        public void LogSystemInfoToTheFile(string worldName, DeterministicSettings settings)
-        {
-            CreateClientSystemInfoLogger(worldName, settings);
-            var loggerToUse = worldName == "ClientWorld" ? _clientSystemInfoLogger : _clientSystemInfoLogger2;
-            
-            // Log.Logger = loggerToUse;
-            loggerToUse.Write("Operating System: " + SystemInfo.operatingSystem);
-            loggerToUse.Flush();
-            loggerToUse.Write("Processor: " + SystemInfo.processorType + " with " + SystemInfo.processorCount + " cores");
-            loggerToUse.Flush();
-            loggerToUse.Write("GPU: " + SystemInfo.graphicsDeviceName + ", VRAM: " + SystemInfo.graphicsMemorySize + " MB");
-            loggerToUse.Flush();
-            loggerToUse.Write("RAM: " + SystemInfo.systemMemorySize + " MB");
-            loggerToUse.Flush();
-            loggerToUse.Write("Screen Resolution: " + Screen.currentResolution.width + "x" + Screen.currentResolution.height);
-            loggerToUse.Flush();
-        }
-        
-        /// <summary>
-        /// Function which logs all of the inputs which were send to the server to the file.
-        /// Those are not simple inputs but rather a full RPC`s messages that clients were sending to the server.
-        /// This form of storage allows for easy replay of the game.
-        /// </summary>
-        /// <param name="serverInputRecording">NativeList containing all of the RPC`s with client input which were send to the server</param>
-        public void LogServerInputRecordingToTheFile(NativeList<RpcBroadcastTickDataToClients> serverInputRecording, DeterministicSettings settings)
-        {
-            CreateServerInputRecordingLogger(settings);
-            // Log.Logger = _serverInputRecordingLogger;
-            
-            foreach (var rpc in serverInputRecording)
-            {
-                var tempSerializableRpc = new SerializableRpcBroadcastTickDataToClients
-                {
-                    networkIDsOfAllClients = new List<int>(),
-                    gameInputsFromAllClients = new List<PongInputs>(),
-                    simulationTick = rpc.SimulationTick
-                };
-                
-                foreach (var clientNetworkID in rpc.NetworkIDsOfAllClients)
-                {
-                    tempSerializableRpc.networkIDsOfAllClients.Add(clientNetworkID);
-                }
 
-                foreach (var gameInput in rpc.GameInputsFromAllClients)
-                {
-                    tempSerializableRpc.gameInputsFromAllClients.Add(gameInput);
-                }
-                
-                var jsonOutput = JsonUtility.ToJson(tempSerializableRpc, true);
-                _serverInputRecordingLogger.Write(jsonOutput);
-                _serverInputRecordingLogger.Flush();
-            }
-        }
-        
         /// <summary>
-        /// Function which is used to save the nondeterminism debug info to the file.
+        /// Add a log entry for the current tick.
         /// </summary>
-        /// <param name="message"></param>
-        private void LogClientNondeterminismInfoToTheFile(string worldName, string message)
+        public void AddToHashLog(string worldName, int tick, string message)
         {
-            var loggerToUse = worldName == "ClientWorld" ? _nondeterminismInfoClientLogger : _nondeterminismInfoClientLogger2;
-            // Log.Logger = loggerToUse;
-            loggerToUse.Write(message);
-            loggerToUse.Flush();
-        }
-        
-        /// <summary>
-        /// Serializable version of RpcBroadcastTickDataToClients struct
-        /// </summary>
-        [Serializable]
-        public struct SerializableRpcBroadcastTickDataToClients
-        {
-            public List<int> networkIDsOfAllClients;
-            public List<PongInputs> gameInputsFromAllClients;
-            public int simulationTick;
-        }
-        
-        /// <summary>
-        /// Function that returns the list of RpcBroadcastTickDataToClients which were send from clients to the server.
-        /// This allows for smooth replay of the game state based on those.
-        /// The file needs to be placed under NonDeterminismLogs/_ServerInputRecording_.txt path
-        /// </summary>
-        /// <returns>List of RpcBroadcastTickDataToClients which were send from clients to the server</returns>
-        public NativeList<RpcBroadcastTickDataToClients> ReadServerInputRecordingFromTheFile()
-        {
-            const string filePath = "NonDeterminismLogs/_ServerInputRecording_.txt";
-            var listOfSerializableRPCs = new List<SerializableRpcBroadcastTickDataToClients>();
-            
-            using (var streamReader = new StreamReader(filePath))
+            if (!_hashLogsPerRun.ContainsKey(_currentRunIndex))
             {
-                var jsonBuilder = new StringBuilder();
-                string jsonLine;
-                while ((jsonLine = streamReader.ReadLine()) != null)
+                _hashLogsPerRun[_currentRunIndex] = new Dictionary<int, List<string>>();
+            }
+            
+            var runLogs = _hashLogsPerRun[_currentRunIndex];
+            if (!runLogs.ContainsKey(tick))
+            {
+                runLogs[tick] = new List<string>();
+            }
+            
+            runLogs[tick].Add($"[{worldName}] {message}");
+        }
+
+        /// <summary>
+        /// Get hash logs for a specific run.
+        /// </summary>
+        public Dictionary<int, List<string>> GetLogsForRun(int runIndex)
+        {
+            return _hashLogsPerRun.TryGetValue(runIndex, out var logs) ? logs : null;
+        }
+
+        /// <summary>
+        /// Clear all logs.
+        /// </summary>
+        public void ClearAllLogs()
+        {
+            _hashLogsPerRun.Clear();
+            _currentRunIndex = 0;
+        }
+
+        /// <summary>
+        /// Export logs to file.
+        /// </summary>
+        public void ExportLogs(string filename = null)
+        {
+            if (_hashLogsPerRun.Count == 0)
+            {
+                Debug.Log("[DeterministicLogger] No logs to export.");
+                return;
+            }
+            
+            if (!Directory.Exists(_outputDirectory))
+            {
+                Directory.CreateDirectory(_outputDirectory);
+            }
+            
+            filename ??= "validation_log.txt";
+            var path = Path.Combine(_outputDirectory, filename);
+            
+            using (var writer = new StreamWriter(path))
+            {
+                writer.WriteLine("=== DETERMINISM VALIDATION LOG ===");
+                writer.WriteLine($"Generated: {DateTime.Now}");
+                writer.WriteLine($"Total runs: {_hashLogsPerRun.Count}");
+                writer.WriteLine();
+                
+                foreach (var runEntry in _hashLogsPerRun)
                 {
-                    jsonBuilder.Append(jsonLine);
+                    writer.WriteLine($"--- RUN {runEntry.Key + 1} ---");
+                    var sortedTicks = new List<int>(runEntry.Value.Keys);
+                    sortedTicks.Sort();
                     
-                    // Check if the line ends with a JSON object close. This is a temporary solution since when trying to parse entire file to the list at once an error is thrown and thus we need to divide it into smaller parts.
-                    if (jsonLine == "}")
+                    foreach (var tick in sortedTicks)
                     {
-                        try
+                        writer.WriteLine($"Tick {tick}:");
+                        foreach (var logLine in runEntry.Value[tick])
                         {
-                            listOfSerializableRPCs.Add(JsonUtility.FromJson<SerializableRpcBroadcastTickDataToClients>(jsonBuilder.ToString()));
-                            jsonBuilder.Clear();
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.LogError("Failed to parse JSON object: " + ex.Message);
-                            jsonBuilder.Clear();
+                            writer.WriteLine($"  {logLine}");
                         }
                     }
+                    writer.WriteLine();
                 }
             }
             
-            NativeList<RpcBroadcastTickDataToClients> nativeListOfRpcBroadcastTickDataToClients = new NativeList<RpcBroadcastTickDataToClients>(Allocator.Persistent);
-            foreach (var rpc in listOfSerializableRPCs)
-            {
-                RpcBroadcastTickDataToClients rpcBroadcastTickData = new RpcBroadcastTickDataToClients
-                {
-                    SimulationTick = rpc.simulationTick,
-                    NetworkIDsOfAllClients = new NativeList<int>(rpc.networkIDsOfAllClients.Count, Allocator.Persistent),
-                    GameInputsFromAllClients = new NativeList<PongInputs>(rpc.gameInputsFromAllClients.Count, Allocator.Persistent)
-                };
-                
-                foreach (var clientNetworkID in rpc.networkIDsOfAllClients)
-                {
-                    rpcBroadcastTickData.NetworkIDsOfAllClients.Add(clientNetworkID);
-                }
-
-                foreach (var gameInput in rpc.gameInputsFromAllClients)
-                {
-                    rpcBroadcastTickData.GameInputsFromAllClients.Add(gameInput);
-                }
-                
-                nativeListOfRpcBroadcastTickDataToClients.Add(rpcBroadcastTickData);
-            }
-            
-            return nativeListOfRpcBroadcastTickDataToClients;
+            Debug.Log($"[DeterministicLogger] Logs exported to: {path}");
         }
-        
+
         /// <summary>
-        /// Function that returns the DeterministicSettings component which has values from the file.
-        /// This allows for proper game replay based on the same settings.
-        /// The file needs to be placed under NonDeterminismLogs/_ClientGameSettings_.txt path
+        /// Export comparison report between two runs.
         /// </summary>
-        /// <returns>DeterministicSettings component which has values from the file</returns>
-        public DeterministicSettings ReadSettingsFromFile()
+        public void ExportComparisonReport(int run1Index, int run2Index, string filename = null)
         {
-            const string filePath = "NonDeterminismLogs/_ClientGameSettings_.txt";
-            var deterministicSettingsComponent = new DeterministicSettings();
+            if (!_hashLogsPerRun.ContainsKey(run1Index) || !_hashLogsPerRun.ContainsKey(run2Index))
+            {
+                Debug.LogError($"[DeterministicLogger] Cannot compare runs {run1Index} and {run2Index} - logs not found.");
+                return;
+            }
             
-            try
+            if (!Directory.Exists(_outputDirectory))
             {
-                var jsonText = File.ReadAllText(filePath);
-                deterministicSettingsComponent = JsonUtility.FromJson<DeterministicSettings>(jsonText);
+                Directory.CreateDirectory(_outputDirectory);
             }
-            catch (Exception exc)
+            
+            filename ??= $"comparison_run{run1Index + 1}_vs_run{run2Index + 1}.txt";
+            var path = Path.Combine(_outputDirectory, filename);
+            
+            var run1Logs = _hashLogsPerRun[run1Index];
+            var run2Logs = _hashLogsPerRun[run2Index];
+            
+            using (var writer = new StreamWriter(path))
             {
-                Debug.LogError("Failed to read from file or parse JSON: " + exc.Message);
-            }
-
-            return deterministicSettingsComponent;
-        }
-        
-        /// <summary>
-        /// Function which logs the information about the client nondeterministic frame to a file
-        /// </summary>
-        /// <param name="nonDeterministicTick">Nondeterministic tick to log</param>
-        public void LogClientNondeterministicTickInfoToTheFile(string worldName, ulong nonDeterministicTick, DeterministicSettings settings)
-        {
-            var logBuilder = new StringBuilder();
-            var hashInfoBuffer = worldName == "ClientWorld" ? _clientHashInfoBuffer : _clientHashInfoBuffer2;
-            CreateNondeterminismClientLogger(worldName, settings);
-
-            if (settings.isReplayFromFile)
-            {
-                for (ulong i = 0; i <= nonDeterministicTick; i++)
+                writer.WriteLine("=== DETERMINISM COMPARISON REPORT ===");
+                writer.WriteLine($"Comparing Run {run1Index + 1} vs Run {run2Index + 1}");
+                writer.WriteLine($"Generated: {DateTime.Now}");
+                writer.WriteLine();
+                
+                // Find all ticks
+                var allTicks = new HashSet<int>();
+                foreach (var tick in run1Logs.Keys) allTicks.Add(tick);
+                foreach (var tick in run2Logs.Keys) allTicks.Add(tick);
+                
+                var sortedTicks = new List<int>(allTicks);
+                sortedTicks.Sort();
+                
+                int firstDifferenceTick = -1;
+                
+                foreach (var tick in sortedTicks)
                 {
-                    if (!hashInfoBuffer.TryGetValue(i, out var nondeterministicFrameInfo)) continue; //TODO: throw new Exception("No data to log for tick " + i);
-            
-                    logBuilder.AppendLine("Tick " + i);
-                    foreach (var frameInfoLine in nondeterministicFrameInfo)
+                    var hasRun1 = run1Logs.TryGetValue(tick, out var logs1);
+                    var hasRun2 = run2Logs.TryGetValue(tick, out var logs2);
+                    
+                    if (!hasRun1 || !hasRun2)
                     {
-                        logBuilder.AppendLine(frameInfoLine);
-                        
-                        if (logBuilder.Length >= MaxLoggingBatchSize)
+                        if (firstDifferenceTick == -1) firstDifferenceTick = tick;
+                        writer.WriteLine($"Tick {tick}: MISSING in Run {(hasRun1 ? run2Index + 1 : run1Index + 1)}");
+                        continue;
+                    }
+                    
+                    // Compare logs
+                    var isDifferent = false;
+                    if (logs1.Count != logs2.Count)
+                    {
+                        isDifferent = true;
+                    }
+                    else
+                    {
+                        for (int i = 0; i < logs1.Count; i++)
                         {
-                            LogClientNondeterminismInfoToTheFile(worldName, logBuilder.ToString());
-                            logBuilder.Clear();
+                            if (logs1[i] != logs2[i])
+                            {
+                                isDifferent = true;
+                                break;
+                            }
                         }
                     }
-                    if (logBuilder.Length > 0)
+                    
+                    if (isDifferent)
                     {
-                        LogClientNondeterminismInfoToTheFile(worldName, logBuilder.ToString());
+                        if (firstDifferenceTick == -1) firstDifferenceTick = tick;
+                        writer.WriteLine($"Tick {tick}: DIFFERENT");
+                        writer.WriteLine("  Run 1:");
+                        foreach (var line in logs1) writer.WriteLine($"    {line}");
+                        writer.WriteLine("  Run 2:");
+                        foreach (var line in logs2) writer.WriteLine($"    {line}");
                     }
                 }
+                
+                writer.WriteLine();
+                if (firstDifferenceTick == -1)
+                {
+                    writer.WriteLine("RESULT: All ticks match - runs are deterministic!");
+                }
+                else
+                {
+                    writer.WriteLine($"RESULT: First difference at tick {firstDifferenceTick}");
+                }
             }
-            else
-            {
-                if(!hashInfoBuffer.TryGetValue(nonDeterministicTick, out var nondeterministicFrameInfo)) throw new Exception("No data to log for nondeterministic tick " + nonDeterministicTick);
             
-                logBuilder.AppendLine("Tick " + nonDeterministicTick);
-                foreach (var frameInfoLine in nondeterministicFrameInfo)
-                {
-                    logBuilder.AppendLine(frameInfoLine);
-                        
-                    if (logBuilder.Length >= MaxLoggingBatchSize)
-                    {
-                        LogClientNondeterminismInfoToTheFile(worldName, logBuilder.ToString());
-                        logBuilder.Clear();
-                    }
-                }
-                if (logBuilder.Length > 0)
-                {
-                    LogClientNondeterminismInfoToTheFile(worldName, logBuilder.ToString());
-                }
+            Debug.Log($"[DeterministicLogger] Comparison report exported to: {path}");
+        }
+
+        /// <summary>
+        /// Log validation settings to file.
+        /// </summary>
+        public void LogSettings(DeterministicSettings settings)
+        {
+            if (!Directory.Exists(_outputDirectory))
+            {
+                Directory.CreateDirectory(_outputDirectory);
             }
+            
+            var path = Path.Combine(_outputDirectory, "settings.json");
+            var json = JsonUtility.ToJson(settings, true);
+            File.WriteAllText(path, json);
+            
+            Debug.Log($"[DeterministicLogger] Settings exported to: {path}");
+        }
+
+        /// <summary>
+        /// Log system info to file.
+        /// </summary>
+        public void LogSystemInfo()
+        {
+            if (!Directory.Exists(_outputDirectory))
+            {
+                Directory.CreateDirectory(_outputDirectory);
+            }
+            
+            var path = Path.Combine(_outputDirectory, "system_info.txt");
+            
+            using (var writer = new StreamWriter(path))
+            {
+                writer.WriteLine("=== SYSTEM INFO ===");
+                writer.WriteLine($"Operating System: {SystemInfo.operatingSystem}");
+                writer.WriteLine($"Processor: {SystemInfo.processorType} ({SystemInfo.processorCount} cores)");
+                writer.WriteLine($"GPU: {SystemInfo.graphicsDeviceName}");
+                writer.WriteLine($"VRAM: {SystemInfo.graphicsMemorySize} MB");
+                writer.WriteLine($"RAM: {SystemInfo.systemMemorySize} MB");
+                writer.WriteLine($"Unity Version: {Application.unityVersion}");
+                writer.WriteLine($"Platform: {Application.platform}");
+            }
+            
+            Debug.Log($"[DeterministicLogger] System info exported to: {path}");
         }
     }
 }

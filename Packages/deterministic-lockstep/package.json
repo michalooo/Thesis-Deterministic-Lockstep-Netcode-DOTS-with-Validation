@@ -2,11 +2,10 @@
   "name": "com.michal-chrobot.determinism-validation",
   "version": "2.0.0",
   "displayName": "Determinism Validation for Unity DOTS",
-  "description": "A comprehensive determinism validation package for Unity DOTS. Supports single-player validation (comparing multiple simulation runs), system-level validation (testing individual ECS systems), and multiplayer deterministic lockstep netcode. Includes debugging tools to identify sources of nondeterminism.",
+  "description": "A comprehensive determinism validation package for Unity DOTS. Supports full-game validation (comparing multiple simulation runs), system-level validation (testing individual ECS systems for determinism), and cross-platform comparison via exportable hash logs. Includes debugging tools to identify sources of nondeterminism.",
   "unity": "2022.3",
   "dependencies": {
-    "com.unity.entities": "1.4.4",
-    "com.unity.transport": "2.6.0"
+    "com.unity.entities": "1.4.4"
   },
   "keywords": [
     "Determinism",
@@ -15,10 +14,9 @@
     "ECS",
     "Testing",
     "Debugging",
-    "Lockstep",
-    "Netcode",
-    "Multiplayer",
-    "Single-player"
+    "Single-player",
+    "Cross-platform",
+    "Simulation"
   ],
   "author": {
     "name": "Michał Chrobot",
@@ -27,19 +25,14 @@
   },
   "samples": [
     {
-      "displayName": "Pong (Multiplayer)",
-      "description": "Multiplayer Pong game demonstrating deterministic lockstep netcode with up to 4 players and 1000 balls",
-      "path": "Samples~/Pong"
+      "displayName": "System Validation Example",
+      "description": "Example demonstrating how to validate individual ECS systems for determinism",
+      "path": "Samples~/SystemValidation"
     },
     {
-      "displayName": "3D Capsules",
-      "description": "3D capsules sample demonstrating multiplayer determinism validation with up to 16 players",
-      "path": "Samples~/3D_capsules"
-    },
-    {
-      "displayName": "Single-Player Validation Example",
-      "description": "Simple example demonstrating single-player determinism validation",
-      "path": "Samples~/SinglePlayerValidation"
+      "displayName": "Game Validation Example",
+      "description": "Example demonstrating full-game determinism validation over multiple runs",
+      "path": "Samples~/GameValidation"
     }
   ],
   "documentationUrl": "https://github.com/michalooo/Thesis",

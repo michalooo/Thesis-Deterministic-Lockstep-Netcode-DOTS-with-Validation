@@ -1,9 +1,9 @@
 {
-    "name": "com.michal-chrobot.determinism-validation",
-    "rootNamespace": "DeterministicLockstep",
+    "name": "GameValidation.Sample",
+    "rootNamespace": "DeterministicLockstep.Samples",
     "references": [
+        "com.michal-chrobot.determinism-validation",
         "Unity.Entities",
-        "Unity.Entities.Hybrid",
         "Unity.Burst",
         "Unity.Collections",
         "Unity.Mathematics",
@@ -19,3 +19,4 @@
     "versionDefines": [],
     "noEngineReferences": false
 }
+

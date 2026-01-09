@@ -1,7 +1,6 @@
 ﻿using System;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Networking.Transport;
 
 namespace DeterministicLockstep
 {
@@ -11,195 +10,82 @@ namespace DeterministicLockstep
     public enum DeterminismValidationMode
     {
         /// <summary>
-        /// Single-player mode - validate by running simulation multiple times and comparing hashes.
+        /// Full game validation - run entire simulation multiple times and compare hashes.
+        /// Can compare final hash only (fast) or per-tick hashes (debugging).
         /// </summary>
-        SinglePlayer,
+        FullGame,
         
         /// <summary>
-        /// Multiplayer mode - validate by comparing hashes between clients via server.
+        /// System-level validation - validate individual ECS systems in isolation.
+        /// Useful for finding which system causes nondeterminism.
         /// </summary>
-        Multiplayer,
+        PerSystem
+    }
+    
+    /// <summary>
+    /// Hash comparison mode for validation.
+    /// </summary>
+    public enum HashComparisonMode
+    {
+        /// <summary>
+        /// Only compare the final hash after all ticks complete (fast YES/NO answer).
+        /// </summary>
+        FinalHashOnly,
         
         /// <summary>
-        /// System-level mode - validate individual ECS systems in isolation.
+        /// Compare hash after each tick (slower but helps find first divergent tick).
         /// </summary>
-        SystemLevel
-    }
-    
-    /// <summary>
-    /// Different possible server states used to control server behaviour.
-    /// </summary>
-    public enum DeterministicServerWorkingMode
-    {
-        ListenForConnections, // Server is waiting for listening for connections without running the simulation
-        RunDeterministicSimulation, // Server starts running the simulation and validating client inputs and hashes
-        Disconnect, // Server is disconnecting all clients
-        None // Default state, server is not doing anything
-    }
-    
-    /// <summary>
-    /// Different possible client states used to control client behaviour.
-    /// </summary>
-    public enum DeterministicClientWorkingMode
-    {
-        Connect, // Client is connecting to the server
-        Disconnect, // Client is disconnecting from the server
-        RunDeterministicSimulation, // Client is running the simulation and sending inputs and hashes to the server
-        ClientReady, // Client is ready to start the simulation (all the scenes and elements are loaded)
-        LoadingGame, // Client is loading the game
-        GameFinished, // Client has finished the game
-        Desync, // Desync message was received from the server. The game stops
-        RunSinglePlayerValidation, // Client is running single-player validation simulation
-        None // Default state, client is not doing anything
-    }
-    
-    
-    /// <summary>
-    /// Component used to store the player input data to use for current simulation step.
-    /// It should be assumed that it contains the input data to use for current frame and its automatically updated by the package.
-    /// </summary>
-    public struct PlayerInputDataToUse : IComponentData, IEnableableComponent
-    {
-        /// <summary>
-        /// ID of the player that the input data belongs to
-        /// </summary>
-        public int clientNetworkId;
+        PerTick,
         
         /// <summary>
-        /// Inputs to apply for the current simulation step for the player with the given ID
+        /// Compare hash after each system within each tick (most detailed, finds exact system causing nondeterminism).
         /// </summary>
-        public PongInputs playerInputToApply;
+        PerSystemPerTick
+    }
+    
+    /// <summary>
+    /// State of validation.
+    /// </summary>
+    public enum ValidationState
+    {
+        /// <summary>
+        /// No validation running.
+        /// </summary>
+        Idle,
         
         /// <summary>
-        /// Indication if player was disconnected
+        /// Validation is currently running.
         /// </summary>
-        public bool isPlayerDisconnected;
-    }
-
-    /// <summary>
-    /// Component used to store connection info for every connection
-    /// </summary>
-    public struct NetworkConnectionReference : IComponentData
-    {
-        public NetworkDriver driverReference;
-        public NetworkPipeline reliablePipelineReference;
-        public NetworkConnection connectionReference;
-    }
-
-    /// <summary>
-    /// Component used to store the networkID of the connection and reference to the entity that is the target of the commands.
-    /// </summary>
-    public struct GhostOwner : IComponentData
-    {
-        /// <summary>
-        /// Network ID of the connection that owns the Entity on the scene.
-        /// </summary>
-        public int connectionNetworkId;
+        Running,
         
         /// <summary>
-        /// Reference to the entity that is the target of the commands.
+        /// Validation completed successfully (deterministic).
         /// </summary>
-        public Entity connectionCommandsTargetEntity;
-    }
-
-    /// <summary> 
-    /// An enableable tag component used to track if an entity is owned by the local client or not.
-    /// This component is usually added to different entities so it may cause desync if used in determinims validation.
-    /// </summary>
-    public struct GhostOwnerIsLocal : IComponentData, IEnableableComponent
-    {
-    } 
-
-    /// <summary>
-    /// Tag component used to tag connections for which a player prefab was spawned
-    /// </summary>
-    public struct PlayerSpawned : IComponentData
-    {
+        Passed,
+        
+        /// <summary>
+        /// Validation completed with nondeterminism detected.
+        /// </summary>
+        Failed
     }
     
     /// <summary>
-    /// Component used to store all the time related variables
-    /// </summary>
-    public struct DeterministicSimulationTime : IComponentData
-    {
-        /// <summary>
-        /// Variable storing information of how many ticks we already processed for the current frame
-        /// </summary>
-        public int numTimesTickedThisFrame;
-
-        /// <summary>
-        /// Set constant value of what's the tick rate of the game
-        /// </summary>
-        public int GameTickRate;
-
-        /// <summary>
-        /// Value describing how many ticks ahead is client sending his inputs. This value is taking care of forced input latency (in ticks)
-        /// </summary>
-        public int forcedInputLatencyDelay;
-
-        /// <summary>
-        /// Variable that is used to calculate time before processing next tick
-        /// </summary>
-        public double timeLeftToSendNextTick;
-
-        /// <summary>
-        /// variable that takes count of which tick is being processed on the client
-        /// </summary>
-        public int currentSimulationTick;
-
-        /// <summary>
-        /// Variable that takes count of the current tick that we are sending to the server (future tick).
-        /// </summary>
-        public int currentClientTickToSend;
-
-        /// <summary>
-        /// Calculated hash for the current tick
-        /// </summary>
-        public NativeList<ulong> hashesForTheCurrentTick;
-
-        /// <summary>
-        /// Queue of RPCs that are received from the server with all clients inputs for a given tick.
-        /// </summary>
-        public NativeQueue<RpcBroadcastTickDataToClients> storedIncomingTicksFromServer;
-    }
-
-    /// <summary>
-    /// Buffer element of component type used to mark components for validation
-    /// </summary>
-    public struct DeterministicComponent : IBufferElementData
-    {
-        public ComponentType type;
-    }
-    
-    /// <summary>
-    /// Component used to mark current server working mode.
-    /// </summary>
-    public struct DeterministicServerComponent : IComponentData
-    {
-        public DeterministicServerWorkingMode deterministicServerWorkingMode;
-    }
-    
-    /// <summary>
-    /// Component used to mark current client working mode.
-    /// </summary>
-    public struct DeterministicClientComponent : IComponentData
-    {
-        public int clientNetworkId;
-        public DeterministicClientWorkingMode deterministicClientWorkingMode;
-    }
-    
-    /// <summary>
-    /// Component used to store validation settings for single-player and system-level validation.
+    /// Component used to store validation settings and state.
     /// </summary>
     public struct DeterminismValidationSettings : IComponentData
     {
         /// <summary>
-        /// The validation mode to use (SinglePlayer, Multiplayer, SystemLevel).
+        /// The validation mode to use.
         /// </summary>
         public DeterminismValidationMode validationMode;
         
         /// <summary>
-        /// Number of times to run the simulation for comparison in single-player mode.
+        /// How to compare hashes during validation.
+        /// </summary>
+        public HashComparisonMode hashComparisonMode;
+        
+        /// <summary>
+        /// Number of times to run the simulation for comparison.
         /// </summary>
         public int numberOfRuns;
         
@@ -209,14 +95,9 @@ namespace DeterministicLockstep
         public int currentRunIndex;
         
         /// <summary>
-        /// Whether validation is currently in progress.
+        /// Current validation state.
         /// </summary>
-        public bool isValidationInProgress;
-        
-        /// <summary>
-        /// Whether validation has completed.
-        /// </summary>
-        public bool isValidationComplete;
+        public ValidationState validationState;
         
         /// <summary>
         /// Whether nondeterminism was detected during validation.
@@ -224,67 +105,88 @@ namespace DeterministicLockstep
         public bool nondeterminismDetected;
         
         /// <summary>
-        /// The tick at which nondeterminism was first detected (0 if none detected).
+        /// The tick at which nondeterminism was first detected (-1 if none detected).
         /// </summary>
         public int firstNondeterministicTick;
+        
+        /// <summary>
+        /// The system index at which nondeterminism was first detected (-1 if not per-system mode or none detected).
+        /// </summary>
+        public int firstNondeterministicSystemIndex;
         
         /// <summary>
         /// Total number of ticks to simulate for validation.
         /// </summary>
         public int ticksToSimulate;
+        
+        /// <summary>
+        /// Random seed for deterministic simulation.
+        /// </summary>
+        public uint randomSeed;
     }
     
     /// <summary>
-    /// To ensure deterministic sorting of entities when logging, this component should be added to entities on creation.
-    /// It represents a unique, deterministic identifier.
-    /// This identifier is a simple incrementing integer that is assigned when the entity is created.
-    /// This way, the order of entity creation will determine the order of entities in the sorted log list for determinism validation, which should be deterministic as long as entities are created in a deterministic manner.
+    /// Component used to store simulation time related variables.
+    /// </summary>
+    public struct DeterministicSimulationTime : IComponentData
+    {
+        /// <summary>
+        /// Number of times the simulation has ticked this frame.
+        /// </summary>
+        public int numTimesTickedThisFrame;
+
+        /// <summary>
+        /// Target tick rate of the simulation (ticks per second).
+        /// </summary>
+        public int tickRate;
+
+        /// <summary>
+        /// Time remaining until next tick should be processed.
+        /// </summary>
+        public double timeUntilNextTick;
+
+        /// <summary>
+        /// Current simulation tick number.
+        /// </summary>
+        public int currentTick;
+
+        /// <summary>
+        /// Hashes computed during the current tick (one per system if per-system mode, otherwise one total).
+        /// </summary>
+        public NativeList<ulong> hashesForCurrentTick;
+    }
+
+    /// <summary>
+    /// Buffer element for tracking which component types should be included in hash calculations.
+    /// </summary>
+    public struct DeterministicComponent : IBufferElementData
+    {
+        public ComponentType type;
+    }
+    
+    /// <summary>
+    /// Component to ensure deterministic sorting of entities when computing hashes.
+    /// Add this to entities that should be included in determinism validation.
+    /// The ID should be assigned incrementally when entities are created to ensure deterministic ordering.
     /// </summary>
     public struct DeterministicEntityID : IComponentData, IComparable<DeterministicEntityID>
     {
+        /// <summary>
+        /// Unique deterministic identifier for this entity.
+        /// </summary>
         public int id;
 
-        public int CompareTo(DeterministicEntityID otherEntityID)
+        public int CompareTo(DeterministicEntityID other)
         {
-            return id.CompareTo(otherEntityID.id);
-        }
-    }
-   
-    /// <summary>
-    /// Predefined struct for managing player inputs in the sample Pong game.
-    /// This is an example implementation of IPlayerInputs.
-    /// For your own game, create a similar struct that implements IPlayerInputs.
-    /// </summary>
-    [Serializable]
-    public struct PongInputs : IComponentData, IPlayerInputs
-    {
-        public int verticalInput;
-
-        public void SerializeInputs(ref DataStreamWriter writer)
-        {
-            writer.WriteInt(verticalInput);
-        }
-
-        public void DeserializeInputs(ref DataStreamReader reader)
-        {
-            verticalInput = reader.ReadInt();
+            return id.CompareTo(other.id);
         }
     }
     
     /// <summary>
-    /// Empty input struct for single-player validation where no actual inputs are needed.
+    /// Tag component to mark entities that should be included in whitelist-based validation.
+    /// Only entities with this component will be hashed when using whitelist validation mode.
     /// </summary>
-    [Serializable]
-    public struct EmptyInputs : IComponentData, IPlayerInputs
+    public struct CountEntityForWhitelistedDeterminismValidation : IComponentData
     {
-        public void SerializeInputs(ref DataStreamWriter writer)
-        {
-            // No inputs to serialize
-        }
-
-        public void DeserializeInputs(ref DataStreamReader reader)
-        {
-            // No inputs to deserialize
-        }
     }
 }
