@@ -46,8 +46,10 @@ This package provides tools to **detect, locate, and debug** nondeterminism.
 2. Click **"+" > Add package from git URL**
 3. Enter:
 ```
-https://github.com/michalooo/Thesis.git
+https://github.com/michalooo/Thesis.git#single-player-validation
 ```
+
+**Note:** This package uses the `single-player-validation` branch, which is not the default branch. Make sure to include `#single-player-validation` in the URL.
 
 ### Via manifest.json
 
@@ -56,7 +58,7 @@ Add to your project's `Packages/manifest.json`:
 ```json
 {
   "dependencies": {
-    "com.michal-chrobot.determinism-validation": "https://github.com/michalooo/Thesis.git"
+    "com.michal-chrobot.determinism-validation": "https://github.com/michalooo/Thesis.git#single-player-validation"
   }
 }
 ```
