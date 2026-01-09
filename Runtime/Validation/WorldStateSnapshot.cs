@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using UnityEngine;
 
@@ -97,14 +98,15 @@ namespace DeterministicLockstep
                     if (typeInfo.TypeSize <= 0)
                         continue;
                     
-                    // Get raw component data using ComponentType
+                    // Get raw component data using EntityDataAccess
                     unsafe
                     {
-                        var ptr = entityManager.GetComponentDataRawRO(entity, componentType);
+                        var access = entityManager.GetCheckedEntityDataAccess();
+                        var ptr = access->EntityComponentStore->GetComponentDataWithTypeRO(entity, typeIndex);
                         var data = new byte[typeInfo.TypeSize];
                         fixed (byte* dest = data)
                         {
-                            UnsafeUtility.MemCpy(dest, ptr, typeInfo.TypeSize);
+                            Unity.Collections.LowLevel.Unsafe.UnsafeUtility.MemCpy(dest, ptr, typeInfo.TypeSize);
                         }
                         snapshot.componentData[typeIndex] = data;
                     }
@@ -173,10 +175,11 @@ namespace DeterministicLockstep
                     
                     unsafe
                     {
-                        var ptr = entityManager.GetComponentDataRawRW(entity, componentType);
+                        var access = entityManager.GetCheckedEntityDataAccess();
+                        var ptr = access->EntityComponentStore->GetComponentDataWithTypeRW(entity, typeIndex, access->EntityComponentStore->GlobalSystemVersion);
                         fixed (byte* src = data)
                         {
-                            UnsafeUtility.MemCpy(ptr, src, data.Length);
+                            Unity.Collections.LowLevel.Unsafe.UnsafeUtility.MemCpy(ptr, src, data.Length);
                         }
                     }
                 }

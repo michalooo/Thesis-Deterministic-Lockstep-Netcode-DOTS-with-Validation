@@ -239,23 +239,14 @@ namespace DeterministicLockstep
                 
                 foreach (var systemHandle in systems)
                 {
-                    // Get system name - try managed system first, fall back to debug name
+                    // Get system name from SystemState
                     string systemName;
                     try
                     {
-                        var managedSystem = world.GetExistingSystemManaged(systemHandle);
-                        if (managedSystem != null)
-                        {
-                            systemName = managedSystem.GetType().Name;
-                        }
-                        else
-                        {
-                            // For unmanaged ISystem, get debug name from SystemState
-                            ref readonly var systemState = ref world.Unmanaged.ResolveSystemStateRef(systemHandle);
-                            systemName = systemState.DebugName.ToString();
-                            if (string.IsNullOrEmpty(systemName))
-                                systemName = "UnknownSystem";
-                        }
+                        ref readonly var systemState = ref world.Unmanaged.ResolveSystemStateRef(systemHandle);
+                        systemName = systemState.DebugName.ToString();
+                        if (string.IsNullOrEmpty(systemName))
+                            systemName = $"System_{systemHandle.GetHashCode()}";
                     }
                     catch
                     {
