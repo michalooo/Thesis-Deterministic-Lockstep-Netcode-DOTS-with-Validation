@@ -180,7 +180,7 @@ GameValidator.Instance.StartValidation(new ValidationConfig
 
 ## Requirements
 
-- Unity 2022.3 or later
+- Unity 6 (6000.3) or later
 - Entities 1.4.4 or later
 
 ## Samples

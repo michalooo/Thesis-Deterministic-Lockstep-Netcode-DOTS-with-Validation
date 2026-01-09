@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "displayName": "Determinism Validation for Unity DOTS",
   "description": "A comprehensive determinism validation package for Unity DOTS. Supports full-game validation (comparing multiple simulation runs), system-level validation (testing individual ECS systems for determinism), and cross-platform comparison via exportable hash logs. Includes debugging tools to identify sources of nondeterminism.",
-  "unity": "2022.3",
+  "unity": "6000.3",
   "dependencies": {
     "com.unity.entities": "1.4.4"
   },
