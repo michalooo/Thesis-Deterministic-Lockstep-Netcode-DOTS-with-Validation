@@ -46,6 +46,11 @@ namespace DeterministicLockstep
     public struct DeterministicSettings : IComponentData
     {
         /// <summary>
+        /// The validation mode to use. Default is Multiplayer for backward compatibility.
+        /// </summary>
+        public DeterminismValidationMode validationMode;
+        
+        /// <summary>
         /// What should be the value of the forced input latency. This is used to compensate for the latency between the server and the client. Default value is 9 ticks which will result in 150ms of fixed latency.
         /// </summary>
         public int ticksOfForcedInputLatency;
@@ -96,12 +101,37 @@ namespace DeterministicLockstep
         /// Bool signifying if the game simulation is running
         /// </summary>
         public bool isInGame;
+        
+        /// <summary>
+        /// Number of runs to perform for single-player validation. Default is 2.
+        /// </summary>
+        public int numberOfValidationRuns;
+        
+        /// <summary>
+        /// Total number of ticks to simulate for single-player validation. Default is 1000.
+        /// </summary>
+        public int ticksToSimulate;
     }
     
     public class DeterministicSettingsAuthoring : MonoBehaviour
     {
+        [Header("Validation Mode")]
+        [Tooltip("The validation mode to use. SinglePlayer for local validation, Multiplayer for network validation, SystemLevel for per-system validation.")]
+        public DeterminismValidationMode validationMode = DeterminismValidationMode.Multiplayer;
+        
+        [Header("Simulation Settings")]
         [Tooltip("How many ticks per second should the simulation run at. Default value is 60.")]
         public int simulationTickRate = 60;
+        [Tooltip("What should be the hash calculation option for the simulation. Default value is WhiteListHashPerTick.")]
+        public DeterminismHashCalculationOption hashCalculationOption = DeterminismHashCalculationOption.WhiteListHashPerTick;
+        
+        [Header("Single-Player Validation Settings")]
+        [Tooltip("Number of times to run the simulation for comparison in single-player mode. Default is 2.")]
+        public int numberOfValidationRuns = 2;
+        [Tooltip("Total number of ticks to simulate for single-player validation. Default is 1000.")]
+        public int ticksToSimulate = 1000;
+        
+        [Header("Multiplayer Settings")]
         [Tooltip("How many connections/players are allowed per game. Default value is 2.")]
         public int allowedConnectionsPerGame = 2;
         [Tooltip("What should be the value of the forced input latency. This is used to compensate for the latency between the server and the client. Default value is 9 ticks which will result in 150ms of fixed latency.")]
@@ -110,8 +140,8 @@ namespace DeterministicLockstep
         public int serverPort = 7979;
         [Tooltip("Server address for the game. Default value is the local address of 127.0.0.1.")]
         public string serverAddress = "127.0.0.1";
-        [Tooltip("What should be the hash calculation option for the simulation. Default value is WhiteListHashPerTick.")]
-        public DeterminismHashCalculationOption hashCalculationOption = DeterminismHashCalculationOption.WhiteListHashPerTick;
+        
+        [Header("Replay Settings")]
         [Tooltip("Should the game try to replay the simulation from a file. Default value is false. If set to true, remember to ensure that the file is present in the NonDeterminismLogs folder.")]
         public bool isReplayFromFile;
         
@@ -120,6 +150,7 @@ namespace DeterministicLockstep
             public override void Bake(DeterministicSettingsAuthoring authoring)
             {
                 var component = default(DeterministicSettings);
+                component.validationMode = authoring.validationMode;
                 component.ticksOfForcedInputLatency = authoring.ticksOfForcedInputLatency;
                 component.allowedConnectionsPerGame = authoring.allowedConnectionsPerGame;
                 component.simulationTickRate = authoring.simulationTickRate;
@@ -128,6 +159,8 @@ namespace DeterministicLockstep
                 component.serverAddress = authoring.serverAddress;
                 component.isReplayFromFile = authoring.isReplayFromFile;
                 component.isInGame = false;
+                component.numberOfValidationRuns = authoring.numberOfValidationRuns;
+                component.ticksToSimulate = authoring.ticksToSimulate;
                 var entity = GetEntity(TransformUsageFlags.Dynamic);
                 
                 AddComponent(entity, component);

@@ -6,6 +6,27 @@ using Unity.Networking.Transport;
 namespace DeterministicLockstep
 {
     /// <summary>
+    /// Validation mode for determinism checking.
+    /// </summary>
+    public enum DeterminismValidationMode
+    {
+        /// <summary>
+        /// Single-player mode - validate by running simulation multiple times and comparing hashes.
+        /// </summary>
+        SinglePlayer,
+        
+        /// <summary>
+        /// Multiplayer mode - validate by comparing hashes between clients via server.
+        /// </summary>
+        Multiplayer,
+        
+        /// <summary>
+        /// System-level mode - validate individual ECS systems in isolation.
+        /// </summary>
+        SystemLevel
+    }
+    
+    /// <summary>
     /// Different possible server states used to control server behaviour.
     /// </summary>
     public enum DeterministicServerWorkingMode
@@ -28,6 +49,7 @@ namespace DeterministicLockstep
         LoadingGame, // Client is loading the game
         GameFinished, // Client has finished the game
         Desync, // Desync message was received from the server. The game stops
+        RunSinglePlayerValidation, // Client is running single-player validation simulation
         None // Default state, client is not doing anything
     }
     
@@ -167,6 +189,52 @@ namespace DeterministicLockstep
     }
     
     /// <summary>
+    /// Component used to store validation settings for single-player and system-level validation.
+    /// </summary>
+    public struct DeterminismValidationSettings : IComponentData
+    {
+        /// <summary>
+        /// The validation mode to use (SinglePlayer, Multiplayer, SystemLevel).
+        /// </summary>
+        public DeterminismValidationMode validationMode;
+        
+        /// <summary>
+        /// Number of times to run the simulation for comparison in single-player mode.
+        /// </summary>
+        public int numberOfRuns;
+        
+        /// <summary>
+        /// Current run index when performing multiple run validation.
+        /// </summary>
+        public int currentRunIndex;
+        
+        /// <summary>
+        /// Whether validation is currently in progress.
+        /// </summary>
+        public bool isValidationInProgress;
+        
+        /// <summary>
+        /// Whether validation has completed.
+        /// </summary>
+        public bool isValidationComplete;
+        
+        /// <summary>
+        /// Whether nondeterminism was detected during validation.
+        /// </summary>
+        public bool nondeterminismDetected;
+        
+        /// <summary>
+        /// The tick at which nondeterminism was first detected (0 if none detected).
+        /// </summary>
+        public int firstNondeterministicTick;
+        
+        /// <summary>
+        /// Total number of ticks to simulate for validation.
+        /// </summary>
+        public int ticksToSimulate;
+    }
+    
+    /// <summary>
     /// To ensure deterministic sorting of entities when logging, this component should be added to entities on creation.
     /// It represents a unique, deterministic identifier.
     /// This identifier is a simple incrementing integer that is assigned when the entity is created.
@@ -183,10 +251,12 @@ namespace DeterministicLockstep
     }
    
     /// <summary>
-    /// Predefined struct for managing player inputs in the sample Pong game
+    /// Predefined struct for managing player inputs in the sample Pong game.
+    /// This is an example implementation of IPlayerInputs.
+    /// For your own game, create a similar struct that implements IPlayerInputs.
     /// </summary>
     [Serializable]
-    public struct PongInputs: IComponentData // TODO: this should be codegen and not placed in the package
+    public struct PongInputs : IComponentData, IPlayerInputs
     {
         public int verticalInput;
 
@@ -195,11 +265,26 @@ namespace DeterministicLockstep
             writer.WriteInt(verticalInput);
         }
 
-        public void
-            DeserializeInputs(
-                ref DataStreamReader reader)
+        public void DeserializeInputs(ref DataStreamReader reader)
         {
             verticalInput = reader.ReadInt();
+        }
+    }
+    
+    /// <summary>
+    /// Empty input struct for single-player validation where no actual inputs are needed.
+    /// </summary>
+    [Serializable]
+    public struct EmptyInputs : IComponentData, IPlayerInputs
+    {
+        public void SerializeInputs(ref DataStreamWriter writer)
+        {
+            // No inputs to serialize
+        }
+
+        public void DeserializeInputs(ref DataStreamReader reader)
+        {
+            // No inputs to deserialize
         }
     }
 }

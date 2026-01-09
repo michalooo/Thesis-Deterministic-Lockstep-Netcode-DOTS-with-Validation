@@ -11,8 +11,9 @@ namespace DeterministicLockstep
     /// System group that contains deterministic simulation systems.
     /// All the systems that are affecting the game state should be added to this group.
     /// It's responsible for performing necessary determinism checks on those systems and running them in set frame rate.
+    /// Works in any world (single-player, multiplayer client, or default world).
     /// </summary>
-    [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
+    [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation | WorldSystemFilterFlags.LocalSimulation | WorldSystemFilterFlags.Default)]
     public partial class DeterministicSimulationSystemGroup : ComponentSystemGroup
     {
         /// <summary>
@@ -52,7 +53,19 @@ namespace DeterministicLockstep
                 storedIncomingTicksFromServer = new NativeQueue<RpcBroadcastTickDataToClients>(Allocator.Persistent),
                 hashesForTheCurrentTick = new NativeList<ulong>(Allocator.Persistent),
             });
-            EntityManager.CreateSingleton<PongInputs>();
+            
+            // Create validation settings singleton for single-player validation
+            EntityManager.CreateSingleton(new DeterminismValidationSettings
+            {
+                validationMode = DeterminismValidationMode.Multiplayer,
+                numberOfRuns = 2,
+                currentRunIndex = 0,
+                isValidationInProgress = false,
+                isValidationComplete = false,
+                nondeterminismDetected = false,
+                firstNondeterministicTick = 0,
+                ticksToSimulate = 1000
+            });
         }
 
         protected override void OnDestroy()
@@ -85,6 +98,7 @@ namespace DeterministicLockstep
 
         /// <summary>
         /// IRateManager implementation which allows for fixed step simulation.
+        /// Supports both multiplayer and single-player validation modes.
         /// </summary>
         public struct DeterministicFixedStepRateManager : IRateManager
         {
@@ -93,6 +107,7 @@ namespace DeterministicLockstep
             private EntityQuery _connectionQuery;
             private EntityQuery _inputDataQuery;
             private EntityQuery _deterministicClientQuery;
+            private EntityQuery _validationSettingsQuery;
             private NativeList<RpcBroadcastTickDataToClients> _dataToReplayFromTheFile;
 
             public DeterministicFixedStepRateManager(ComponentSystemGroup group) : this()
@@ -100,6 +115,7 @@ namespace DeterministicLockstep
                 _deterministicTimeQuery = group.EntityManager.CreateEntityQuery(typeof(DeterministicSimulationTime));
                 _deterministicSettingsQuery = group.EntityManager.CreateEntityQuery(typeof(DeterministicSettings));
                 _deterministicClientQuery = group.EntityManager.CreateEntityQuery(typeof(DeterministicClientComponent));
+                _validationSettingsQuery = group.EntityManager.CreateEntityQuery(typeof(DeterminismValidationSettings));
                 _connectionQuery =
                     group.EntityManager.CreateEntityQuery(
                         typeof(GhostOwnerIsLocal));
@@ -108,8 +124,114 @@ namespace DeterministicLockstep
 
             public bool ShouldGroupUpdate(ComponentSystemGroup group)
             {
+                // Check if we have settings
+                if (_deterministicSettingsQuery.IsEmpty || _deterministicTimeQuery.IsEmpty)
+                    return false;
+                
+                var deterministicSettings = _deterministicSettingsQuery.GetSingletonRW<DeterministicSettings>();
+                
+                // Route to appropriate handler based on validation mode
+                if (deterministicSettings.ValueRO.validationMode == DeterminismValidationMode.SinglePlayer ||
+                    deterministicSettings.ValueRO.validationMode == DeterminismValidationMode.SystemLevel)
+                {
+                    return ShouldGroupUpdateSinglePlayer(group);
+                }
+                
+                return ShouldGroupUpdateMultiplayer(group);
+            }
+            
+            /// <summary>
+            /// Handles simulation updates for single-player validation mode.
+            /// </summary>
+            private bool ShouldGroupUpdateSinglePlayer(ComponentSystemGroup group)
+            {
+                if (_validationSettingsQuery.IsEmpty)
+                    return false;
+                    
+                var validationSettings = _validationSettingsQuery.GetSingletonRW<DeterminismValidationSettings>();
+                
+                // Check if validation is in progress
+                if (!validationSettings.ValueRO.isValidationInProgress)
+                    return false;
+                    
+                // Check if validation is complete
+                if (validationSettings.ValueRO.isValidationComplete)
+                    return false;
+                
+                var deltaTime = (double) group.World.Time.DeltaTime;
+                var deterministicTime = _deterministicTimeQuery.GetSingletonRW<DeterministicSimulationTime>();
+                var deterministicSettings = _deterministicSettingsQuery.GetSingletonRW<DeterministicSettings>();
+                
+                // Check if we've reached the target tick count
+                if (deterministicTime.ValueRO.currentSimulationTick >= validationSettings.ValueRO.ticksToSimulate)
+                {
+                    // Mark current run as complete, validation manager will handle next run
+                    return false;
+                }
+                
+                var isTimeToSendNextTick = false;
+                
+                if (deterministicTime.ValueRO.numTimesTickedThisFrame >= MaxTicksPerFrame)
+                {
+                    deterministicTime.ValueRW.timeLeftToSendNextTick += LocalDeltaTime;
+                }
+                else if (deterministicTime.ValueRO.timeLeftToSendNextTick > deltaTime)
+                {
+                    deterministicTime.ValueRW.timeLeftToSendNextTick -= deltaTime;
+                }
+                else if (deterministicTime.ValueRO.timeLeftToSendNextTick <= deltaTime)
+                {
+                    if (deterministicTime.ValueRO.timeLeftToSendNextTick >= 0)
+                    {
+                        isTimeToSendNextTick = true;
+                        deterministicTime.ValueRW.timeLeftToSendNextTick -= deltaTime;
+                    }
+                    else
+                    {
+                        if (deterministicTime.ValueRW.timeLeftToSendNextTick + deltaTime > 0)
+                        {
+                            deterministicTime.ValueRW.timeLeftToSendNextTick += deltaTime;
+                        }
+                        else
+                        {
+                            isTimeToSendNextTick = true;
+                            deterministicTime.ValueRW.timeLeftToSendNextTick += deltaTime;
+                        }
+                    }
+                }
+                
+                if (isTimeToSendNextTick)
+                {
+                    deterministicTime.ValueRW.currentSimulationTick++;
+                    deterministicTime.ValueRW.currentClientTickToSend++;
+                    deterministicTime.ValueRW.numTimesTickedThisFrame++;
+                    
+                    group.World.PushTime(new TimeData(LocalDeltaTime, LocalDeltaTime));
+                    return true;
+                }
+                
+                // Pop any pushed time this frame
+                for (var i = 0; i < deterministicTime.ValueRO.numTimesTickedThisFrame; i++)
+                {
+                    group.World.PopTime();
+                }
+                
+                deterministicTime.ValueRW.numTimesTickedThisFrame = 0;
+                return false;
+            }
+            
+            /// <summary>
+            /// Handles simulation updates for multiplayer mode (original behavior).
+            /// </summary>
+            private bool ShouldGroupUpdateMultiplayer(ComponentSystemGroup group)
+            {
+                // Check if DeterministicClientComponent exists for multiplayer mode
+                if (_deterministicClientQuery.IsEmpty)
+                    return false;
+                    
                 var deterministicClient = _deterministicClientQuery.GetSingletonRW<DeterministicClientComponent>();
-                if (deterministicClient.ValueRO.deterministicClientWorkingMode != DeterministicClientWorkingMode.RunDeterministicSimulation)
+                if (deterministicClient.ValueRO.deterministicClientWorkingMode != DeterministicClientWorkingMode.RunDeterministicSimulation &&
+                    deterministicClient.ValueRO.deterministicClientWorkingMode != DeterministicClientWorkingMode.RunSinglePlayerValidation)
                     return false;
                 
                 var deltaTime = (double) group.World.Time.DeltaTime;
@@ -196,8 +318,10 @@ namespace DeterministicLockstep
                         
                         UpdateComponentsData(rpcToUse, group);
                       
-                        group.EntityManager.SetComponentEnabled<PlayerInputDataToUse>(localConnectionEntity[0],
-                            true);
+                        if (localConnectionEntity.Length > 0)
+                        {
+                            group.EntityManager.SetComponentEnabled<PlayerInputDataToUse>(localConnectionEntity[0], true);
+                        }
                         deterministicTime.ValueRW.numTimesTickedThisFrame++;
                         
                         group.World.PushTime(
@@ -221,8 +345,10 @@ namespace DeterministicLockstep
                             UpdateComponentsData(deterministicTime.ValueRW.storedIncomingTicksFromServer.Dequeue(),
                                 group); // it will remove it so no reason for dispose method for arrays?
 
-                            group.EntityManager.SetComponentEnabled<PlayerInputDataToUse>(localConnectionEntity[0],
-                                true);
+                            if (localConnectionEntity.Length > 0)
+                            {
+                                group.EntityManager.SetComponentEnabled<PlayerInputDataToUse>(localConnectionEntity[0], true);
+                            }
                             
                             deterministicTime.ValueRW.numTimesTickedThisFrame++;
                             group.World.PushTime(

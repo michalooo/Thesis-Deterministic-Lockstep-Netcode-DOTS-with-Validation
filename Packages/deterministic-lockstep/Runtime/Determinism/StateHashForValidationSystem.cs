@@ -9,10 +9,11 @@ namespace DeterministicLockstep
     /// <summary>
     /// System that calculates the hash of the current state of the game for validation purposes.
     /// When run, it will add one hash to the DeterministicTime component.
+    /// Works in any world (single-player, multiplayer client, or default world).
     /// </summary>
     [UpdateInGroup(typeof(DeterministicSimulationSystemGroup), OrderLast = true)]
     [UpdateBefore(typeof(PlayerInputSendSystem))]
-    [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
+    [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation | WorldSystemFilterFlags.LocalSimulation | WorldSystemFilterFlags.Default)]
     public partial struct StateHashForValidationSystem : ISystem
     {
         /// <summary>
