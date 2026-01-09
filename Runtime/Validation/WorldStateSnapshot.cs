@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using Unity.Collections;
-using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using UnityEngine;
 
@@ -26,6 +27,68 @@ namespace DeterministicLockstep
         private List<ComponentType> _componentTypes = new List<ComponentType>();
         private bool _isValid = false;
         private int _entityCount = 0;
+        
+        // Cache for reflected methods
+        private static readonly Dictionary<Type, MethodInfo> _getComponentDataMethods = new Dictionary<Type, MethodInfo>();
+        private static readonly Dictionary<Type, MethodInfo> _setComponentDataMethods = new Dictionary<Type, MethodInfo>();
+        
+        /// <summary>
+        /// Gets component data as raw bytes using reflection.
+        /// </summary>
+        private static byte[] GetComponentDataAsBytes(EntityManager em, Entity entity, Type componentType, int size)
+        {
+            // Get or create cached method
+            if (!_getComponentDataMethods.TryGetValue(componentType, out var method))
+            {
+                method = typeof(EntityManager)
+                    .GetMethod("GetComponentData", new[] { typeof(Entity) })
+                    .MakeGenericMethod(componentType);
+                _getComponentDataMethods[componentType] = method;
+            }
+            
+            // Invoke GetComponentData<T>
+            var component = method.Invoke(em, new object[] { entity });
+            
+            // Serialize to bytes
+            var data = new byte[size];
+            var handle = GCHandle.Alloc(component, GCHandleType.Pinned);
+            try
+            {
+                Marshal.Copy(handle.AddrOfPinnedObject(), data, 0, size);
+            }
+            finally
+            {
+                handle.Free();
+            }
+            return data;
+        }
+        
+        /// <summary>
+        /// Sets component data from raw bytes using reflection.
+        /// </summary>
+        private static void SetComponentDataFromBytes(EntityManager em, Entity entity, Type componentType, byte[] data)
+        {
+            // Get or create cached method  
+            if (!_setComponentDataMethods.TryGetValue(componentType, out var method))
+            {
+                method = typeof(EntityManager)
+                    .GetMethod("SetComponentData")
+                    .MakeGenericMethod(componentType);
+                _setComponentDataMethods[componentType] = method;
+            }
+            
+            // Deserialize from bytes
+            var handle = GCHandle.Alloc(data, GCHandleType.Pinned);
+            try
+            {
+                var component = Marshal.PtrToStructure(handle.AddrOfPinnedObject(), componentType);
+                method.Invoke(em, new object[] { entity, component });
+            }
+            finally
+            {
+                handle.Free();
+            }
+        }
         
         /// <summary>
         /// Whether this snapshot contains valid data.
@@ -98,16 +161,11 @@ namespace DeterministicLockstep
                     if (typeInfo.TypeSize <= 0)
                         continue;
                     
-                    // Get raw component data using EntityDataAccess
-                    unsafe
+                    // Get raw component data using reflection
+                    var componentRuntimeType = TypeManager.GetType(typeIndex);
+                    if (componentRuntimeType != null)
                     {
-                        var access = entityManager.GetCheckedEntityDataAccess();
-                        var ptr = access->EntityComponentStore->GetComponentDataWithTypeRO(entity, typeIndex);
-                        var data = new byte[typeInfo.TypeSize];
-                        fixed (byte* dest = data)
-                        {
-                            Unity.Collections.LowLevel.Unsafe.UnsafeUtility.MemCpy(dest, ptr, typeInfo.TypeSize);
-                        }
+                        var data = GetComponentDataAsBytes(entityManager, entity, componentRuntimeType, typeInfo.TypeSize);
                         snapshot.componentData[typeIndex] = data;
                     }
                 }
@@ -173,14 +231,11 @@ namespace DeterministicLockstep
                     if (!entityManager.HasComponent(entity, componentType))
                         continue;
                     
-                    unsafe
+                    // Set component data using reflection
+                    var componentRuntimeType = TypeManager.GetType(typeIndex);
+                    if (componentRuntimeType != null)
                     {
-                        var access = entityManager.GetCheckedEntityDataAccess();
-                        var ptr = access->EntityComponentStore->GetComponentDataWithTypeRW(entity, typeIndex, access->EntityComponentStore->GlobalSystemVersion);
-                        fixed (byte* src = data)
-                        {
-                            Unity.Collections.LowLevel.Unsafe.UnsafeUtility.MemCpy(ptr, src, data.Length);
-                        }
+                        SetComponentDataFromBytes(entityManager, entity, componentRuntimeType, data);
                     }
                 }
                 
@@ -239,17 +294,6 @@ namespace DeterministicLockstep
         public void Dispose()
         {
             Clear();
-        }
-    }
-    
-    /// <summary>
-    /// Unsafe utility for memory operations.
-    /// </summary>
-    public static unsafe class UnsafeUtility
-    {
-        public static void MemCpy(void* dest, void* src, int size)
-        {
-            Unity.Collections.LowLevel.Unsafe.UnsafeUtility.MemCpy(dest, src, size);
         }
     }
 }
