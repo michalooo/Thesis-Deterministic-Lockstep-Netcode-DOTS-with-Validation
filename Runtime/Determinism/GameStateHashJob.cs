@@ -25,6 +25,12 @@ namespace DeterministicLockstep
         public DynamicTypeList listOfDeterministicTypes;
         
         /// <summary>
+        /// List of TypeIndex values corresponding to the component types.
+        /// </summary>
+        [ReadOnly]
+        public TypeIndexList typeIndexList;
+        
+        /// <summary>
         /// EntityTypeHandle for accessing entities in chunks.
         /// </summary>
         [ReadOnly]
@@ -62,7 +68,8 @@ namespace DeterministicLockstep
                         continue;
 
                     var dynamicComponentTypeHandle = dynamicTypeListPtr[j];
-                    var componentTypeInfo = TypeManager.GetTypeInfo(dynamicComponentTypeHandle.TypeIndex);
+                    var typeIndex = typeIndexList.GetTypeIndex(j);
+                    var componentTypeInfo = TypeManager.GetTypeInfo(typeIndex);
                     var rawComponentByteData = chunk.GetDynamicComponentDataArrayReinterpret<byte>(
                         ref dynamicComponentTypeHandle, componentTypeInfo.TypeSize);
                     
@@ -77,7 +84,7 @@ namespace DeterministicLockstep
                         componentHash = TypeHash.CombineFNV1A64(componentHash, rawComponentByteData[byteIndex]);
                     }
                                 
-                    var logEntry = new KeyValuePair<TypeIndex, ulong>(dynamicComponentTypeHandle.TypeIndex, componentHash);
+                    var logEntry = new KeyValuePair<TypeIndex, ulong>(typeIndex, componentHash);
                     logHashMap.Add(entity, logEntry);
                 }
             }

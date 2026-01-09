@@ -239,13 +239,32 @@ namespace DeterministicLockstep
                 
                 foreach (var systemHandle in systems)
                 {
-                    var systemType = world.Unmanaged.GetTypeOfSystem(systemHandle);
-                    if (systemType == null)
+                    // Get system name - try managed system first, fall back to debug name
+                    string systemName;
+                    try
+                    {
+                        var managedSystem = world.GetExistingSystemManaged(systemHandle);
+                        if (managedSystem != null)
+                        {
+                            systemName = managedSystem.GetType().Name;
+                        }
+                        else
+                        {
+                            // For unmanaged ISystem, get debug name from SystemState
+                            ref readonly var systemState = ref world.Unmanaged.ResolveSystemStateRef(systemHandle);
+                            systemName = systemState.DebugName.ToString();
+                            if (string.IsNullOrEmpty(systemName))
+                                systemName = "UnknownSystem";
+                        }
+                    }
+                    catch
+                    {
                         continue;
+                    }
                     
                     var result = new ValidationResult
                     {
-                        systemName = systemType.Name,
+                        systemName = systemName,
                         numberOfRuns = numberOfRuns,
                         hashesPerRun = new List<ulong>(),
                         isDeterministic = true,
@@ -267,7 +286,7 @@ namespace DeterministicLockstep
                         }
                         catch (Exception e)
                         {
-                            Debug.LogError($"[SystemValidator] Error running {systemType.Name}: {e.Message}");
+                            Debug.LogError($"[SystemValidator] Error running {systemName}: {e.Message}");
                             result.isDeterministic = false;
                             break;
                         }

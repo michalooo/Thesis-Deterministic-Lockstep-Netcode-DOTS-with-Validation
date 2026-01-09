@@ -6,6 +6,33 @@ using System.Runtime.InteropServices;
 namespace DeterministicLockstep
 {
     /// <summary>
+    /// Fixed-size array of TypeIndex values to accompany DynamicTypeList.
+    /// Needed because DynamicComponentTypeHandle no longer exposes TypeIndex in newer Unity Entities versions.
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public unsafe struct TypeIndexList
+    {
+        #if NETCODE_COMPONENTS_256
+        public const int MaxCapacity = 256;
+        #else
+        public const int MaxCapacity = 128;
+        #endif
+        
+        private fixed int typeIndices[MaxCapacity];
+        public int Length;
+        
+        public TypeIndex GetTypeIndex(int index)
+        {
+            return new TypeIndex { Value = typeIndices[index] };
+        }
+        
+        public void SetTypeIndex(int index, TypeIndex typeIndex)
+        {
+            typeIndices[index] = typeIndex.Value;
+        }
+    }
+    
+    /// <summary>
     /// This struct stores all component types we're checking when performing determinism validation.
     /// It only exists because of an IJob limitation where <see cref="DynamicComponentTypeHandle"/>'s MUST be defined as fields.
     /// I.e. Collections containing <see cref="DynamicComponentTypeHandle"/>'s are not valid.
@@ -20,10 +47,10 @@ namespace DeterministicLockstep
         public const int MaxCapacity = 128;
         #endif
 
-        public static unsafe void PopulateList(ref SystemState system, DynamicBuffer<DeterministicComponent> deterministicComponentsCollection, bool readOnly, ref DynamicTypeList list)
+        public static unsafe void PopulateList(ref SystemState system, DynamicBuffer<DeterministicComponent> deterministicComponentsCollection, bool readOnly, ref DynamicTypeList list, ref TypeIndexList typeIndexList)
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
-            if (UnsafeUtility.SizeOf<DynamicComponentTypeHandle32>() != UnsafeUtility.SizeOf<DynamicComponentTypeHandle>()*32)
+            if (Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<DynamicComponentTypeHandle32>() != Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<DynamicComponentTypeHandle>()*32)
                 throw new System.Exception("Invalid type size, this will cause undefined behavior");
 #endif
             var listLength = deterministicComponentsCollection.Length;
@@ -33,19 +60,21 @@ namespace DeterministicLockstep
 #endif
             DynamicComponentTypeHandle* GhostChunkComponentTypesPtr = list.GetData();
             list.Length = listLength;
+            typeIndexList.Length = listLength;
             for (int i = 0; i < list.Length; ++i)
             {
                 var compType = deterministicComponentsCollection[i].type;
                 if (readOnly)
                     compType.AccessModeType = ComponentType.AccessMode.ReadOnly;
                 GhostChunkComponentTypesPtr[i] = system.GetDynamicComponentTypeHandle(compType);
+                typeIndexList.SetTypeIndex(i, compType.TypeIndex);
             }
         }
 
-        public static unsafe void PopulateListFromArray(ref SystemState system, NativeArray<ComponentType> componentTypes,  bool readOnly, ref DynamicTypeList list)
+        public static unsafe void PopulateListFromArray(ref SystemState system, NativeArray<ComponentType> componentTypes,  bool readOnly, ref DynamicTypeList list, ref TypeIndexList typeIndexList)
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
-            if (UnsafeUtility.SizeOf<DynamicComponentTypeHandle32>() != UnsafeUtility.SizeOf<DynamicComponentTypeHandle>()*32)
+            if (Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<DynamicComponentTypeHandle32>() != Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<DynamicComponentTypeHandle>()*32)
                 throw new System.Exception("Invalid type size, this will cause undefined behavior");
 #endif
 
@@ -55,12 +84,14 @@ namespace DeterministicLockstep
                 throw new System.Exception($"Invalid number of components used for ghost serialization: {componentTypes.Length}, max is {MaxCapacity}. The maximum limit can be increased up to 256 by defining NETCODE_COMPONENTS_256.");
 #endif
             list.Length = componentTypes.Length;
+            typeIndexList.Length = componentTypes.Length;
             for (int i = 0; i < list.Length; ++i)
             {
                 var compType = componentTypes[i];
                 if (readOnly)
                     compType.AccessModeType = ComponentType.AccessMode.ReadOnly;
                 componentTypesPtr[i] = system.GetDynamicComponentTypeHandle(compType);
+                typeIndexList.SetTypeIndex(i, compType.TypeIndex);
             }
         }
 

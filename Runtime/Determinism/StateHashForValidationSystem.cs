@@ -46,7 +46,8 @@ namespace DeterministicLockstep
             
             _listOfDeterministicTypes = SystemAPI.GetSingletonBuffer<DeterministicComponent>();
             var dynamicListOfDeterministicTypes = new DynamicTypeList();
-            DynamicTypeList.PopulateList(ref state, _listOfDeterministicTypes, true, ref dynamicListOfDeterministicTypes);
+            var typeIndexList = new TypeIndexList();
+            DynamicTypeList.PopulateList(ref state, _listOfDeterministicTypes, true, ref dynamicListOfDeterministicTypes, ref typeIndexList);
             
             var entityCount = _componentTypesQuery.CalculateEntityCount();
             var determinismLogPerEntityTypeMap = new NativeParallelMultiHashMap<Entity, KeyValuePair<TypeIndex, ulong>>(
@@ -56,6 +57,7 @@ namespace DeterministicLockstep
             {
                 hashScope = settings.hashScope,
                 listOfDeterministicTypes = dynamicListOfDeterministicTypes,
+                typeIndexList = typeIndexList,
                 entityTypeHandle = SystemAPI.GetEntityTypeHandle(),
                 logHashMap = determinismLogPerEntityTypeMap.AsParallelWriter(),
             };

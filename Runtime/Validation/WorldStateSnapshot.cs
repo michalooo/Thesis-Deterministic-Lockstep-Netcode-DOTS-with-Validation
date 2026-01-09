@@ -97,10 +97,10 @@ namespace DeterministicLockstep
                     if (typeInfo.TypeSize <= 0)
                         continue;
                     
-                    // Get raw component data
+                    // Get raw component data using ComponentType
                     unsafe
                     {
-                        var ptr = entityManager.GetComponentDataRawRO(entity, typeIndex);
+                        var ptr = entityManager.GetComponentDataRawRO(entity, componentType);
                         var data = new byte[typeInfo.TypeSize];
                         fixed (byte* dest = data)
                         {
@@ -166,13 +166,14 @@ namespace DeterministicLockstep
                 {
                     var typeIndex = kvp.Key;
                     var data = kvp.Value;
+                    var componentType = ComponentType.FromTypeIndex(typeIndex);
                     
-                    if (!entityManager.HasComponent(entity, ComponentType.FromTypeIndex(typeIndex)))
+                    if (!entityManager.HasComponent(entity, componentType))
                         continue;
                     
                     unsafe
                     {
-                        var ptr = entityManager.GetComponentDataRawRW(entity, typeIndex);
+                        var ptr = entityManager.GetComponentDataRawRW(entity, componentType);
                         fixed (byte* src = data)
                         {
                             UnsafeUtility.MemCpy(ptr, src, data.Length);
